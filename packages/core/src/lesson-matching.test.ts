@@ -73,6 +73,23 @@ describe('matchLessonName: 類似度', () => {
 		});
 	});
 
+	it('波ダッシュと全角のチルダ、ハイフンと負号のような、取り違えやすい記号は同じ文字とみなす', () => {
+		const withClass: SubjectName[] = [
+			{ id: 30, name: '架空の科目1～4' },
+			{ id: 31, name: '架空の演習1-AB' },
+		];
+		expect(matchLessonName('架空の科目1〜4', withClass)).toEqual({
+			kind: 'matched',
+			subjectId: 30,
+			method: 'normalized',
+		});
+		expect(matchLessonName('架空の演習1−AB', withClass)).toEqual({
+			kind: 'matched',
+			subjectId: 31,
+			method: 'normalized',
+		});
+	});
+
 	it('末尾の番号が数字でも、番号が違えば別の科目として選ばない', () => {
 		const numbered: SubjectName[] = [{ id: 20, name: '情報処理演習 2' }];
 		expect(matchLessonName('情報処理演習 1', numbered)).toEqual({ kind: 'unmatched' });

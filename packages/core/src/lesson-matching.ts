@@ -23,9 +23,17 @@ export const SIMILARITY_THRESHOLD = 0.8;
 /** 1 位と 2 位の類似度の差。これ以上なければ決めない */
 export const SIMILARITY_MARGIN = 0.1;
 
-/** NFKC で正規化し、空白を除き、小文字にする */
+/**
+ * NFKC で正規化し、空白を除き、小文字にする。
+ * 波ダッシュ (〜) とチルダ、ハイフンと負号 (−) などは、文字コードの変換で入れ替わりやすいので、同じ文字にそろえる
+ */
 function normalize(text: string): string {
-	return text.normalize('NFKC').replace(/\s+/g, '').toLowerCase();
+	return text
+		.normalize('NFKC')
+		.replace(/[〜∼]/g, '~')
+		.replace(/[‐-―−]/g, '-')
+		.replace(/\s+/g, '')
+		.toLowerCase();
 }
 
 /** 末尾の "(旧:...)" を除く。括弧と冒号は全角と半角の両方を受け付ける */
