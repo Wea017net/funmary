@@ -1,16 +1,16 @@
 <script lang="ts">
 	import IconDark from '~icons/material-symbols/dark-mode-outline';
 	import IconLight from '~icons/material-symbols/light-mode-outline';
-	import IconSystem from '~icons/material-symbols/brightness-auto-outline';
+	import IconSystem from '~icons/material-symbols/contrast-outline';
 	import { nextThemePreference, THEME_COOKIE, type ThemePreference } from '$lib/theme.ts';
 
-	// 画面の色を、端末の設定、ライト、ダークの順に切り替える。設定は Cookie に置き、次の読み込みではサーバーが反映する
+	// 画面の色を、自動 (端末の設定に従う)、ライト、ダークの順に切り替える。設定は Cookie に置き、次の読み込みではサーバーが反映する
 	let { initial, compact = false }: { initial: ThemePreference; compact?: boolean } = $props();
 
 	let theme = $derived(initial);
 
 	const LABELS: Record<ThemePreference, string> = {
-		system: '端末の設定',
+		system: '自動',
 		light: 'ライト',
 		dark: 'ダーク',
 	};
