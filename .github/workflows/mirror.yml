@@ -34,4 +34,4 @@ jobs:
           MIRROR_SSH_KEY: ${{ secrets.MIRROR_SSH_KEY }}
           # GitHub の SSH のホスト鍵 (https://api.github.com/meta の ssh_keys)。接続先のすり替わりを防ぐため固定する
           GITHUB_HOST_KEY: github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl
-        run: node scripts/workflows/mirror/push-mirror.ts
+        run: node scripts/workflows/mirror/push-mirror.js

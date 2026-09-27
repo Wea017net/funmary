@@ -1,11 +1,11 @@
 // ビルド済みのアプリを、VPS に置けるリリースの tar.gz にまとめる (設計書 20.6)。
-// 使い方: node scripts/package-release.ts <版の名前>。先に pnpm build と、apps/web の pnpm bundle-cli を動かしておく。
+// 使い方: node scripts/package-release.js <版の名前>。先に pnpm build と、apps/web の pnpm bundle-cli を動かしておく。
 // 版の名前は build-<コミットの短い hash> か v<数字>.<数字>.<数字> の形にする (VPS の funmary-update が同じ形を確かめる)。
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { cpSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
-import { generateThirdPartyLicenses } from './third-party-licenses.ts';
+import { generateThirdPartyLicenses } from './third-party-licenses.js';
 
 const VERSION_PATTERN = /^(build-[0-9a-f]{7,40}|v\d+\.\d+\.\d+(-[0-9A-Za-z.]+)?)$/;
 
@@ -34,9 +34,9 @@ cpSync(join(root, 'deploy'), join(stage, 'deploy'), { recursive: true });
 cpSync(join(webDir, 'dist/server.js'), join(stage, 'server.js'));
 
 // 本番の依存は better-sqlite3 だけ。版は apps/web/package.json (catalog を解決したもの) に合わせる
-const webPackage = JSON.parse(readFileSync(join(webDir, 'package.json'), 'utf8')) as {
-	dependencies: Record<string, string>;
-};
+/** @type {unknown} */
+const webPackageJson = JSON.parse(readFileSync(join(webDir, 'package.json'), 'utf8'));
+const webPackage = /** @type {{ dependencies: Record<string, string> }} */ (webPackageJson);
 const lockfile = readFileSync(join(root, 'pnpm-lock.yaml'), 'utf8');
 const sqliteVersion =
 	/^ {4}better-sqlite3:\n {6}specifier: [^\n]+\n {6}version: (\d+\.\d+\.\d+)/m.exec(lockfile)?.[1];
@@ -63,10 +63,15 @@ const licenses = generateThirdPartyLicenses(root);
 writeFileSync(join(stage, 'THIRD_PARTY_LICENSES.txt'), licenses);
 writeFileSync(join(outDir, 'THIRD_PARTY_LICENSES.txt'), licenses);
 
-/** ファイルの相対パス (/ 区切り) の順に、パスと中身を混ぜた hash。中身が同じなら、いつ作っても同じになる */
-function hashTree(dir: string): string {
+/**
+ * ファイルの相対パス (/ 区切り) の順に、パスと中身を混ぜた hash。中身が同じなら、いつ作っても同じになる
+ * @param {string} dir
+ * @returns {string}
+ */
+function hashTree(dir) {
 	const hash = createHash('sha256');
-	const walk = (current: string): void => {
+	/** @param {string} current */
+	const walk = (current) => {
 		for (const entry of readdirSync(current, { withFileTypes: true }).sort((a, b) =>
 			a.name < b.name ? -1 : 1,
 		)) {

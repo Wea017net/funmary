@@ -12,7 +12,7 @@ const config = {
 			config: (config) => {
 				config['include'].push(
 					'../e2e/**/*.ts',
-					'../scripts/**/*.ts',
+					'../scripts/**/*.js',
 					'../playwright.config.ts',
 					'../tsdown.config.ts',
 				);

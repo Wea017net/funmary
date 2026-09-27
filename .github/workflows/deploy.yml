@@ -38,4 +38,4 @@ jobs:
         with:
           install: false
       - name: VPS に反映を頼む
-        run: node scripts/workflows/deploy/request-deploy.ts
+        run: node scripts/workflows/deploy/request-deploy.js

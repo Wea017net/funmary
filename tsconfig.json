@@ -1,6 +1,8 @@
 {
-	// apps/web 以外の TypeScript をまとめて検査する。apps/web は svelte-check で検査する (設計書 6.2)
+	// apps/web 以外の TypeScript と、scripts/ の JavaScript (JSDoc の型) をまとめて検査する。apps/web は svelte-check で検査する (設計書 6.2)
 	"compilerOptions": {
+		"allowJs": true,
+		"checkJs": true,
 		"target": "es2024",
 		"lib": ["es2024"],
 		"module": "preserve",

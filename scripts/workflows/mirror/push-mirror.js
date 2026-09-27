@@ -7,7 +7,11 @@ import { join } from 'node:path';
 
 const MIRROR_URL = 'git@github.com:otnc/funmary-mirror.git';
 
-function requiredEnv(name: string): string {
+/**
+ * @param {string} name
+ * @returns {string}
+ */
+function requiredEnv(name) {
 	const value = process.env[name];
 	if (!value) throw new Error(`環境変数 ${name} がありません`);
 	return value;
@@ -19,7 +23,8 @@ mkdirSync(sshDir, { recursive: true, mode: 0o700 });
 writeFileSync(keyFile, `${requiredEnv('MIRROR_SSH_KEY')}\n`, { mode: 0o600 });
 writeFileSync(join(sshDir, 'known_hosts'), `${requiredEnv('GITHUB_HOST_KEY')}\n`);
 
-const git = (...args: string[]) =>
+/** @param {string[]} args */
+const git = (...args) =>
 	execFileSync('git', args, {
 		stdio: 'inherit',
 		env: {

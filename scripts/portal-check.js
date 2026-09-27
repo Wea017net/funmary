@@ -1,5 +1,5 @@
 // 学生ポータルへのログインと一覧の取得を、手元で 1 回だけ確かめる (開発者が自分のアカウントで行う)。
-// 使い方: node --env-file=.env scripts/portal-check.ts [HTML の保存先]
+// 使い方: node --env-file=.env scripts/portal-check.js [HTML の保存先]
 // PORTAL_USER_ID と PORTAL_PASSWORD を、環境変数から読む。取得の間隔の下限 (60 分) は、この確認にも守る。
 // 保存先を渡すと、取得した HTML を保存する。休講の一覧には、個人情報を含むことがあるので、公開の場所には置かない。
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -14,7 +14,8 @@ if (!userId || !password) {
 
 // 前回の試みの時刻を残し、確認を繰り返してもポータルに負荷をかけないようにする
 const stampFile = join(import.meta.dirname, '..', 'data', 'portal-check-last-attempt');
-let lastAttemptAt: Date | null = null;
+/** @type {Date | null} */
+let lastAttemptAt = null;
 try {
 	lastAttemptAt = new Date(readFileSync(stampFile, 'utf8').trim());
 	if (Number.isNaN(lastAttemptAt.getTime())) lastAttemptAt = null;

@@ -1,5 +1,5 @@
 // 内閣府の祝日の CSV を取得して、同梱のデータ (packages/sources/src/holidays/bundled-data.ts) を作り直す。
-// 使い方: node scripts/update-bundled-holidays.ts
+// 使い方: node scripts/update-bundled-holidays.js
 // 初回の起動で内閣府に届かないときの備えなので、ときどき (年に 1 回ほど) 更新すればよい。
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -24,7 +24,7 @@ const today = new Date().toISOString().slice(0, 10);
 const source = `// 内閣府の「国民の祝日について」の CSV (${HOLIDAY_CSV_URL}) を、UTF-8 にして写したもの。
 // 出典: 内閣府「国民の祝日について」。文字コードを UTF-8 にして写している (加工)。
 // ${today} に取得。${last} までの祝日と休日 (振替休日を含む) が載っている。
-// このファイルは scripts/update-bundled-holidays.ts が作るので、手で書き換えない。
+// このファイルは scripts/update-bundled-holidays.js が作るので、手で書き換えない。
 // 起動したときに内閣府へ届かなくても、祝日が分かるようにするための備えで、取得できたあとはそちらを使う。
 export const BUNDLED_HOLIDAY_CSV = \`${csv}
 \`;

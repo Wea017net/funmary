@@ -36,7 +36,7 @@ jobs:
       - name: リリースの起動の確認
         run: |
           pnpm package-release build-0000000
-          node scripts/smoke-release.ts build-0000000
+          node scripts/smoke-release.js build-0000000
 
   e2e:
     name: E2E テスト
@@ -83,7 +83,7 @@ jobs:
       - name: 本番のドメインの混入検査
         env:
           PRODUCTION_DOMAIN: ${{ secrets.PRODUCTION_DOMAIN }}
-        run: node scripts/workflows/ci/check-production-domain.ts
+        run: node scripts/workflows/ci/check-production-domain.js
 
   commitlint:
     name: コミットメッセージの検査

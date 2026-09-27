@@ -1,14 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { buildReleaseNotes, parseChange } from './release-notes.ts';
+import { buildReleaseNotes, parseChange } from './release-notes.js';
 
+/** @type {import('./release-notes.js').ReleaseNotesInput} */
 const BASE = {
 	repo: 'oto-lab/funmary',
 	version: 'build-54ffc9b',
 	sha: '54ffc9b1111111111111111111111111111111aa',
-	previousVersion: 'build-0de56d8' as string | null,
-	previousSha: '0de56d81111111111111111111111111111111bb' as string | null,
-	subjects: [] as string[],
-	changedFiles: [] as string[],
+	previousVersion: 'build-0de56d8',
+	previousSha: '0de56d81111111111111111111111111111111bb',
+	subjects: [],
+	changedFiles: [],
 };
 
 describe('parseChange', () => {

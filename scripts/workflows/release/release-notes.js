@@ -1,62 +1,82 @@
 // リリースのノート (GitHub Releases の本文) を作る。前回のリリースから今回までの変更を、種類ごとに分け、
-// 反映のときに確かめることを、変更されたファイルから判断して書く。I/O は持たない。git と gh の呼び出しは publish-release.ts が行う。
+// 反映のときに確かめることを、変更されたファイルから判断して書く。I/O は持たない。git と gh の呼び出しは publish-release.js が行う。
 
-export interface Change {
-	readonly type: string;
-	readonly scope: string | null;
-	readonly description: string;
-	readonly pr: number | null;
-	readonly breaking: boolean;
-}
+/**
+ * @typedef {object} Change
+ * @property {string} type
+ * @property {string | null} scope
+ * @property {string} description
+ * @property {number | null} pr
+ * @property {boolean} breaking
+ */
 
-/** コミットの題 (type(scope): 説明 (#番号)) を分ける。決まりに合わない題は、その他として扱う */
-export function parseChange(subject: string): Change {
+/**
+ * コミットの題 (type(scope): 説明 (#番号)) を分ける。決まりに合わない題は、その他として扱う
+ * @param {string} subject
+ * @returns {Change}
+ */
+export function parseChange(subject) {
 	const match = /^(\w+)(?:\(([^)]+)\))?(!)?: (.+?)(?: \(#(\d+)\))?$/.exec(subject.trim());
 	if (!match) {
 		return { type: 'other', scope: null, description: subject.trim(), pr: null, breaking: false };
 	}
+	const [, type = '', scope, bang, description = '', pr] = match;
 	return {
-		type: match[1]!,
-		scope: match[2] ?? null,
-		description: match[4]!,
-		pr: match[5] ? Number(match[5]) : null,
-		breaking: match[3] === '!',
+		type,
+		scope: scope ?? null,
+		description,
+		pr: pr ? Number(pr) : null,
+		breaking: bang === '!',
 	};
 }
 
-export interface ReleaseNotesInput {
-	/** oto-lab/funmary の形 */
-	readonly repo: string;
-	readonly version: string;
-	readonly sha: string;
-	readonly previousVersion: string | null;
-	readonly previousSha: string | null;
-	/** 前回から今回までに、main に入ったコミットの題 (新しいものが先) */
-	readonly subjects: readonly string[];
-	/** 前回から今回までに、変更されたファイルのパス */
-	readonly changedFiles: readonly string[];
-}
+/**
+ * @typedef {object} ReleaseNotesInput
+ * @property {string} repo oto-lab/funmary の形
+ * @property {string} version
+ * @property {string} sha
+ * @property {string | null} previousVersion
+ * @property {string | null} previousSha
+ * @property {readonly string[]} subjects 前回から今回までに、main に入ったコミットの題 (新しいものが先)
+ * @property {readonly string[]} changedFiles 前回から今回までに、変更されたファイルのパス
+ */
 
-const SECTIONS: readonly { title: string; types: readonly string[] }[] = [
+/** @type {readonly { title: string; types: readonly string[] }[]} */
+const SECTIONS = [
 	{ title: '機能', types: ['feat'] },
 	{ title: '不具合の修正', types: ['fix'] },
 ];
 
-/** 題や説明に含まれる、Markdown として効いてしまう記号を、ただの文字にする */
-function plain(text: string): string {
+/**
+ * 題や説明に含まれる、Markdown として効いてしまう記号を、ただの文字にする
+ * @param {string} text
+ * @returns {string}
+ */
+function plain(text) {
 	return text.replace(/[\\`*_[\]<>#|]/g, (char) => `\\${char}`);
 }
 
-function line(change: Change, repo: string): string {
+/**
+ * @param {Change} change
+ * @param {string} repo
+ * @returns {string}
+ */
+function line(change, repo) {
 	const scope = change.scope ? ` (${plain(change.scope)})` : '';
 	const link = change.pr ? ` ([#${change.pr}](https://github.com/${repo}/pull/${change.pr}))` : '';
 	return `- ${plain(change.description)}${scope}${link}`;
 }
 
-/** 変更されたファイルから、反映のときに確かめることを判断する */
-function checks(files: readonly string[]): string[] {
-	const has = (predicate: (file: string) => boolean) => files.some(predicate);
-	const items: string[] = [];
+/**
+ * 変更されたファイルから、反映のときに確かめることを判断する
+ * @param {readonly string[]} files
+ * @returns {string[]}
+ */
+function checks(files) {
+	/** @param {(file: string) => boolean} predicate */
+	const has = (predicate) => files.some(predicate);
+	/** @type {string[]} */
+	const items = [];
 	if (has((f) => f.startsWith('packages/db/migrations/'))) {
 		items.push(
 			'DB のマイグレーションを含みます。起動するときに自動で適用され、その前にバックアップが取られます。',
@@ -78,9 +98,14 @@ function checks(files: readonly string[]): string[] {
 	return items;
 }
 
-export function buildReleaseNotes(input: ReleaseNotesInput): string {
+/**
+ * @param {ReleaseNotesInput} input
+ * @returns {string}
+ */
+export function buildReleaseNotes(input) {
 	const changes = input.subjects.filter((s) => !/^Merge\b/.test(s.trim())).map(parseChange);
-	const out: string[] = [];
+	/** @type {string[]} */
+	const out = [];
 
 	if (input.previousVersion) {
 		out.push(`${input.previousVersion} からの変更です。`);

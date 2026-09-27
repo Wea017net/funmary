@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { releaseVersion } from './release-version.ts';
+import { releaseVersion } from './release-version.js';
 
 describe('releaseVersion', () => {
 	it('コミットの hash の先頭 7 文字から build-<hash> の版を作る', () => {

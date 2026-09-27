@@ -14,9 +14,9 @@
 	},
 	"scripts": {
 		"dev": "pnpm --filter @funmary/web dev",
-		"build": "pnpm --filter @funmary/web build && node scripts/check-bundle-size.ts",
+		"build": "pnpm --filter @funmary/web build && node scripts/check-bundle-size.js",
 		"preview": "pnpm --filter @funmary/web preview",
-		"package-release": "pnpm --filter @funmary/web bundle-cli && node scripts/package-release.ts",
+		"package-release": "pnpm --filter @funmary/web bundle-cli && node scripts/package-release.js",
 		"funmary-admin": "node apps/web/src/cli.ts",
 		"lint": "eslint .",
 		"format": "prettier --write .",

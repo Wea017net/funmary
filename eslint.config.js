@@ -37,6 +37,7 @@ export default defineConfig(
 	{
 		// 設定ファイルなどの .js は型の検査の対象外にする
 		files: ['**/*.js'],
+		ignores: ['scripts/**', 'apps/web/scripts/**'],
 		extends: [ts.configs.disableTypeChecked],
 	},
 );

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isDeployEnabled } from './request-deploy.ts';
+import { isDeployEnabled } from './request-deploy.js';
 
 describe('isDeployEnabled', () => {
 	it('DEPLOY_ENABLED が false のときだけ止める', () => {

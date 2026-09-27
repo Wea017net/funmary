@@ -5,14 +5,22 @@ import { execFileSync } from 'node:child_process';
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import { releaseVersion } from '../release/release-version.ts';
+import { releaseVersion } from '../release/release-version.js';
 
-/** DEPLOY_ENABLED が false のときだけ止める。止めたいときは明示する */
-export function isDeployEnabled(value: string | undefined): boolean {
+/**
+ * DEPLOY_ENABLED が false のときだけ止める。止めたいときは明示する
+ * @param {string | undefined} value
+ * @returns {boolean}
+ */
+export function isDeployEnabled(value) {
 	return value !== 'false';
 }
 
-function requiredEnv(name: string): string {
+/**
+ * @param {string} name
+ * @returns {string}
+ */
+function requiredEnv(name) {
 	const value = process.env[name];
 	if (!value)
 		throw new Error(
