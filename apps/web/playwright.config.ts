@@ -1,6 +1,5 @@
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import { defineConfig, devices } from '@playwright/test';
+import { E2E_DATA_DIR } from './e2e-data-dir.ts';
 import { OIDC_PORT } from './oidc-port.ts';
 import { generateSecrets } from './src/lib/server/env-file.ts';
 
@@ -18,8 +17,7 @@ const serverEnv = {
 	REGISTRATION: 'open',
 	PORTAL_USER_ID: 'e2e-student',
 	PORTAL_PASSWORD: 'e2e-password',
-	// Playwright はテストの前に test-results を消すので、サーバーが開く DB は別の場所に置く
-	DATA_DIR: join(tmpdir(), 'funmary-e2e-data'),
+	DATA_DIR: E2E_DATA_DIR,
 };
 
 export default defineConfig({

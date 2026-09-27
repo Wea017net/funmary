@@ -67,6 +67,11 @@ export interface CourseStore {
 		origin: { readonly source: SlotSource; readonly createdBy: string | null },
 		now: Date,
 	): AddSlotsResult;
+	/** 履修登録する。新しく登録したら true (登録済みなら、HOPE の URL などは変えずに false) */
+	register(userId: string, subjectId: number, now: Date): boolean;
+	/** 履修登録を取り消す。共有の枠は、ほかの利用者も使うので残す */
+	unregister(userId: string, subjectId: number): boolean;
+	isRegistered(userId: string, subjectId: number): boolean;
 	listRegistrations(userId: string): { subjectId: number; hopeCourseUrl: string | null }[];
 	slotsOf(subjectId: number): StoredSlot[];
 }
@@ -194,6 +199,36 @@ export function createCourseStore(database: Database): CourseStore {
 				}
 			})();
 			return { added, updated, conflicts };
+		},
+
+		register(userId, subjectId, now) {
+			const inserted = db
+				.insert(courseRegistrations)
+				.values({ userId, subjectId, createdAt: now })
+				.onConflictDoNothing()
+				.run();
+			return inserted.changes > 0;
+		},
+
+		unregister(userId, subjectId) {
+			const deleted = db
+				.delete(courseRegistrations)
+				.where(
+					and(eq(courseRegistrations.userId, userId), eq(courseRegistrations.subjectId, subjectId)),
+				)
+				.run();
+			return deleted.changes > 0;
+		},
+
+		isRegistered(userId, subjectId) {
+			const row = db
+				.select({ subjectId: courseRegistrations.subjectId })
+				.from(courseRegistrations)
+				.where(
+					and(eq(courseRegistrations.userId, userId), eq(courseRegistrations.subjectId, subjectId)),
+				)
+				.get();
+			return row !== undefined;
 		},
 
 		listRegistrations(userId) {

@@ -20,6 +20,7 @@
 
 	{#if data.user}
 		<p>{data.user.email} でログインしています。</p>
+		<p><a href={resolve('/courses')}>履修科目</a></p>
 		<!-- /auth は、サーバーが処理する。SvelteKit の form の処理を通さず、通常の送信にする -->
 		<form method="POST" action="/auth/logout" data-sveltekit-reload>
 			<button type="submit">ログアウト</button>

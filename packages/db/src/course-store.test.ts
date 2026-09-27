@@ -188,3 +188,41 @@ describe('CourseStore.addSharedSlots', () => {
 		expect(courses.slotsOf(subjectId)).toHaveLength(1);
 	});
 });
+
+describe('register と unregister', () => {
+	it('科目を履修登録し、取り消せる。取り消しても共有の枠は残る', () => {
+		const { alice, subjectId, courses } = setup();
+		expect(courses.register(alice, subjectId, T0)).toBe(true);
+		courses.addSharedSlots(
+			[{ subjectId, weekday: 1, period: 1, room: '363' }],
+			{ source: 'manual', createdBy: alice },
+			T0,
+		);
+		expect(courses.listRegistrations(alice)).toEqual([{ subjectId, hopeCourseUrl: null }]);
+
+		expect(courses.unregister(alice, subjectId)).toBe(true);
+		expect(courses.listRegistrations(alice)).toEqual([]);
+		expect(courses.slotsOf(subjectId)).toHaveLength(1);
+	});
+
+	it('登録済みの科目をもう一度登録しても、HOPE の URL は消えない', () => {
+		const { alice, subjectId, courses } = setup();
+		courses.importFromPortal(alice, [cell()], T0);
+		expect(courses.register(alice, subjectId, T0)).toBe(false);
+		expect(courses.listRegistrations(alice)[0]?.hopeCourseUrl).toBe(cell().hopeUrl);
+	});
+
+	it('ほかの利用者の登録は、取り消さない', () => {
+		const { alice, bob, subjectId, courses } = setup();
+		courses.register(alice, subjectId, T0);
+		expect(courses.unregister(bob, subjectId)).toBe(false);
+		expect(courses.listRegistrations(alice)).toHaveLength(1);
+	});
+
+	it('isRegistered は、その利用者が登録しているかを返す', () => {
+		const { alice, bob, subjectId, courses } = setup();
+		courses.register(alice, subjectId, T0);
+		expect(courses.isRegistered(alice, subjectId)).toBe(true);
+		expect(courses.isRegistered(bob, subjectId)).toBe(false);
+	});
+});
