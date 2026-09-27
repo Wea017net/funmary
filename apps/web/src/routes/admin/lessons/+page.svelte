@@ -116,10 +116,6 @@
 		gap: 0.5rem;
 		min-height: 48px;
 	}
-	input:not([type='radio']) {
-		min-height: 48px;
-		font: inherit;
-	}
 	.message,
 	.error {
 		padding: 0.75rem 1rem;

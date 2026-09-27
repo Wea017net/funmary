@@ -197,11 +197,6 @@
 		display: flex;
 		flex-direction: column;
 	}
-	select,
-	input {
-		min-height: 48px;
-		font: inherit;
-	}
 	.note {
 		padding: 0.5rem 0.75rem;
 		border-radius: 0.5rem;
