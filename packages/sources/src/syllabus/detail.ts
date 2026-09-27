@@ -58,12 +58,15 @@ const TERMS = new Map<string, Term>([
 
 /**
  * 開講期の表記から Term を決める。夏期集中、冬期集中は、開講期の表記か、授業名の "夏期集中" などで見分ける。
- * 実物では、開講期が前期で、授業名に "夏期集中" と付く科目があるので、集中かどうかを先に見る
+ * 実物では、開講期が前期で、授業名に "夏期集中" と付く科目があるので、集中かどうかを先に見る。
+ * 作者の判断で、前期集中は夏期集中に、後期集中は冬期集中にまとめる。夏季、冬季の表記も同じに扱う
  */
 function termFrom(label: string | undefined, name: string): Term | undefined {
-	const text = normalizeLabel(`${label ?? ''}${name}`);
-	if (/夏期?集中/.test(text)) return 'summer-intensive';
-	if (/冬期?集中/.test(text)) return 'winter-intensive';
+	// 開講期と授業名は、つなげずに別々に見る (前期 + 集中講義入門 を、前期集中と読まないため)
+	for (const text of [normalizeLabel(name), normalizeLabel(label ?? '')]) {
+		if (/(夏[期季]?|前期)集中/.test(text)) return 'summer-intensive';
+		if (/(冬[期季]?|後期)集中/.test(text)) return 'winter-intensive';
+	}
 	return label === undefined ? undefined : TERMS.get(normalizeLabel(label));
 }
 
