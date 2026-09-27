@@ -50,7 +50,7 @@ export function academicYearOf(date: CalendarDate): number {
 	return Number(date.slice(5, 7)) >= 4 ? year : year - 1;
 }
 
-/** その週の月曜の日付 */
+/** その日を含む週 (日曜から土曜) の日曜の日付。日曜に時間割を開くと、次の週が出るようにするため */
 export function startOfWeek(date: CalendarDate): CalendarDate {
-	return addDays(date, 1 - isoWeekday(date));
+	return addDays(date, -(isoWeekday(date) % 7));
 }

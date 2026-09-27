@@ -20,8 +20,10 @@ export const load: ServerLoad = ({ locals, url }) => {
 	const date = parseDateParam(param);
 	if (param !== null && date === null) redirect(303, '/week');
 
-	const monday = startOfWeek(date ?? today);
-	const range = { start: monday, end: addDays(monday, 6) };
+	// 週は日曜から土曜。見出しと列は月曜から出す (日曜と土曜は、授業のあるときだけ列を出す)
+	const sunday = startOfWeek(date ?? today);
+	const monday = addDays(sunday, 1);
+	const range = { start: sunday, end: addDays(sunday, 6) };
 	const timetable = buildUserTimetable(getServices(), locals.user.id, range);
 	const lessons = timetable.lessons.map(toLessonView);
 
@@ -45,7 +47,7 @@ export const load: ServerLoad = ({ locals, url }) => {
 		monday,
 		previous: addDays(monday, -7),
 		next: addDays(monday, 7),
-		isThisWeek: monday === startOfWeek(today),
+		isThisWeek: sunday === startOfWeek(today),
 		today,
 		days: days.map((day) => ({ date: day, note: timetable.notes.get(day) ?? null })),
 		rows: periods.map((number) => {

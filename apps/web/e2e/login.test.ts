@@ -448,6 +448,10 @@ test.describe('今日と週の時間割', () => {
 		await expect(holiday).toContainText('祝日');
 		await expect(holiday).toContainText('スポーツの日');
 
+		// 週は日曜から土曜なので、日曜の日付は次の月曜からの週になる
+		await page.goto('/week?date=2026-10-11');
+		await expect(page.getByRole('heading', { level: 1 })).toHaveText('10/12 (月) からの週');
+
 		// カレンダーで日付を選ぶと、その日を含む週に移る
 		await page.getByRole('button', { name: 'カレンダーで日付を選んで、その週を出す' }).click();
 		await page.locator('.picker input[type="date"]').fill('2026-11-04');
