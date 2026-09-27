@@ -141,3 +141,29 @@ describe('subjectsInSemester', () => {
 		expect(subjectsInSemester(all, null)).toHaveLength(all.length);
 	});
 });
+
+describe('planSlotImport: 管理者の紐付け', () => {
+	it('管理者が紐付けた名前は、その科目の枠にする (照合より優先する)', () => {
+		const plan = planSlotImport(
+			[cell({ subject: '架空演習 (再)', classes: '1-AB' })],
+			subjects,
+			new Map([['架空演習 (再)1-AB', 1]]),
+		);
+		expect(plan.unmatched).toEqual([]);
+		expect(plan.slots).toEqual([
+			{
+				subjectId: 1,
+				weekday: 1,
+				period: 1,
+				room: '363',
+				lessonName: '架空演習 (再)1-AB',
+				method: 'manual',
+			},
+		]);
+	});
+
+	it('紐付けた科目が候補 (学期で絞ったもの) になければ、通常の照合に回す', () => {
+		const plan = planSlotImport([cell()], subjects, new Map([['架空演習1-AB', 999]]));
+		expect(plan.slots.map((s) => [s.subjectId, s.method])).toEqual([[1, 'exact']]);
+	});
+});
