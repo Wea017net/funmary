@@ -1,5 +1,6 @@
 // 学期の期間の決め方 (設計書 10 章)。値は、管理者が入れた値、学年暦から取った値、既定の規則による推定の順に探す。
-// 推定するのは前期と後期だけで、1Q から 4Q と集中講義は、保存された値があるときだけ使う。
+// 規則で推定するのは前期と後期だけ。1Q から 4Q は、値がなければ、それを含む前期か後期の期間をそのまま使う。
+// 集中講義は、保存された値があるときだけ使う。
 // I/O は持たない。保存された値は引数で受け取る。
 import { addDays, isoWeekday, type CalendarDate } from './calendar-date.ts';
 import type { Term, TermPeriod } from './timetable.ts';
@@ -44,6 +45,14 @@ export function estimateAcademicTerms(academicYear: number): TermPeriod[] {
 
 const ESTIMATED_TERMS: readonly Term[] = ['spring', 'fall'];
 
+/** クォーターと、それを含む学期 */
+const QUARTER_SEMESTERS: readonly (readonly [Term, Term])[] = [
+	['q1', 'spring'],
+	['q2', 'spring'],
+	['q3', 'fall'],
+	['q4', 'fall'],
+];
+
 /** 同じ学期に複数の値があるとき、手入力を先に使う。管理者が、取得した値の誤りを直せるようにするため */
 const SOURCE_PRIORITY: Record<StoredTerm['source'], number> = { manual: 0, auto: 1 };
 
@@ -61,6 +70,18 @@ export function resolveAcademicTerms(
 	for (const estimate of estimateAcademicTerms(academicYear)) {
 		if (ESTIMATED_TERMS.includes(estimate.term) && !byTerm.has(estimate.term)) {
 			byTerm.set(estimate.term, { ...estimate, source: 'estimated' });
+		}
+	}
+	// クォーターの期間がなければ、それを含む前期か後期の期間をそのまま使う (作者の判断)
+	for (const [quarter, semester] of QUARTER_SEMESTERS) {
+		const period = byTerm.get(semester);
+		if (period && !byTerm.has(quarter)) {
+			byTerm.set(quarter, {
+				term: quarter,
+				start: period.start,
+				end: period.end,
+				source: 'estimated',
+			});
 		}
 	}
 	// 開始日の順。同じ日に始まるものは、終わりが遅い (期間が長い) 方を先にする
