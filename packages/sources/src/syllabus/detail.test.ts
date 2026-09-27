@@ -69,6 +69,10 @@ describe('シラバスの詳細の解析', () => {
 		expect(termOf(fixture.replace('>後期<', '>集中<').replace('入門1～4', '入門　冬期集中'))).toBe(
 			'winter-intensive',
 		);
+		// 実物では、開講期が前期で、授業名に「夏期集中」と付いている。授業名を先に見る
+		expect(
+			termOf(fixture.replace('>後期<', '>前期<').replace('入門1～4', '入門1～4　夏期集中')),
+		).toBe('summer-intensive');
 	});
 
 	it('単位数が数字でなければ、単位数を空にして続ける', () => {
