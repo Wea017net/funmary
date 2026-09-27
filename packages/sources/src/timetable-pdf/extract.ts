@@ -1,5 +1,8 @@
 // PDF から、文字とその座標を取り出す。pdfjs-dist (Mozilla) を使う。文字のデータが入った PDF が対象で、画像の PDF は読めない。
 // 取り出した文字の配列は grid.ts に渡す。管理者が手元で 1 回動かす取り込みで使う (定期処理では使わない)。
+// 型だけの宣言ファイルなので import では読めない。apps/web の svelte-check は src の宣言ファイルを拾わないため、ここで参照する
+// eslint-disable-next-line @typescript-eslint/triple-slash-reference
+/// <reference path="./pdf-worker.d.ts" />
 import {
 	parseTimetableItems,
 	type PdfTextItem,
@@ -21,7 +24,14 @@ export async function extractPdfTextItems(data: Uint8Array): Promise<ExtractResu
 	if (data.byteLength > MAX_PDF_BYTES) return { kind: 'invalid', reason: 'PDF が大きすぎます' };
 	try {
 		// 読み込みが重いので、使うときまで読まない
-		const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
+		const [pdfjs, worker] = await Promise.all([
+			import('pdfjs-dist/legacy/build/pdf.mjs'),
+			import('pdfjs-dist/legacy/build/pdf.worker.mjs'),
+		]);
+		// pdfjs は worker のファイルを自分の隣から読もうとするので、1 ファイルにまとめた cli.js では見つからない。
+		// 読み込んだ worker を渡しておくと、ファイルを探さずに同じスレッドで動かす
+		const global = globalThis as { pdfjsWorker?: unknown };
+		global.pdfjsWorker ??= worker;
 		// pdfjs は渡したバッファを使い回すので、コピーを渡す
 		const task = pdfjs.getDocument({
 			data: new Uint8Array(data),

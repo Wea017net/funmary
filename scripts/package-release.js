@@ -26,12 +26,16 @@ mkdirSync(stage, { recursive: true });
 
 // adapter-node の出力。server/migrations はビルドが写したもの
 cpSync(join(webDir, 'build'), join(stage, 'build'), { recursive: true });
-cpSync(join(webDir, 'dist/cli.js'), join(stage, 'cli.js'));
+// cli.js (管理用コマンド) と server.js (本番の入口。環境変数を整えてから、build/ の adapter-node の入口を読み込む)。
+// 必要なときだけ読み込む部分 (PDF の読み取りなど) は別のファイルに分かれているので、dist の .js をすべて隣に置く
+const bundles = readdirSync(join(webDir, 'dist')).filter((name) => name.endsWith('.js'));
+for (const required of ['cli.js', 'server.js']) {
+	if (!bundles.includes(required)) throw new Error(`apps/web/dist/${required} がありません`);
+}
+for (const name of bundles) cpSync(join(webDir, 'dist', name), join(stage, name));
 // cli.js が自分の隣から探す
 cpSync(join(root, 'packages/db/migrations'), join(stage, 'migrations'), { recursive: true });
 cpSync(join(root, 'deploy'), join(stage, 'deploy'), { recursive: true });
-// 本番の入口。環境変数を整えてから、build/ の adapter-node の入口を読み込む
-cpSync(join(webDir, 'dist/server.js'), join(stage, 'server.js'));
 
 // 本番の依存は better-sqlite3 だけ。版は apps/web/package.json (catalog を解決したもの) に合わせる
 /** @type {unknown} */

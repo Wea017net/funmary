@@ -25,7 +25,8 @@ function minimalPdf(texts: { text: string; x: number; y: number }[]): Uint8Array
 }
 
 describe('PDF からの文字の取り出し', () => {
-	it('文字と、その位置 (左端の x、下端の y) を取り出す', async () => {
+	// 最初に pdfjs と worker (合わせて 3 MB ほど) を読み込むので、ほかのテストと並んで動くと 5 秒を超えることがある
+	it('文字と、その位置 (左端の x、下端の y) を取り出す', { timeout: 30_000 }, async () => {
 		const result = await extractPdfTextItems(
 			minimalPdf([
 				{ text: 'Hello', x: 100, y: 200 },

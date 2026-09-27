@@ -5,7 +5,8 @@
 	"description": "外部からの取得と解析 (学生ポータル、シラバス、HOPE、学年暦、祝日)",
 	"license": "(BSD-3-Clause OR Apache-2.0)",
 	"exports": {
-		".": "./src/index.ts"
+		".": "./src/index.ts",
+		"./timetable-pdf": "./src/timetable-pdf/extract.ts"
 	},
 	"dependencies": {
 		"@funmary/core": "workspace:*",
