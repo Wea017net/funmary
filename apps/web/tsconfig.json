@@ -4,7 +4,9 @@
 		"allowJs": true,
 		"checkJs": true,
 		"strict": true,
-		"noUncheckedIndexedAccess": true,
+		// SMUI 9 は型のために TypeScript のソースを同梱していて、svelte-check はそれも検査する。
+		// SMUI のソースはこの設定を満たさないので、apps/web では外す (packages と scripts は、ルートの tsconfig で検査する)
+		"noUncheckedIndexedAccess": false,
 		"allowImportingTsExtensions": true,
 		"skipLibCheck": true,
 		"sourceMap": true,

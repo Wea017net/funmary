@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button, { Label } from '@smui/button';
 	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
 	import { DEFAULT_PERIODS } from '@funmary/core';
@@ -42,7 +43,7 @@
 	<meta name="robots" content="noindex" />
 </svelte:head>
 
-<main>
+<div class="page">
 	<h1>履修科目</h1>
 
 	{#if form?.error}
@@ -106,7 +107,7 @@
 										教室 (分からなければ空のまま)
 										<input name="room" maxlength="100" autocomplete="off" />
 									</label>
-									<button type="submit">登録する</button>
+									<Button type="submit" variant="unelevated"><Label>登録する</Label></Button>
 								</form>
 								<p class="note">
 									曜日、時限、教室は、大学から自動では取得できないため、利用者どうしで登録しています。登録した内容は、同じ科目を履修しているほかの利用者の時間割にも使われます。
@@ -115,7 +116,7 @@
 
 							<form method="POST" action="?/unregister" use:enhance>
 								<input type="hidden" name="subjectId" value={subject.id} />
-								<button type="submit" class="secondary">登録を取り消す</button>
+								<Button type="submit" variant="outlined"><Label>登録を取り消す</Label></Button>
 							</form>
 						</li>
 					{/each}
@@ -130,7 +131,7 @@
 					科目名、教員、シラバスの番号
 					<input type="search" name="q" value={data.query} maxlength="100" />
 				</label>
-				<button type="submit">探す</button>
+				<Button type="submit" variant="unelevated"><Label>探す</Label></Button>
 			</form>
 
 			{#if data.query.trim() !== ''}
@@ -148,7 +149,7 @@
 								</p>
 								<form method="POST" action="?/register" use:enhance>
 									<input type="hidden" name="subjectId" value={subject.id} />
-									<button type="submit">登録する</button>
+									<Button type="submit" variant="unelevated"><Label>登録する</Label></Button>
 								</form>
 							</li>
 						{/each}
@@ -162,15 +163,11 @@
 			<a href={resolve('/courses/import')}>ポータルの時間割から取り込む</a>
 		</p>
 	{/if}
-</main>
+</div>
 
 <style>
-	main {
+	.page {
 		max-width: 40rem;
-		margin: 0 auto;
-		padding: 1rem;
-		font-family: system-ui, sans-serif;
-		line-height: 1.7;
 	}
 	.subjects {
 		padding: 0;
@@ -179,7 +176,7 @@
 	.subjects > li {
 		margin: 0.75rem 0;
 		padding: 0.75rem 1rem;
-		border: 1px solid #dddddd;
+		border: 1px solid var(--fm-divider);
 		border-radius: 0.5rem;
 	}
 	h3 {
@@ -188,7 +185,7 @@
 	}
 	.meta {
 		margin: 0;
-		color: #666666;
+		color: var(--fm-text-muted);
 	}
 	.slot-form {
 		display: flex;
@@ -200,7 +197,6 @@
 		display: flex;
 		flex-direction: column;
 	}
-	button,
 	select,
 	input {
 		min-height: 48px;
@@ -208,8 +204,8 @@
 	}
 	.note {
 		padding: 0.5rem 0.75rem;
-		border-left: 4px solid currentcolor;
-		background: color-mix(in srgb, currentcolor 6%, transparent);
+		border-radius: 0.5rem;
+		background: var(--fm-surface-muted);
 	}
 	.message {
 		padding: 0.75rem 1rem;
@@ -220,6 +216,6 @@
 		padding: 0.75rem 1rem;
 		border: 1px solid currentcolor;
 		border-radius: 0.25rem;
-		color: #b3261e;
+		color: var(--fm-error);
 	}
 </style>

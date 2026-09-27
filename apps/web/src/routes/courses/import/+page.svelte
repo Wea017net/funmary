@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button, { Label } from '@smui/button';
 	import { onMount } from 'svelte';
 
 	interface ImportSummary {
@@ -36,7 +37,7 @@
 	<meta name="robots" content="noindex" />
 </svelte:head>
 
-<main>
+<div class="page">
 	<h1>ポータルの時間割から取り込む</h1>
 
 	<p class="note">
@@ -79,7 +80,7 @@
 		<form method="POST">
 			<input type="hidden" name="payload" value={payload} />
 			<p>ポータルの時間割を読み取りました。取り込むと、履修科目として登録します。</p>
-			<button type="submit">取り込む</button>
+			<Button type="submit" variant="unelevated"><Label>取り込む</Label></Button>
 		</form>
 	{:else}
 		<h2>使い方</h2>
@@ -98,26 +99,22 @@
 			には送られません。読み取りは、あなたのブラウザの中だけで行います。
 		</p>
 	{/if}
-</main>
+</div>
 
 <style>
-	main {
+	.page {
 		max-width: 40rem;
-		margin: 0 auto;
-		padding: 1rem;
-		font-family: system-ui, sans-serif;
-		line-height: 1.7;
 	}
 	.note {
 		padding: 0.75rem 1rem;
-		border-left: 4px solid currentcolor;
-		background: color-mix(in srgb, currentcolor 6%, transparent);
+		border-radius: 0.5rem;
+		background: var(--fm-surface-muted);
 	}
 	.error {
 		padding: 0.75rem 1rem;
 		border: 1px solid currentcolor;
 		border-radius: 0.25rem;
-		color: #b3261e;
+		color: var(--fm-error);
 	}
 	.bookmarklet {
 		display: inline-block;

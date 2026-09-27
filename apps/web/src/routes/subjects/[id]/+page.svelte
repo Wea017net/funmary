@@ -1,4 +1,5 @@
 <script lang="ts">
+	import StatusBadge from '$lib/components/StatusBadge.svelte';
 	import { resolve } from '$app/paths';
 	import { formatSlot, formatTerm } from '$lib/term-label.ts';
 
@@ -16,7 +17,7 @@
 		key: string;
 		date: string;
 		period: number;
-		label: string;
+		status: 'cancelled' | 'makeup' | 'roomChanged';
 		detail: string | null;
 		comment: string | null;
 		withdrawn: boolean;
@@ -43,7 +44,7 @@
 	<meta name="robots" content="noindex" />
 </svelte:head>
 
-<main>
+<div class="page">
 	<p><a href={resolve('/courses')}>履修科目</a></p>
 	<h1>{data.subject.name}</h1>
 
@@ -92,7 +93,7 @@
 			<ul class="changes">
 				{#each data.changes as change (change.key)}
 					<li class={{ withdrawn: change.withdrawn }}>
-						<span class="label">{change.label}</span>
+						<StatusBadge status={change.status} />
 						{change.date}
 						{change.period} 限{#if change.detail}、{change.detail}{/if}
 						{#if change.withdrawn}(取り消されました){/if}
@@ -128,15 +129,11 @@
 			{/each}
 		{/if}
 	</section>
-</main>
+</div>
 
 <style>
-	main {
+	.page {
 		max-width: 40rem;
-		margin: 0 auto;
-		padding: 1rem;
-		font-family: system-ui, sans-serif;
-		line-height: 1.7;
 	}
 	dl {
 		display: grid;
@@ -144,7 +141,7 @@
 		gap: 0.25rem 1rem;
 	}
 	dt {
-		color: #666666;
+		color: var(--fm-text-muted);
 	}
 	dd {
 		margin: 0;
@@ -160,15 +157,8 @@
 	.changes li {
 		margin: 0.5rem 0;
 	}
-	.label {
-		display: inline-block;
-		padding: 0 0.5rem;
-		border: 1px solid currentcolor;
-		border-radius: 0.25rem;
-		font-weight: bold;
-	}
 	.withdrawn {
-		color: #666666;
+		color: var(--fm-text-muted);
 	}
 	.comment,
 	.section {

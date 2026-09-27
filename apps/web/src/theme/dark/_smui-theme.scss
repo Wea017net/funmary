@@ -1,0 +1,42 @@
+// ダーク用のテーマ (設計書 12.3)。端末の設定がダークのときだけ効くよう、変換のときに @media で囲む。
+@use '../../lib/styles/fonts';
+
+@use '@smui/common/theme/index' as theme with (
+	$primary: #d6999e,
+	$on-primary: #550404,
+	$secondary: #9fb8e6,
+	$on-secondary: #141212,
+	$surface: #1e1b1b,
+	$on-surface: #e6e1e1,
+	$background: #141212,
+	$error: #f2b8b5
+);
+
+// テーマの色を先に決める (文字の設定も、中でテーマを読むため)
+@use '@smui/common/typography/index' as typography with (
+	$font-family: fonts.$system
+);
+
+// SMUI の部品が読む色の CSS 変数 (--mdc-theme-*) を出す。ダークでは、この変数だけを置き換える
+@include theme.core-styles;
+
+:root {
+	color-scheme: dark;
+	--fm-text: #e6e1e1;
+	--fm-text-muted: #b3abab;
+	--fm-divider: #3a3535;
+	--fm-background: #141212;
+	--fm-surface: #1e1b1b;
+	--fm-surface-muted: #262222;
+	--fm-primary: #d6999e;
+	--fm-on-primary: #550404;
+	--fm-primary-soft: #3a1a1c;
+	--fm-link: #9fb8e6;
+	--fm-error: #f2b8b5;
+	--fm-cancelled: #f2b8b5;
+	--fm-cancelled-soft: #3b1a18;
+	--fm-makeup: #a5d6a7;
+	--fm-makeup-soft: #1b2e1c;
+	--fm-room-changed: #f0d060;
+	--fm-room-changed-soft: #33290a;
+}

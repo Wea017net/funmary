@@ -1,7 +1,10 @@
 import adapter from '@sveltejs/adapter-node';
+import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 
 /** @type {import('@sveltejs/kit').Config} */
 const config = {
+	// <style lang="scss"> を Sass として変換する (設計書 5.2)
+	preprocess: vitePreprocess(),
 	kit: {
 		// 静的ファイルを gzip と Brotli で事前に圧縮しておく (設計書 4.2)
 		adapter: adapter({ precompress: true }),

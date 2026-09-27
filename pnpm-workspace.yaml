@@ -32,6 +32,8 @@ catalog:
 
 # 依存のインストール時スクリプトは、ここで許可したものだけを動かす
 allowBuilds:
+  # sass の監視用 (任意の依存)。テーマの変換では監視を使わないので、ネイティブのビルドは動かさない
+  '@parcel/watcher': false
   # better-sqlite3 は各 OS 向けのビルド済みのファイルを同梱している。ソースからのビルド (node-gyp) は動かさない
   better-sqlite3: false
   esbuild: true

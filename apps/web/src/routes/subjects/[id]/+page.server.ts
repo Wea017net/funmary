@@ -3,6 +3,13 @@ import { error, redirect, type ServerLoad } from '@sveltejs/kit';
 import { describeClassChange } from '$lib/class-change-label.ts';
 import { getServices } from '$lib/server/services.ts';
 
+/** 休講などの種類を、時間割の画面と同じ表示 (StatusBadge) にそろえる */
+const CHANGE_STATUS = {
+	cancellation: 'cancelled',
+	makeup: 'makeup',
+	roomChange: 'roomChanged',
+} as const;
+
 /** 画面に出すリンクは https のものだけにする (javascript: などを href に入れないため) */
 const httpsOnly = (url: string | null) => (url?.startsWith('https://') ? url : null);
 
@@ -41,6 +48,7 @@ export const load: ServerLoad = ({ locals, params }) => {
 			period: change.period,
 			comment: change.comment,
 			withdrawn: change.withdrawn,
+			status: CHANGE_STATUS[change.kind],
 			...describeClassChange(change),
 		})),
 	};

@@ -36,8 +36,7 @@
 	<title>週の時間割 - Funmary</title>
 </svelte:head>
 
-<main>
-	<p><a href={resolve('/')}>今日</a></p>
+<div class="page">
 	<h1>{formatDate(data.monday)} からの週</h1>
 
 	<nav aria-label="週の切り替え" class="weeks">
@@ -105,15 +104,11 @@
 			学期の期間は、大学の学年暦がまだ入っていないため、推定した日付で出しています。
 		</p>
 	{/if}
-</main>
+</div>
 
 <style>
-	main {
+	.page {
 		max-width: 72rem;
-		margin: 0 auto;
-		padding: 1rem;
-		font-family: system-ui, sans-serif;
-		line-height: 1.6;
 	}
 	.weeks {
 		display: flex;
@@ -135,7 +130,7 @@
 	th,
 	td {
 		padding: 0.5rem;
-		border: 1px solid #dddddd;
+		border: 1px solid var(--fm-divider);
 		vertical-align: top;
 		text-align: left;
 	}
@@ -148,19 +143,19 @@
 		width: 4.5rem;
 		position: sticky;
 		left: 0;
-		background: #ffffff;
+		background: var(--fm-background);
 		white-space: nowrap;
 	}
 	thead th:first-child {
 		width: 4.5rem;
 	}
 	.today {
-		background: #f9e9ea;
+		background: var(--fm-primary-soft);
 	}
 	.time,
 	.note {
 		display: block;
-		color: #666666;
+		color: var(--fm-text-muted);
 		font-size: 0.75rem;
 		font-weight: normal;
 	}
