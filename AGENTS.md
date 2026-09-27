@@ -68,6 +68,7 @@ Windows で開発しているので、npm scripts に POSIX シェル前提の�
 | `diagnosing-bugs`                                 | 原因の分からない不具合や、遅さを調べるとき                                           |
 | `codebase-design`                                 | モジュールの分け方やインターフェースを考えるとき                                     |
 | `accessibility`、`web-design-guidelines`          | 画面の使いやすさとアクセシビリティを確かめるとき                                     |
+| `impeccable`                                      | 画面の見た目と使い勝手を作る、見直すとき (`audit`、`polish`、`layout` など)          |
 | `hush-review`、`hush-fix`                         | コードのコメントの質を確かめる、直すとき                                             |
 | `typescript-design`                               | TypeScript のモジュールの分け方、型、エラーの扱いを考えるとき                        |
 | `natural-japanese`、`stop-ai-slop-jp`             | README、docs、Issue、PR などの日本語の文章を書く、直すとき                           |
