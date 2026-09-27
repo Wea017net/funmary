@@ -163,3 +163,34 @@ describe('listBySubject', () => {
 		]);
 	});
 });
+
+describe('unassignedLessonNames と assignSubject', () => {
+	it('科目が決まっていない授業名を返し、授業名ごとに科目を割り当てる。割り当て済みは変えない', () => {
+		const subjects = createSubjectStore(database);
+		const base = {
+			academicYear: 2026,
+			teacher: null,
+			credits: 2,
+			term: 'fall',
+			attributes: {},
+			syllabus: {},
+			syllabusUrl: null,
+		};
+		const first = subjects.upsert({ ...base, syllabusId: '100001', name: '線形代数 I' }, t1);
+		const second = subjects.upsert({ ...base, syllabusId: '100002', name: '別の科目' }, t1);
+		const store = createClassChangeStore(database);
+		const result = detectChanges({
+			previous: [],
+			scraped: [item(), item({ period: 4 }), item({ lessonName: 'ほかの科目' })],
+			today: '2026-10-01',
+		});
+		if (result.kind !== 'ok') throw new Error('ok のはず');
+		store.apply(result.next, t1);
+
+		expect(store.unassignedLessonNames()).toEqual(['ほかの科目', '線形代数 I']);
+		expect(store.assignSubject('線形代数 I', first)).toBe(2);
+		expect(store.unassignedLessonNames()).toEqual(['ほかの科目']);
+		expect(store.assignSubject('線形代数 I', second)).toBe(0);
+		expect(store.listBySubject(first)).toHaveLength(2);
+	});
+});

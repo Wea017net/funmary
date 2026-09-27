@@ -6,10 +6,12 @@ import {
 	detectChanges,
 	isSourceDisabled,
 	isUnhealthy,
+	matchLessonNames,
 	shouldAttempt,
 	type ChangeEvent,
 	type ScrapedChange,
 	type SourceHealth,
+	type SubjectName,
 	type TrackedChange,
 } from '@funmary/core';
 import {
@@ -48,6 +50,17 @@ export interface ScrapePortalDeps {
 	readonly onEvents?: (events: readonly ChangeEvent[]) => void | Promise<void>;
 	/** 取得が成功したときに、監視サービス (HEARTBEAT_URL) に知らせる。失敗しても、処理の結果には影響しない */
 	readonly heartbeat?: () => Promise<unknown>;
+	/** 授業名と科目の照合 (設計書 9.1 の 7)。科目は、履修登録と同じく、保存されている最新の年度のものを使う */
+	readonly matching?: {
+		unassignedLessonNames(): string[];
+		assignSubject(lessonName: string, subjectId: number): number;
+		latestSubjectYear(): number | null;
+		subjects(academicYear: number): readonly SubjectName[];
+		/** 管理者が手で紐付けた名前 */
+		resolvedNames(academicYear: number): ReadonlyMap<string, number>;
+		/** 照合できなかった名前を記録し、新しく記録した数を返す */
+		recordUnmatched(academicYear: number, lessonNames: readonly string[], now: Date): number;
+	};
 }
 
 const sha256 = (text: string) => createHash('sha256').update(text).digest('hex');
@@ -93,7 +106,43 @@ function toScraped(parsed: Extract<ParseResult, { kind: 'ok' }>): ScrapedChange[
 	];
 }
 
+/**
+ * 科目が決まっていない休講などの授業名を照合し、科目を入れる。照合できなかった名前は記録し、新しいものがあれば管理者に知らせる。
+ * 結果の要約 (照合できなかった名前がなければ空) を返す
+ */
+async function matchPending(
+	matching: NonNullable<ScrapePortalDeps['matching']>,
+	alert: ScrapePortalDeps['alert'],
+	at: Date,
+): Promise<string> {
+	const academicYear = matching.latestSubjectYear();
+	if (academicYear === null) return '';
+	const names = matching.unassignedLessonNames();
+	if (names.length === 0) return '';
+	const result = matchLessonNames(
+		names,
+		matching.subjects(academicYear),
+		matching.resolvedNames(academicYear),
+	);
+	for (const { lessonName, subjectId } of result.matched) {
+		matching.assignSubject(lessonName, subjectId);
+	}
+	if (result.unmatched.length === 0) return '';
+	const added = matching.recordUnmatched(academicYear, result.unmatched, at);
+	if (added > 0) {
+		await alert({
+			severity: 'warn',
+			title: '休講などの授業名を、科目と照合できませんでした',
+			message: `管理画面で科目に紐付けてください: ${result.unmatched.join('、')}`,
+			key: `unmatched-lessons:${result.unmatched.join(',')}`,
+		});
+	}
+	return ` (科目と照合できなかった授業名 ${result.unmatched.length} 件)`;
+}
+
 export function createScrapePortalJob(deps: ScrapePortalDeps): JobDefinition {
+	const match = (at: Date) =>
+		deps.matching ? matchPending(deps.matching, deps.alert, at) : Promise.resolve('');
 	return {
 		name: 'scrape-portal',
 		// 日本時間の 7 時、12 時、18 時
@@ -145,7 +194,8 @@ export function createScrapePortalJob(deps: ScrapePortalDeps): JobDefinition {
 			};
 
 			if (health.contentHash === contentHash && !isUnhealthy(health)) {
-				return done('前回と同じ内容だったので、解析を省きました');
+				// あとから取り込んだ科目や、管理者の紐付けを反映するため、内容が同じでも照合はする
+				return done(`前回と同じ内容だったので、解析を省きました${await match(at)}`);
 			}
 
 			const { today, academicYear } = japanDate(at);
@@ -171,12 +221,15 @@ export function createScrapePortalJob(deps: ScrapePortalDeps): JobDefinition {
 			}
 
 			deps.changes.apply(detected.next, at);
+			// 通知の送り先を科目で決められるよう、通知の仕組みに渡す前に照合する
+			const unmatchedSummary = await match(at);
 			await deps.onEvents?.(detected.events);
 			const count = (type: ChangeEvent['type']) =>
 				detected.events.filter((e) => e.type === type).length;
 			return done(
 				`新規 ${count('created')} 件、変更 ${count('updated')} 件、取り消し ${count('withdrawn')} 件` +
-					(parsed.rejectedRows > 0 ? ` (形が合わず捨てた行 ${parsed.rejectedRows} 件)` : ''),
+					(parsed.rejectedRows > 0 ? ` (形が合わず捨てた行 ${parsed.rejectedRows} 件)` : '') +
+					unmatchedSummary,
 			);
 		},
 	};

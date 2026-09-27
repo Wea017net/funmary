@@ -1,7 +1,7 @@
 // 休講、補講、教室変更の、前回までの記録 (設計書 9.2、11 章)。@funmary/core の detectChanges の入出力を保存する。
-// 科目との照合 (subject_id) は、ここでは変えない。
+// 科目との照合 (subject_id) は、apply では変えず、照合のあとに assignSubject で入れる。
 import type { ScrapedChange, TrackedChange } from '@funmary/core';
-import { and, desc, eq } from 'drizzle-orm';
+import { and, asc, desc, eq, isNull } from 'drizzle-orm';
 import type { Database } from './database.ts';
 import { classChanges } from './schema.ts';
 
@@ -18,6 +18,10 @@ export interface ClassChangeStore {
 	seenAt(change: ScrapedChange): { firstSeenAt: Date; lastSeenAt: Date } | null;
 	/** 科目と照合できた休講などを、日付の新しい順に返す (授業の詳細の履歴に使う) */
 	listBySubject(subjectId: number): SubjectClassChange[];
+	/** まだ科目が決まっていない授業名を、重なりなく名前の順に返す */
+	unassignedLessonNames(): string[];
+	/** 科目が決まっていない、その授業名の行に科目を入れ、変えた行の数を返す。決まっている行は変えない */
+	assignSubject(lessonName: string, subjectId: number): number;
 }
 
 export interface SubjectClassChange {
@@ -135,6 +139,22 @@ export function createClassChangeStore(database: Database): ClassChangeStore {
 					makeupPlan: row.makeupPlan,
 					withdrawn: row.withdrawnAt !== null,
 				}));
+		},
+		unassignedLessonNames() {
+			return db
+				.selectDistinct({ lessonName: classChanges.lessonName })
+				.from(classChanges)
+				.where(isNull(classChanges.subjectId))
+				.orderBy(asc(classChanges.lessonName))
+				.all()
+				.map((row) => row.lessonName);
+		},
+		assignSubject(lessonName, subjectId) {
+			return db
+				.update(classChanges)
+				.set({ subjectId })
+				.where(and(eq(classChanges.lessonName, lessonName), isNull(classChanges.subjectId)))
+				.run().changes;
 		},
 	};
 }

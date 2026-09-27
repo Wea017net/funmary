@@ -117,3 +117,34 @@ export function matchLessonName(lessonName: string, subjects: readonly SubjectNa
 	}
 	return { kind: 'matched', subjectId: first.subject.id, method: 'similarity' };
 }
+
+export interface LessonNamesMatch {
+	readonly matched: readonly { readonly lessonName: string; readonly subjectId: number }[];
+	/** 照合できなかった、または決められなかった名前。管理画面で手で紐付ける */
+	readonly unmatched: readonly string[];
+}
+
+/**
+ * 休講一覧などの授業名をまとめて照合する。管理者が手で紐付けた名前 (resolved) を先に使う。
+ * 紐付けた科目が subjects にない (別の年度の科目など) ときは、通常の照合に回す
+ */
+export function matchLessonNames(
+	lessonNames: readonly string[],
+	subjects: readonly SubjectName[],
+	resolved: ReadonlyMap<string, number>,
+): LessonNamesMatch {
+	const ids = new Set(subjects.map((subject) => subject.id));
+	const matched: { lessonName: string; subjectId: number }[] = [];
+	const unmatched: string[] = [];
+	for (const lessonName of new Set(lessonNames)) {
+		const manual = resolved.get(lessonName);
+		if (manual !== undefined && ids.has(manual)) {
+			matched.push({ lessonName, subjectId: manual });
+			continue;
+		}
+		const result = matchLessonName(lessonName, subjects);
+		if (result.kind === 'matched') matched.push({ lessonName, subjectId: result.subjectId });
+		else unmatched.push(lessonName);
+	}
+	return { matched, unmatched };
+}

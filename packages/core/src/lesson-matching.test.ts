@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { matchLessonName, type SubjectName } from './lesson-matching.ts';
+import { matchLessonName, matchLessonNames, type SubjectName } from './lesson-matching.ts';
 
 const subjects: SubjectName[] = [
 	{ id: 1, name: '線形代数 I' },
@@ -108,5 +108,39 @@ describe('matchLessonName: 類似度', () => {
 	it('科目が 1 つもなければ、照合できない。空の授業名も', () => {
 		expect(matchLessonName('線形代数 I', [])).toEqual({ kind: 'unmatched' });
 		expect(matchLessonName('', subjects)).toEqual({ kind: 'unmatched' });
+	});
+});
+
+describe('matchLessonNames', () => {
+	it('管理者が紐付けた名前を先に使い、残りを照合する。決められない名前は照合できなかったものに入れる', () => {
+		const resolved = new Map([['線形代数 (再)', 2]]);
+		expect(
+			matchLessonNames(
+				['線形代数 I', '線形代数 (再)', 'まったく別の授業', 'Webプログラミング'],
+				subjects,
+				resolved,
+			),
+		).toEqual({
+			matched: [
+				{ lessonName: '線形代数 I', subjectId: 1 },
+				{ lessonName: '線形代数 (再)', subjectId: 2 },
+				{ lessonName: 'Webプログラミング', subjectId: 4 },
+			],
+			unmatched: ['まったく別の授業'],
+		});
+	});
+
+	it('同じ名前が何度出ても、1 回だけ照合する', () => {
+		expect(matchLessonNames(['線形代数 I', '線形代数 I'], subjects, new Map())).toEqual({
+			matched: [{ lessonName: '線形代数 I', subjectId: 1 }],
+			unmatched: [],
+		});
+	});
+
+	it('管理者が紐付けた科目が今の科目の一覧になければ、通常の照合に回す', () => {
+		expect(matchLessonNames(['線形代数 I'], subjects, new Map([['線形代数 I', 999]]))).toEqual({
+			matched: [{ lessonName: '線形代数 I', subjectId: 1 }],
+			unmatched: [],
+		});
 	});
 });
