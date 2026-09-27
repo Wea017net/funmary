@@ -24,10 +24,12 @@ export {
 export {
 	createAcademicCalendarStore,
 	type AcademicCalendarStore,
+	type NoClassDay,
 	type StoredSource,
 } from './academic-calendar-store.ts';
 export {
 	createClassChangeStore,
+	type AssignedClassChange,
 	type ClassChangeStore,
 	type SubjectClassChange,
 } from './class-change-store.ts';

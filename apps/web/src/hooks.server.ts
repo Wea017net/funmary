@@ -10,6 +10,7 @@ import { createApi, SESSION_COOKIE_MAX_AGE_S, sessionCookieName } from '@funmary
 import { createAuthService, createGoogleOidcClient, type AuthService } from '@funmary/auth';
 import {
 	checkHealth,
+	createAcademicCalendarStore,
 	createAuthStore,
 	createClassChangeStore,
 	createCourseStore,
@@ -31,6 +32,7 @@ import {
 } from '@funmary/jobs';
 import {
 	bundledHolidays,
+	estimateHolidays,
 	fetchHolidays,
 	fetchPortalPage,
 	fetchSyllabusCatalog,
@@ -203,6 +205,10 @@ export const init: ServerInit = () => {
 		subjects: subjectStore,
 		classChanges: changeStore,
 		unmatchedLessons: unmatchedStore,
+		academicCalendar: createAcademicCalendarStore(database),
+		holidays: holidayStore,
+		sourceHealth: createSourceHealthStore(database),
+		estimateHolidays,
 		origin: publicOrigin,
 		alertAdmin: (alert) => alerter.send(alert),
 	});

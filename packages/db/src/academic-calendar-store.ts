@@ -27,6 +27,15 @@ export interface AcademicCalendarStore {
 	listSubstituteDays(start: CalendarDate, end: CalendarDate): SubstituteDay[];
 	saveSubstituteDay(day: SubstituteDay, source: StoredSource): void;
 	deleteSubstituteDay(date: CalendarDate): void;
+	/** start から end まで (両端を含む) の、全学の休講日。label は学年暦の行事名 */
+	listNoClassDays(start: CalendarDate, end: CalendarDate): NoClassDay[];
+	saveNoClassDay(date: CalendarDate, label: string | null, source: StoredSource): void;
+	deleteNoClassDay(date: CalendarDate): void;
+}
+
+export interface NoClassDay {
+	readonly date: CalendarDate;
+	readonly label: string | null;
 }
 
 export function createAcademicCalendarStore(database: Database): AcademicCalendarStore {
@@ -100,6 +109,28 @@ export function createAcademicCalendarStore(database: Database): AcademicCalenda
 		deleteSubstituteDay(date) {
 			db.delete(academicDays)
 				.where(and(eq(academicDays.date, date), eq(academicDays.kind, 'substitute')))
+				.run();
+		},
+		listNoClassDays(start, end) {
+			return db
+				.select({ date: academicDays.date, label: academicDays.label })
+				.from(academicDays)
+				.where(and(eq(academicDays.kind, 'noClass'), between(academicDays.date, start, end)))
+				.orderBy(academicDays.date)
+				.all();
+		},
+		saveNoClassDay(date, label, source) {
+			db.insert(academicDays)
+				.values({ date, kind: 'noClass', label, source })
+				.onConflictDoUpdate({
+					target: [academicDays.date, academicDays.kind],
+					set: { label, source },
+				})
+				.run();
+		},
+		deleteNoClassDay(date) {
+			db.delete(academicDays)
+				.where(and(eq(academicDays.date, date), eq(academicDays.kind, 'noClass')))
 				.run();
 		},
 	};

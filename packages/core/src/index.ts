@@ -1,4 +1,14 @@
-export { addDays, type CalendarDate, type Weekday } from './calendar-date.ts';
+export {
+	addDays,
+	academicYearOf,
+	eachDate,
+	isoWeekday,
+	jstDateTime,
+	startOfWeek,
+	type CalendarDate,
+	type Weekday,
+} from './calendar-date.ts';
+export { findNextLesson, type NextLesson } from './next-lesson.ts';
 export {
 	estimateAcademicTerms,
 	resolveAcademicTerms,
@@ -10,8 +20,10 @@ export { DEFAULT_PERIODS, findPeriod, type Period } from './periods.ts';
 export {
 	INITIAL_SOURCE_HEALTH,
 	MAX_BACKOFF_MS,
+	STALE_AFTER_MS,
 	UNHEALTHY_AFTER,
 	isSourceDisabled,
+	isStale,
 	isUnhealthy,
 	recordFailure,
 	recordSuccess,
