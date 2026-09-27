@@ -75,6 +75,24 @@ describe('シラバスの詳細の解析', () => {
 		).toBe('summer-intensive');
 	});
 
+	it('後期集中は冬期集中に、前期集中は夏期集中にまとめる。夏季、冬季の表記も同じに扱う', () => {
+		// 授業名と「後期集中」などの間は、全角の空白
+		const wideSpace = String.fromCharCode(0x3000);
+		const termOf = (label: string, suffix: string) => {
+			const result = parseSyllabusDetail(
+				fixture
+					.replace('>後期<', `>${label}<`)
+					.replace('入門1～4', `入門1～4${wideSpace}${suffix}`),
+			);
+			return result.kind === 'ok' ? result.detail.term : result.kind;
+		};
+		// 実物: 物質の科学1～4 (全角の空白) 後期集中
+		expect(termOf('後期', '後期集中')).toBe('winter-intensive');
+		expect(termOf('前期', '前期集中')).toBe('summer-intensive');
+		expect(termOf('前期', '夏季集中')).toBe('summer-intensive');
+		expect(termOf('後期', '冬季集中')).toBe('winter-intensive');
+	});
+
 	it('単位数が数字でなければ、単位数を空にして続ける', () => {
 		const html = fixture.replace('2単位', '未定');
 		const result = parseSyllabusDetail(html);
