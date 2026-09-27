@@ -7,6 +7,7 @@ import { defineCommand, runMain } from 'citty';
 import {
 	backupDatabase,
 	createAcademicCalendarStore,
+	createSourceHealthStore,
 	createCourseStore,
 	createSubjectStore,
 	createUnmatchedLessonStore,
@@ -17,6 +18,7 @@ import {
 import { parseTimetablePdf } from '@funmary/sources/timetable-pdf';
 import { academicYearOf, jstDateTime, resolveAcademicTerms } from '@funmary/core';
 import { formatCalendarReport } from './lib/server/calendar-report.ts';
+import { formatSourcesReport, sourceStatuses } from './lib/server/source-status.ts';
 import { parseConfig, type Config } from './lib/server/config.ts';
 import { fillSecrets, generateSecrets } from './lib/server/env-file.ts';
 import { findMigrationsFolder } from './lib/server/migrations-path.ts';
@@ -320,9 +322,32 @@ const calendar = defineCommand({
 	subCommands: { show: calendarShow },
 });
 
+const sourcesStatus = defineCommand({
+	meta: { name: 'status', description: '取得元ごとの最終成功時刻と、連続の失敗回数を表示する' },
+	run() {
+		const config = loadConfigOrExit();
+		const database = openDatabase(join(config.dataDir, 'funmary.db'), {
+			backupDir: join(config.dataDir, 'backups'),
+			...(bundledMigrations && { migrationsFolder: bundledMigrations }),
+		});
+		try {
+			const rows = sourceStatuses(createSourceHealthStore(database).list());
+			for (const line of formatSourcesReport(rows)) console.log(line);
+			console.log('時刻は日本時間です。');
+		} finally {
+			database.close();
+		}
+	},
+});
+
+const sources = defineCommand({
+	meta: { name: 'sources', description: '取得元 (ポータル、シラバス、祝日) の状態を扱う' },
+	subCommands: { status: sourcesStatus },
+});
+
 const main = defineCommand({
 	meta: { name: 'funmary-admin', description: 'Funmary の管理用コマンド' },
-	subCommands: { init, migrate, backup, restore, timetable, calendar },
+	subCommands: { init, migrate, backup, restore, timetable, calendar, sources },
 });
 
 await runMain(main);

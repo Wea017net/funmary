@@ -25,6 +25,8 @@ export interface JobRunStore {
 	recordSkipped(job: string, at: Date, message: string): void;
 	/** そのタスクの記録を、新しい順に count 件 */
 	recent(job: string, count: number): StoredJobRun[];
+	/** すべてのタスクの記録を、新しい順に count 件 (管理画面に使う) */
+	recentAll(count: number): StoredJobRun[];
 	/**
 	 * 起動したときに、"running" のまま残っている記録を失敗として閉じ、その数を返す。
 	 * プロセスが途中で落ちると、終わりを書き込めずに残るため
@@ -57,6 +59,14 @@ export function createJobRunStore(database: Database): JobRunStore {
 				.select()
 				.from(jobRuns)
 				.where(eq(jobRuns.job, job))
+				.orderBy(desc(jobRuns.startedAt), desc(jobRuns.id))
+				.limit(count)
+				.all();
+		},
+		recentAll(count) {
+			return db
+				.select()
+				.from(jobRuns)
 				.orderBy(desc(jobRuns.startedAt), desc(jobRuns.id))
 				.limit(count)
 				.all();

@@ -4,6 +4,7 @@ import type {
 	ClassChangeStore,
 	CourseStore,
 	HolidayStore,
+	StoredJobRunStore,
 	SourceHealthStore,
 	SubjectStore,
 	UnmatchedLessonStore,
@@ -18,6 +19,7 @@ export interface Services {
 	readonly academicCalendar: AcademicCalendarStore;
 	readonly holidays: HolidayStore;
 	readonly sourceHealth: SourceHealthStore;
+	readonly jobRuns: StoredJobRunStore;
 	readonly estimateHolidays: TimetableSources['estimateHolidays'];
 	/** 公開 URL の origin (ブックマークレットの戻り先に使う) */
 	readonly origin: string;

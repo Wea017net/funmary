@@ -27,6 +27,7 @@
 				({data.calendarYear} 年度は入力済み)
 			{/if}
 		</li>
+		<li><a href={resolve('/admin/status')}>取得元と実行履歴</a></li>
 	</ul>
 </div>
 

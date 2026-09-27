@@ -581,3 +581,64 @@ test.describe('学年暦の管理', () => {
 		await expect(terms.getByRole('row', { name: /^後期/ })).toContainText('推定');
 	});
 });
+
+test.describe('取得元と実行履歴', () => {
+	test.beforeAll(() => {
+		seedSubjects((database) => {
+			// 未来の時刻にして、実行履歴の先頭に出す
+			const started = Date.parse('2030-01-01T03:00:00Z');
+			database.sqlite
+				.prepare(
+					`INSERT OR REPLACE INTO source_status
+						(source, last_success_at, last_attempt_at, consecutive_failures, next_attempt_at, last_error)
+						VALUES ('portal', ?, ?, 3, ?, '架空のタイムアウト')`,
+				)
+				.run(started - 3_600_000, started, started + 3_600_000);
+			database.sqlite.prepare("DELETE FROM job_runs WHERE message = '架空のタイムアウト'").run();
+			database.sqlite
+				.prepare(
+					`INSERT INTO job_runs (job, started_at, finished_at, status, message)
+						VALUES ('scrape-portal', ?, ?, 'failed', '架空のタイムアウト')`,
+				)
+				.run(started, started + 2_000);
+		});
+	});
+
+	// 手元では DB が残るので、入れた行を消す (今日の画面の「まだ取得していません」のテストに響くため)
+	test.afterAll(() => {
+		seedSubjects((database) => {
+			database.sqlite.prepare("DELETE FROM source_status WHERE source = 'portal'").run();
+			database.sqlite.prepare("DELETE FROM job_runs WHERE message = '架空のタイムアウト'").run();
+		});
+	});
+
+	test('管理者は、取得元の状態と実行履歴を見られる', async ({ page }) => {
+		const email = 'e2e-admin@fun.ac.jp';
+		oidc.setIdentity({ sub: email, email, email_verified: true, hd: 'fun.ac.jp' });
+		await page.goto('/auth/google');
+		await page.goto('/admin');
+		await page.getByRole('link', { name: '取得元と実行履歴' }).click();
+
+		const portal = page
+			.getByRole('region', { name: '取得元の状態' })
+			.getByRole('listitem')
+			.filter({ hasText: '学生ポータル (休講など)' });
+		await expect(portal).toContainText('不調');
+		await expect(portal).toContainText('最終試行 2030-01-01 12:00');
+		await expect(portal).toContainText('架空のタイムアウト');
+
+		const first = page.getByRole('region', { name: '定期処理の実行履歴' }).getByRole('row').nth(1);
+		await expect(first).toContainText('2030-01-01 12:00');
+		await expect(first).toContainText('休講などの取得');
+		await expect(first).toContainText('失敗');
+		await expect(first).toContainText('2 秒');
+	});
+
+	test('管理者でなければ、見つからないことにする', async ({ page }) => {
+		const email = 'e2e-not-admin@fun.ac.jp';
+		oidc.setIdentity({ sub: email, email, email_verified: true, hd: 'fun.ac.jp' });
+		await page.goto('/auth/google');
+		const response = await page.goto('/admin/status');
+		expect(response?.status()).toBe(404);
+	});
+});

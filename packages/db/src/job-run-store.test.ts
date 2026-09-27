@@ -58,6 +58,15 @@ describe('createJobRunStore', () => {
 		expect(store.recent('b', 5)).toHaveLength(1);
 	});
 
+	it('すべてのタスクの記録を、新しい順に、指定した数だけ返す', () => {
+		const store = createJobRunStore(database);
+		store.recordSkipped('a', at('2026-10-01T00:00:00Z'), 'a1');
+		store.recordSkipped('b', at('2026-10-03T00:00:00Z'), 'b1');
+		store.recordSkipped('a', at('2026-10-02T00:00:00Z'), 'a2');
+		expect(store.recentAll(2).map((r) => r.message)).toEqual(['b1', 'a2']);
+		expect(store.recentAll(10)).toHaveLength(3);
+	});
+
 	it('残っている "running" は、プロセスが落ちた名残なので、起動時に失敗として閉じられる', () => {
 		const store = createJobRunStore(database);
 		const id = store.start('scrape-portal', at('2026-10-01T07:00:00Z'));

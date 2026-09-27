@@ -209,6 +209,7 @@ export const init: ServerInit = () => {
 		academicCalendar: createAcademicCalendarStore(database),
 		holidays: holidayStore,
 		sourceHealth: createSourceHealthStore(database),
+		jobRuns: jobRunStore,
 		estimateHolidays,
 		origin: publicOrigin,
 		alertAdmin: (alert) => alerter.send(alert),
