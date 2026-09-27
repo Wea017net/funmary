@@ -21,7 +21,10 @@ function resultPage(total: number, ids: string[]): string {
 		)
 		.join('');
 	return (
-		`<html><body><form><input type="hidden" name="__VIEWSTATE" value="vs-${ids.join('')}">` +
+		// 実物と同じく、__EVENTTARGET と __EVENTARGUMENT は空の hidden としてページにある
+		`<html><body><form><input type="hidden" name="__EVENTTARGET" value="">` +
+		`<input type="hidden" name="__EVENTARGUMENT" value="">` +
+		`<input type="hidden" name="__VIEWSTATE" value="vs-${ids.join('')}">` +
 		`<h3>検索結果(${total})</h3><table id="MainContent_GridView"><tbody>${rows}</tbody></table>` +
 		`<a href="javascript:__doPostBack('ctl00$MainContent$GridView','Page$2')">2</a></form></body></html>`
 	);
@@ -46,8 +49,9 @@ function fakeSyllabus(pages: Record<number, string>, options: { detailFails?: st
 		if (u.pathname === '/Lesson/SyllabusList' && call.method === 'GET')
 			return Promise.resolve(html(listHtml));
 		if (u.pathname === '/Lesson/SyllabusList' && call.method === 'POST') {
-			const target = call.body?.get('__EVENTARGUMENT');
-			const page = target ? Number(target.replace('Page$', '')) : 1;
+			// ASP.NET は、同じ名前の値が複数あると , でつないで読む。Page$N として読めなければ、1 ページ目を返す
+			const target = call.body?.getAll('__EVENTARGUMENT').join(',') ?? '';
+			const page = Number(/^Page\$(\d+)$/.exec(target)?.[1] ?? 1);
 			return Promise.resolve(html(pages[page] ?? resultPage(0, [])));
 		}
 		if (u.pathname === '/Lesson/Syllabus') {
@@ -91,8 +95,9 @@ describe('公開シラバスの取得', () => {
 		expect(posts).toHaveLength(2);
 		expect(posts[0]!.body!.get('ctl00$MainContent$param_Syllabus_year_eq')).toBe('2026');
 		expect(posts[0]!.body!.get('ctl00$MainContent$SearchButton')).toBe('検索の実行');
-		expect(posts[1]!.body!.get('__EVENTTARGET')).toBe('ctl00$MainContent$GridView');
-		expect(posts[1]!.body!.get('__EVENTARGUMENT')).toBe('Page$2');
+		// ページにある空の値と重ねて送ると、ASP.NET がページ送りと読めないので、1 つだけ送る
+		expect(posts[1]!.body!.getAll('__EVENTTARGET')).toEqual(['ctl00$MainContent$GridView']);
+		expect(posts[1]!.body!.getAll('__EVENTARGUMENT')).toEqual(['Page$2']);
 		expect(posts[1]!.body!.get('__VIEWSTATE')).toBe('vs-12');
 		expect(posts[1]!.body!.get('ctl00$MainContent$param_Syllabus_year_eq')).toBe('2026');
 	});
