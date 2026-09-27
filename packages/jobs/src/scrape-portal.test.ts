@@ -214,3 +214,105 @@ describe('ポータルの定期処理', () => {
 		expect(kinds.size).toBeGreaterThan(0);
 	});
 });
+
+describe('授業名と科目の照合', () => {
+	function withMatching(
+		options: { names?: string[]; latestYear?: number | null; resolved?: Map<string, number> } = {},
+		base: Parameters<typeof setup>[0] = {},
+	) {
+		const t = setup(base);
+		const assigned: [string, number][] = [];
+		const recorded: { year: number; names: readonly string[] }[] = [];
+		const order: string[] = [];
+		const matching: NonNullable<ScrapePortalDeps['matching']> = {
+			unassignedLessonNames: () => {
+				order.push('match');
+				return options.names ?? ['情報処理演習Ⅰ', '英語 I', '架空の知らない授業'];
+			},
+			assignSubject: (name, id) => {
+				assigned.push([name, id]);
+				return 1;
+			},
+			latestSubjectYear: () => (options.latestYear === undefined ? 2026 : options.latestYear),
+			subjects: () => [
+				{ id: 10, name: '情報処理演習Ⅰ' },
+				{ id: 11, name: '英語 I' },
+			],
+			resolvedNames: () => options.resolved ?? new Map(),
+			recordUnmatched: (year, names) => {
+				recorded.push({ year, names });
+				return names.length;
+			},
+		};
+		const onEvents = t.deps.onEvents;
+		const job = createScrapePortalJob({
+			...t.deps,
+			matching,
+			onEvents: (events) => {
+				order.push('events');
+				return onEvents?.(events);
+			},
+		});
+		return { ...t, job, assigned, recorded, order };
+	}
+
+	it('科目が決まっていない授業名を照合して科目を入れ、照合できなかった名前を記録して知らせる', async () => {
+		const t = withMatching();
+		const message = await t.job.run(t.context);
+		expect(t.assigned).toEqual([
+			['情報処理演習Ⅰ', 10],
+			['英語 I', 11],
+		]);
+		expect(t.recorded).toEqual([{ year: 2026, names: ['架空の知らない授業'] }]);
+		expect(t.alerts).toContainEqual(
+			expect.objectContaining({
+				severity: 'warn',
+				title: '休講などの授業名を、科目と照合できませんでした',
+				message: expect.stringContaining('架空の知らない授業') as string,
+			}),
+		);
+		expect(message).toContain('科目と照合できなかった授業名 1 件');
+	});
+
+	it('通知の仕組みに渡す前に照合する (科目で送り先を決められるように)', async () => {
+		const t = withMatching();
+		await t.job.run(t.context);
+		expect(t.order).toEqual(['match', 'events']);
+	});
+
+	it('既に記録した名前だけなら、管理者には知らせない', async () => {
+		const t = withMatching();
+		t.job = createScrapePortalJob({
+			...t.deps,
+			matching: {
+				unassignedLessonNames: () => ['架空の知らない授業'],
+				assignSubject: () => 0,
+				latestSubjectYear: () => 2026,
+				subjects: () => [{ id: 10, name: '情報処理演習Ⅰ' }],
+				resolvedNames: () => new Map(),
+				recordUnmatched: () => 0,
+			},
+		});
+		await t.job.run(t.context);
+		expect(t.alerts).toEqual([]);
+	});
+
+	it('前回と同じ内容でも照合する (あとから取り込んだ科目や、管理者の紐付けを反映するため)', async () => {
+		const first = setup();
+		await first.job.run(first.context);
+		const t = withMatching(
+			{ names: ['架空の別名'], resolved: new Map([['架空の別名', 11]]) },
+			{ health: { ...first.health(), nextAttemptAt: null } },
+		);
+		const message = await t.job.run(t.context);
+		expect(message).toContain('前回と同じ');
+		expect(t.assigned).toEqual([['架空の別名', 11]]);
+	});
+
+	it('科目をまだ取り込んでいなければ、照合しない', async () => {
+		const t = withMatching({ latestYear: null });
+		await t.job.run(t.context);
+		expect(t.assigned).toEqual([]);
+		expect(t.recorded).toEqual([]);
+	});
+});

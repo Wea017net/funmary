@@ -1,6 +1,6 @@
 // 科目と照合できなかった授業名の記録 (設計書 11 章)。管理者が確かめて、手で科目に紐付ける。
 // 同じ名前は年度ごとに 1 行にまとめ、最初に見た時刻と、最後に見た時刻を残す。
-import { and, asc, eq, isNull } from 'drizzle-orm';
+import { and, asc, eq, isNotNull, isNull } from 'drizzle-orm';
 import type { Database } from './database.ts';
 import { unmatchedLessons } from './schema.ts';
 
@@ -15,6 +15,8 @@ export interface UnmatchedLessonStore {
 	record(academicYear: number, lessonNames: readonly string[], now: Date): number;
 	/** まだ科目に紐付けていないものを、名前の順に返す */
 	listUnresolved(academicYear: number): UnmatchedLesson[];
+	/** 管理者が科目に紐付けた名前と、その科目の ID */
+	resolvedNames(academicYear: number): Map<string, number>;
 }
 
 export function createUnmatchedLessonStore(database: Database): UnmatchedLessonStore {
@@ -63,6 +65,25 @@ export function createUnmatchedLessonStore(database: Database): UnmatchedLessonS
 				)
 				.orderBy(asc(unmatchedLessons.lessonName))
 				.all();
+		},
+
+		resolvedNames(academicYear) {
+			const rows = db
+				.select({
+					lessonName: unmatchedLessons.lessonName,
+					subjectId: unmatchedLessons.resolvedSubjectId,
+				})
+				.from(unmatchedLessons)
+				.where(
+					and(
+						eq(unmatchedLessons.academicYear, academicYear),
+						isNotNull(unmatchedLessons.resolvedSubjectId),
+					),
+				)
+				.all();
+			return new Map(
+				rows.flatMap((row) => (row.subjectId === null ? [] : [[row.lessonName, row.subjectId]])),
+			);
 		},
 	};
 }

@@ -51,6 +51,8 @@ export {
 	SIMILARITY_MARGIN,
 	SIMILARITY_THRESHOLD,
 	matchLessonName,
+	matchLessonNames,
+	type LessonNamesMatch,
 	type MatchResult,
 	type SubjectName,
 } from './lesson-matching.ts';

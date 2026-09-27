@@ -15,6 +15,7 @@ import {
 	createCourseStore,
 	createSourceHealthStore,
 	createSubjectStore,
+	createUnmatchedLessonStore,
 	createJobRunStore,
 	openDatabase,
 	type AuthStore,
@@ -116,6 +117,7 @@ export const init: ServerInit = () => {
 	const heartbeatUrl = result.config.heartbeatUrl;
 	if (portal) {
 		const healthStore = createSourceHealthStore(database);
+		const unmatchedStore = createUnmatchedLessonStore(database);
 		jobs.push(
 			createScrapePortalJob({
 				fetchPage: (lastAttemptAt) =>
@@ -128,6 +130,16 @@ export const init: ServerInit = () => {
 				disabledSources: result.config.sourcesDisabled,
 				health: healthStore,
 				changes: changeStore,
+				matching: {
+					unassignedLessonNames: () => changeStore.unassignedLessonNames(),
+					assignSubject: (lessonName, subjectId) =>
+						changeStore.assignSubject(lessonName, subjectId),
+					latestSubjectYear: () => subjectStore.latestYear(),
+					subjects: (academicYear) => subjectStore.list(academicYear),
+					resolvedNames: (academicYear) => unmatchedStore.resolvedNames(academicYear),
+					recordUnmatched: (academicYear, names, now) =>
+						unmatchedStore.record(academicYear, names, now),
+				},
 				alert: (alert) => alerter.send(alert),
 				// 取得のたびに、監視サービスに知らせる。決まった時刻に届かなければ、監視サービスが知らせる
 				...(heartbeatUrl && {

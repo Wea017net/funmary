@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { openDatabase, type Database } from './database.ts';
+import { createSubjectStore } from './subject-store.ts';
 import { createUnmatchedLessonStore } from './unmatched-lesson-store.ts';
 
 let dir: string;
@@ -52,5 +53,34 @@ describe('UnmatchedLessonStore', () => {
 			.run();
 		database.sqlite.prepare('UPDATE unmatched_lessons SET resolved_subject_id = 1').run();
 		expect(store.listUnresolved(2026)).toEqual([]);
+	});
+});
+
+describe('resolvedNames', () => {
+	it('管理者が科目に紐付けた名前と科目の ID を、年度ごとに返す', () => {
+		const subjectId = createSubjectStore(database).upsert(
+			{
+				academicYear: 2026,
+				syllabusId: '100001',
+				name: '架空の科目',
+				teacher: null,
+				credits: 2,
+				term: 'fall',
+				attributes: {},
+				syllabus: {},
+				syllabusUrl: null,
+			},
+			new Date(0),
+		);
+		const store = createUnmatchedLessonStore(database);
+		store.record(2026, ['架空の科目 (再)', '未解決の名前'], new Date(0));
+		store.record(2025, ['架空の科目 (再)'], new Date(0));
+		database.sqlite
+			.prepare(
+				"UPDATE unmatched_lessons SET resolved_subject_id = ? WHERE lesson_name = '架空の科目 (再)'",
+			)
+			.run(subjectId);
+		expect(store.resolvedNames(2026)).toEqual(new Map([['架空の科目 (再)', subjectId]]));
+		expect(store.resolvedNames(2024)).toEqual(new Map());
 	});
 });
