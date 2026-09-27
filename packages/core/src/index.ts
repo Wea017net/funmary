@@ -52,6 +52,7 @@ export {
 	SIMILARITY_THRESHOLD,
 	matchLessonName,
 	matchLessonNames,
+	rankCandidates,
 	type LessonNamesMatch,
 	type MatchResult,
 	type SubjectName,

@@ -94,6 +94,7 @@ export const init: ServerInit = () => {
 	});
 	const jobs: JobDefinition[] = [];
 	const changeStore = createClassChangeStore(database);
+	const unmatchedStore = createUnmatchedLessonStore(database);
 	// 公開シラバスは、ログインが要らないので、ポータルのアカウントがなくても動かす
 	const subjectStore = createSubjectStore(database);
 	jobs.push(
@@ -117,7 +118,6 @@ export const init: ServerInit = () => {
 	const heartbeatUrl = result.config.heartbeatUrl;
 	if (portal) {
 		const healthStore = createSourceHealthStore(database);
-		const unmatchedStore = createUnmatchedLessonStore(database);
 		jobs.push(
 			createScrapePortalJob({
 				fetchPage: (lastAttemptAt) =>
@@ -181,6 +181,7 @@ export const init: ServerInit = () => {
 		courses: createCourseStore(database),
 		subjects: subjectStore,
 		classChanges: changeStore,
+		unmatchedLessons: unmatchedStore,
 		origin: publicOrigin,
 		alertAdmin: (alert) => alerter.send(alert),
 	});
