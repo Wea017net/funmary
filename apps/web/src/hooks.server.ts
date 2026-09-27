@@ -13,6 +13,7 @@ import {
 	createAuthStore,
 	createClassChangeStore,
 	createCourseStore,
+	createHolidayStore,
 	createSourceHealthStore,
 	createSubjectStore,
 	createUnmatchedLessonStore,
@@ -23,11 +24,17 @@ import {
 import {
 	createImportSyllabusJob,
 	createJobRunner,
+	createImportHolidaysJob,
 	createRemindTimetableImportJob,
 	createScrapePortalJob,
 	type JobDefinition,
 } from '@funmary/jobs';
-import { fetchPortalPage, fetchSyllabusCatalog } from '@funmary/sources';
+import {
+	bundledHolidays,
+	fetchHolidays,
+	fetchPortalPage,
+	fetchSyllabusCatalog,
+} from '@funmary/sources';
 import { createAdminAlerter } from '@funmary/notify';
 import { createLogger, type Logger } from '@funmary/log';
 import { parseConfig } from '$lib/server/config.ts';
@@ -114,6 +121,20 @@ export const init: ServerInit = () => {
 	);
 	// 授業時間割の PDF を取り込む時期 (3 月 31 日と 8 月 31 日) を、管理用の Discord に知らせる
 	jobs.push(createRemindTimetableImportJob({ alert: (alert) => alerter.send(alert) }));
+	// 祝日は、最初は同梱の CSV を入れておき、週に 1 回、内閣府の CSV で入れ替える
+	const holidayStore = createHolidayStore(database);
+	if (holidayStore.seedBundled(bundledHolidays())) {
+		logger.withTag('app').info('同梱の祝日を入れました');
+	}
+	jobs.push(
+		createImportHolidaysJob({
+			fetchHolidays: () => fetchHolidays({ fetch: (url, init) => fetch(url, init) }),
+			disabledSources: result.config.sourcesDisabled,
+			health: createSourceHealthStore(database),
+			holidays: holidayStore,
+			alert: (alert) => alerter.send(alert),
+		}),
+	);
 	const portal = result.config.portal;
 	const heartbeatUrl = result.config.heartbeatUrl;
 	if (portal) {

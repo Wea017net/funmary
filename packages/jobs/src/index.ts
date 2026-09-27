@@ -19,3 +19,8 @@ export {
 	createRemindTimetableImportJob,
 	type RemindTimetableImportDeps,
 } from './remind-timetable-import.ts';
+export {
+	HOLIDAYS_SOURCE,
+	createImportHolidaysJob,
+	type ImportHolidaysDeps,
+} from './import-holidays.ts';
