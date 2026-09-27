@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { expandTimetable, type TimetableInput } from './timetable.ts';
+import { expandTimetable, isTerm, TERMS, type TimetableInput } from './timetable.ts';
 
 // 2026 年度の前期。2026-04-06 は月曜
 const spring = { term: 'spring', start: '2026-04-06', end: '2026-08-07' } as const;
@@ -234,5 +234,13 @@ describe('expandTimetable', () => {
 			}),
 		);
 		expect(lessons).toEqual(expandTimetable(input()));
+	});
+});
+
+describe('isTerm', () => {
+	it('学期の一覧にある値だけを学期とみなす', () => {
+		for (const term of TERMS) expect(isTerm(term)).toBe(true);
+		expect(isTerm('autumn')).toBe(false);
+		expect(isTerm('')).toBe(false);
 	});
 });

@@ -12,6 +12,26 @@ export type Term =
 	| 'summer-intensive'
 	| 'winter-intensive';
 
+/** 学期の一覧。画面や入力の選択肢の順 */
+export const TERMS: readonly Term[] = [
+	'full-year',
+	'spring',
+	'fall',
+	'q1',
+	'q2',
+	'q3',
+	'q4',
+	'summer-intensive',
+	'winter-intensive',
+];
+
+const TERM_SET: ReadonlySet<string> = new Set(TERMS);
+
+/** DB や入力から来た文字列が、学期として知っている値か */
+export function isTerm(value: string): value is Term {
+	return TERM_SET.has(value);
+}
+
 /** ある年度の、1 つの学期の期間 (両端を含む) */
 export interface TermPeriod {
 	readonly term: Term;

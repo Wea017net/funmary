@@ -3,13 +3,13 @@
 import {
 	academicYearOf,
 	expandTimetable,
+	isTerm,
 	resolveAcademicTerms,
 	resolveHolidays,
 	type CalendarDate,
 	type ClassChange,
 	type Registration,
 	type Slot,
-	type Term,
 	type Weekday,
 } from '@funmary/core';
 import type {
@@ -57,19 +57,6 @@ export interface UserTimetable {
 	readonly usesEstimatedTerms: boolean;
 }
 
-const TERMS: ReadonlySet<string> = new Set<Term>([
-	'full-year',
-	'spring',
-	'fall',
-	'q1',
-	'q2',
-	'q3',
-	'q4',
-	'summer-intensive',
-	'winter-intensive',
-]);
-
-const isTerm = (value: string): value is Term => TERMS.has(value);
 const isWeekday = (value: number): value is Weekday =>
 	Number.isInteger(value) && value >= 1 && value <= 7;
 

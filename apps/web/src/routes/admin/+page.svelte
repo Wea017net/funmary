@@ -1,7 +1,10 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
 
-	let { data }: { data: { unresolvedLessons: number } } = $props();
+	let {
+		data,
+	}: { data: { unresolvedLessons: number; calendarYear: number; estimatedTerms: number } } =
+		$props();
 </script>
 
 <svelte:head>
@@ -15,6 +18,14 @@
 		<li>
 			<a href={resolve('/admin/lessons')}>照合できなかった授業名</a>
 			({data.unresolvedLessons} 件)
+		</li>
+		<li>
+			<a href={resolve('/admin/calendar')}>学年暦</a>
+			{#if data.estimatedTerms > 0}
+				({data.calendarYear} 年度の前期と後期のうち {data.estimatedTerms} つが推定のままです)
+			{:else}
+				({data.calendarYear} 年度は入力済み)
+			{/if}
 		</li>
 	</ul>
 </div>

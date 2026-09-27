@@ -32,7 +32,9 @@ export {
 	type SourceHealth,
 } from './source-health.ts';
 export {
+	TERMS,
 	expandTimetable,
+	isTerm,
 	type ClassChange,
 	type Lesson,
 	type LessonStatus,

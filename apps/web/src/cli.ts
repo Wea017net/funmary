@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { defineCommand, runMain } from 'citty';
 import {
 	backupDatabase,
+	createAcademicCalendarStore,
 	createCourseStore,
 	createSubjectStore,
 	createUnmatchedLessonStore,
@@ -14,6 +15,8 @@ import {
 } from '@funmary/db';
 // 入口 (@funmary/sources) からだと、取得の部品と依存まで cli.js にまとまるので、PDF の読み取りだけを読み込む
 import { parseTimetablePdf } from '@funmary/sources/timetable-pdf';
+import { academicYearOf, jstDateTime, resolveAcademicTerms } from '@funmary/core';
+import { formatCalendarReport } from './lib/server/calendar-report.ts';
 import { parseConfig, type Config } from './lib/server/config.ts';
 import { fillSecrets, generateSecrets } from './lib/server/env-file.ts';
 import { findMigrationsFolder } from './lib/server/migrations-path.ts';
@@ -275,9 +278,51 @@ const timetable = defineCommand({
 	subCommands: { import: timetableImport },
 });
 
+const calendarShow = defineCommand({
+	meta: {
+		name: 'show',
+		description: '学期の期間 (値の出どころ付き)、振替授業日、全学の休講日を表示する',
+	},
+	args: {
+		year: { type: 'string', description: '年度。省くと今日の年度' },
+	},
+	run({ args }) {
+		const academicYear =
+			args.year === undefined ? academicYearOf(jstDateTime(new Date()).date) : Number(args.year);
+		if (!Number.isInteger(academicYear)) {
+			console.error(`年度は数字で指定してください: ${args.year}`);
+			process.exit(1);
+		}
+		const config = loadConfigOrExit();
+		const database = openDatabase(join(config.dataDir, 'funmary.db'), {
+			backupDir: join(config.dataDir, 'backups'),
+			...(bundledMigrations && { migrationsFolder: bundledMigrations }),
+		});
+		try {
+			const calendar = createAcademicCalendarStore(database);
+			const start = `${academicYear}-04-01`;
+			const end = `${academicYear + 1}-03-31`;
+			const lines = formatCalendarReport({
+				academicYear,
+				terms: resolveAcademicTerms(academicYear, calendar.listTerms(academicYear)),
+				substituteDays: calendar.listSubstituteDays(start, end),
+				noClassDays: calendar.listNoClassDays(start, end),
+			});
+			for (const line of lines) console.log(line);
+		} finally {
+			database.close();
+		}
+	},
+});
+
+const calendar = defineCommand({
+	meta: { name: 'calendar', description: '学年暦 (学期の期間、振替授業日、全学の休講日) を扱う' },
+	subCommands: { show: calendarShow },
+});
+
 const main = defineCommand({
 	meta: { name: 'funmary-admin', description: 'Funmary の管理用コマンド' },
-	subCommands: { init, migrate, backup, restore, timetable },
+	subCommands: { init, migrate, backup, restore, timetable, calendar },
 });
 
 await runMain(main);
