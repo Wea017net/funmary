@@ -453,3 +453,92 @@ test.describe('今日と週の時間割', () => {
 		await expect(page).toHaveURL('/week');
 	});
 });
+
+test.describe('学年暦の管理', () => {
+	test.beforeAll(() => {
+		// 手元では DB が残るので、前回入れた学年暦を消しておく
+		seedSubjects((database) => {
+			database.sqlite.prepare('DELETE FROM academic_terms WHERE academic_year = 2026').run();
+			database.sqlite
+				.prepare("DELETE FROM academic_days WHERE date BETWEEN '2026-04-01' AND '2027-03-31'")
+				.run();
+		});
+	});
+
+	const loginAsAdmin = async (page: import('@playwright/test').Page) => {
+		const email = 'e2e-admin@fun.ac.jp';
+		oidc.setIdentity({ sub: email, email, email_verified: true, hd: 'fun.ac.jp' });
+		await page.goto('/auth/google');
+		await expect(page).toHaveURL('/');
+	};
+
+	test('管理者でなければ、学年暦の画面は見つからないことにする', async ({ page }) => {
+		const email = 'e2e-not-admin@fun.ac.jp';
+		oidc.setIdentity({ sub: email, email, email_verified: true, hd: 'fun.ac.jp' });
+		await page.goto('/auth/google');
+		const response = await page.goto('/admin/calendar');
+		expect(response?.status()).toBe(404);
+	});
+
+	test('学期の期間、振替授業日、全学の休講日を入れて消せる。入れた値は時間割に使われる', async ({
+		page,
+	}) => {
+		await loginAsAdmin(page);
+		await page.goto('/admin');
+		await expect(page.getByText('推定のままです')).toBeVisible();
+		await page.goto('/admin/calendar?year=2026');
+		await expect(page.getByRole('heading', { level: 1 })).toHaveText('2026 年度の学年暦');
+
+		const terms = page.getByRole('region', { name: '学期の期間' });
+		await expect(terms.getByRole('row', { name: /^後期/ })).toContainText('推定');
+
+		// 始まりが終わりより後なら、理由を出して保存しない
+		await terms.getByLabel('学期').selectOption('後期');
+		await terms.getByLabel('始まりの日').fill('2027-01-22');
+		await terms.getByLabel('終わりの日 (最後の授業日)').fill('2027-01-21');
+		await terms.getByRole('button', { name: '学期の期間を保存する' }).click();
+		await expect(page.getByRole('alert')).toHaveText(
+			'始まりの日は、終わりの日より前にしてください',
+		);
+
+		await terms.getByLabel('始まりの日').fill('2026-09-24');
+		await terms.getByRole('button', { name: '学期の期間を保存する' }).click();
+		await expect(page.getByRole('status')).toHaveText('学期の期間を保存しました。');
+		const fall = terms.getByRole('row', { name: /^後期/ });
+		await expect(fall).toContainText('2026-09-24 から 2027-01-21');
+		await expect(fall).toContainText('手入力');
+		await expect(terms.getByRole('row', { name: /^3Q/ })).toContainText('後期と同じ期間');
+
+		const substitute = page.getByRole('region', { name: '振替授業日' });
+		await substitute.getByLabel('日付').fill('2026-10-14');
+		await substitute.getByLabel('行う授業の曜日').selectOption('月曜');
+		await substitute.getByRole('button', { name: '振替授業日を保存する' }).click();
+		await expect(page.getByRole('status')).toHaveText('振替授業日を保存しました。');
+		await expect(substitute.getByRole('listitem')).toHaveText(/10\/14 \(水\) は 月曜の授業/);
+
+		const noClass = page.getByRole('region', { name: '全学の休講日' });
+		await noClass.getByLabel('日付').fill('2026-10-16');
+		await noClass.getByLabel('行事名 (任意)').fill('架空の行事');
+		await noClass.getByRole('button', { name: '全学の休講日を保存する' }).click();
+		await expect(page.getByRole('status')).toHaveText('全学の休講日を保存しました。');
+		await expect(noClass.getByRole('listitem')).toContainText('10/16 (金) (架空の行事)');
+
+		// 週の時間割の日付の横に出る
+		await page.goto('/week?date=2026-10-12');
+		const headers = page.getByRole('table').getByRole('columnheader');
+		await expect(headers.filter({ hasText: '10/14 (水)' })).toContainText('月曜の授業を行う日');
+		await expect(headers.filter({ hasText: '10/16 (金)' })).toContainText(
+			'全学の休講日 (架空の行事)',
+		);
+
+		await page.goto('/admin/calendar?year=2026');
+		await noClass.getByRole('button', { name: /^消す/ }).click();
+		await expect(page.getByRole('status')).toHaveText('全学の休講日を消しました。');
+		await expect(noClass.getByText('ありません。')).toBeVisible();
+		await substitute.getByRole('button', { name: /^消す/ }).click();
+		await expect(page.getByRole('status')).toHaveText('振替授業日を消しました。');
+		await terms.getByRole('row', { name: /^後期/ }).getByRole('button', { name: /^消す/ }).click();
+		await expect(page.getByRole('status')).toContainText('学期の期間を消しました。');
+		await expect(terms.getByRole('row', { name: /^後期/ })).toContainText('推定');
+	});
+});
