@@ -35,7 +35,7 @@ function removeOldName(text: string): string {
 
 /** 末尾の番号 (I、II、III、数字など)。"線形代数 I" と "線形代数 II" は別の科目なので、類似度で取り違えないために使う */
 function trailingNumber(text: string): string | undefined {
-	return /(?:^|[^A-Za-z])([IVX]{1,4}|d+)s*$/.exec(text.normalize('NFKC'))?.[1];
+	return /(?:^|[^A-Za-z])([IVX]{1,4}|\d+)\s*$/.exec(text.normalize('NFKC'))?.[1];
 }
 
 /** 文字の 2 つ組 (bigram) の集合の Dice 係数。0 から 1 */
