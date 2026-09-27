@@ -34,8 +34,8 @@
     "fix-unnatural-line-breaks": {
       "source": "otnc/skills_fix-unnatural-line-breaks",
       "sourceType": "github",
-      "skillPath": "SKILL.md",
-      "computedHash": "4ba2572c42709241d1cfc29af898924ea075f7a10c53af522179fdcab4e1f14f"
+      "skillPath": "skills/fix-unnatural-line-breaks/SKILL.md",
+      "computedHash": "f968f49f5b784d9bd6517434b7a7ed630473642c13bbd78b40cc07a609668325"
     },
     "hono": {
       "source": "honojs/skills",
@@ -120,6 +120,18 @@
       "sourceType": "github",
       "skillPath": "skills/engineering/tdd/SKILL.md",
       "computedHash": "e753a5da75292bbe59d302d89566bc2c53d0e73944da2f0e944a7578883c07d0"
+    },
+    "token-saver-claude-code": {
+      "source": "otnc/skills_ai-agent-saving-tech",
+      "sourceType": "github",
+      "skillPath": "skills/token-saver-claude-code/SKILL.md",
+      "computedHash": "97db5a13c30a7807a8284922730247bae15d4f043e7ef998777f60d2d1daa15d"
+    },
+    "token-saver-codex": {
+      "source": "otnc/skills_ai-agent-saving-tech",
+      "sourceType": "github",
+      "skillPath": "skills/token-saver-codex/SKILL.md",
+      "computedHash": "454f813fd34085b3645131fc5605431b60171db737daffa6269df3318170188d"
     },
     "typescript-design": {
       "source": "fa0311/typescript-design-skill",
