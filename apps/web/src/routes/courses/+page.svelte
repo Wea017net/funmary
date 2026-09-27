@@ -64,7 +64,9 @@
 				<ul class="subjects">
 					{#each data.registered as subject (subject.id)}
 						<li>
-							<h3>{subject.name}</h3>
+							<h3>
+								<a href={resolve('/subjects/[id]', { id: String(subject.id) })}>{subject.name}</a>
+							</h3>
 							<p class="meta">
 								{formatTerm(subject.term)}{#if subject.teacher}、{subject.teacher}{/if}
 							</p>
@@ -138,7 +140,9 @@
 					<ul class="subjects">
 						{#each data.results as subject (subject.id)}
 							<li>
-								<h3>{subject.name}</h3>
+								<h3>
+									<a href={resolve('/subjects/[id]', { id: String(subject.id) })}>{subject.name}</a>
+								</h3>
 								<p class="meta">
 									{formatTerm(subject.term)}{#if subject.teacher}、{subject.teacher}{/if}
 								</p>

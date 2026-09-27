@@ -184,13 +184,16 @@ test.describe('履修科目の登録', () => {
 				syllabus: {},
 				syllabusUrl: null,
 			};
-			subjects.upsert(
+			const exerciseId = subjects.upsert(
 				{
 					...base,
 					syllabusId: '900001',
 					name: '架空の演習Ⅱ1-AB',
 					teacher: '架空 一郎',
 					term: 'fall',
+					attributes: { 配当年次: '2年' },
+					syllabus: { 授業の概要: '架空の演習の概要です。' },
+					syllabusUrl: 'https://syllabus.example.com/900001',
 				},
 				new Date(),
 			);
@@ -198,6 +201,15 @@ test.describe('履修科目の登録', () => {
 				{ ...base, syllabusId: '900002', name: '架空の講義', teacher: null, term: 'q3' },
 				new Date(),
 			);
+			// 前回の実行で足した枠を消し、休講を 1 件入れておく (科目との照合は、済んだものとして入れる)
+			database.sqlite.prepare('DELETE FROM timetable_slots WHERE subject_id = ?').run(exerciseId);
+			database.sqlite
+				.prepare(
+					`INSERT OR IGNORE INTO class_changes
+						(kind, subject_id, lesson_name, date, period, makeup_plan, first_seen_at, last_seen_at)
+						VALUES ('cancellation', ?, '架空の演習Ⅱ1-AB', '2026-10-06', 3, 'planned', 0, 0)`,
+				)
+				.run(exerciseId);
 		} finally {
 			database.close();
 		}
@@ -242,8 +254,30 @@ test.describe('履修科目の登録', () => {
 		await expect(page.getByRole('status')).toHaveText('曜日と時限を登録しました。');
 		await expect(registered).toContainText('火曜 3 限、363');
 
+		// 授業の詳細
+		await registered.getByRole('link', { name: '架空の演習Ⅱ1-AB' }).click();
+		await expect(page.getByRole('heading', { level: 1 })).toHaveText('架空の演習Ⅱ1-AB');
+		await expect(page.getByText('2026 年度 後期')).toBeVisible();
+		await expect(page.getByText('火曜 3 限、363')).toBeVisible();
+		const changes = page.getByRole('region', { name: '休講、補講、教室変更' });
+		await expect(changes).toContainText('休講 2026-10-06 3 限、補講あり');
+		await expect(page.getByText('架空の演習の概要です。')).toBeVisible();
+		await expect(page.getByRole('link', { name: 'シラバスの原文 (大学のサイト)' })).toHaveAttribute(
+			'href',
+			'https://syllabus.example.com/900001',
+		);
+		await page.getByRole('link', { name: '履修科目' }).click();
+
 		await registered.getByRole('button', { name: '登録を取り消す' }).click();
 		await expect(page.getByRole('status')).toHaveText('架空の演習Ⅱ1-AB の登録を取り消しました。');
 		await expect(page.getByText('まだ登録していません')).toBeVisible();
+	});
+
+	test('ない科目の詳細は、見つからないと出す', async ({ page }) => {
+		await loginAs(page);
+		for (const id of ['999999999', 'abc']) {
+			const response = await page.goto(`/subjects/${id}`);
+			expect(response?.status()).toBe(404);
+		}
 	});
 });
