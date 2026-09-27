@@ -50,7 +50,9 @@ const stored = (
 describe('resolveAcademicTerms', () => {
 	it('何も保存されていなければ、前期と後期を推定で返し、推定と分かるようにする', () => {
 		const result = resolveAcademicTerms(2026, []);
-		expect(result.map((t) => [t.term, t.source])).toEqual([
+		expect(
+			result.filter((t) => t.term === 'spring' || t.term === 'fall').map((t) => [t.term, t.source]),
+		).toEqual([
 			['spring', 'estimated'],
 			['fall', 'estimated'],
 		]);
@@ -84,17 +86,46 @@ describe('resolveAcademicTerms', () => {
 		});
 	});
 
-	it('1Q から 4Q や集中講義は、保存されていれば返し、なければ推定しない', () => {
-		expect(resolveAcademicTerms(2026, []).map((t) => t.term)).toEqual(['spring', 'fall']);
-		const result = resolveAcademicTerms(2026, [stored('q1', '2026-04-06', '2026-06-05', 'manual')]);
-		expect(result.map((t) => t.term)).toEqual(['spring', 'q1', 'fall']);
-		expect(result.find((t) => t.term === 'q1')?.source).toBe('manual');
+	it('1Q と 2Q の期間がなければ前期の期間を、3Q と 4Q の期間がなければ後期の期間を、推定として使う (作者の判断)', () => {
+		const result = resolveAcademicTerms(2026, [
+			stored('fall', '2026-09-24', '2027-01-21', 'manual'),
+		]);
+		expect(result.map((t) => [t.term, t.start, t.end, t.source])).toEqual([
+			['spring', '2026-04-06', '2026-07-24', 'estimated'],
+			['q1', '2026-04-06', '2026-07-24', 'estimated'],
+			['q2', '2026-04-06', '2026-07-24', 'estimated'],
+			// 後期が手入力なら、3Q と 4Q は、その手入力の期間を使う
+			['fall', '2026-09-24', '2027-01-21', 'manual'],
+			['q3', '2026-09-24', '2027-01-21', 'estimated'],
+			['q4', '2026-09-24', '2027-01-21', 'estimated'],
+		]);
 	});
 
-	it('開始日の順に並べる', () => {
+	it('クォーターの期間が保存されていれば、そちらを使う', () => {
+		const result = resolveAcademicTerms(2026, [stored('q1', '2026-04-06', '2026-06-05', 'manual')]);
+		expect(result.find((t) => t.term === 'q1')).toMatchObject({
+			end: '2026-06-05',
+			source: 'manual',
+		});
+		expect(result.find((t) => t.term === 'q2')).toMatchObject({
+			end: '2026-07-24',
+			source: 'estimated',
+		});
+	});
+
+	it('集中講義は、保存されていれば返し、なければ推定しない。開始日の順に並べる', () => {
+		expect(resolveAcademicTerms(2026, []).map((t) => t.term)).not.toContain('summer-intensive');
 		const result = resolveAcademicTerms(2026, [
 			stored('summer-intensive', '2026-08-17', '2026-08-28', 'manual'),
 		]);
-		expect(result.map((t) => t.term)).toEqual(['spring', 'summer-intensive', 'fall']);
+		expect(result.map((t) => t.term)).toEqual([
+			'spring',
+			'q1',
+			'q2',
+			'summer-intensive',
+			'fall',
+			'q3',
+			'q4',
+		]);
 	});
 });
