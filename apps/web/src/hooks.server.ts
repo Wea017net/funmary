@@ -12,6 +12,7 @@ import {
 	checkHealth,
 	createAuthStore,
 	createClassChangeStore,
+	createCourseStore,
 	createSourceHealthStore,
 	createSubjectStore,
 	createJobRunStore,
@@ -30,6 +31,7 @@ import { createAdminAlerter } from '@funmary/notify';
 import { createLogger, type Logger } from '@funmary/log';
 import { parseConfig } from '$lib/server/config.ts';
 import { findMigrationsFolder } from '$lib/server/migrations-path.ts';
+import { setServices } from '$lib/server/services.ts';
 
 /** Hono に渡すパス。これ自身か、この下のパスが対象になる */
 const API_PATHS = ['/api', '/auth', '/cal', '/feed', '/healthz', '/mcp', '/signup'];
@@ -163,6 +165,12 @@ export const init: ServerInit = () => {
 	});
 
 	publicOrigin = result.config.origin ?? DEV_ORIGIN;
+	setServices({
+		courses: createCourseStore(database),
+		subjects: subjectStore,
+		origin: publicOrigin,
+		alertAdmin: (alert) => alerter.send(alert),
+	});
 	const store = createAuthStore(database);
 	authStore = store;
 	const authService: AuthService = createAuthService({

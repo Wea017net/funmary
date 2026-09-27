@@ -1,0 +1,166 @@
+// 履修登録と、科目ごとの時間割の枠 (曜日、時限、教室) の保存。
+// 枠は、大学から自動では取れないので、利用者どうしで登録して、同じ科目を取る全員で共有する。
+// 既にある枠は上書きしない。教室が食い違えば、食い違いとして返し、管理者が確かめて直す。
+import { and, asc, eq } from 'drizzle-orm';
+import type { Database } from './database.ts';
+import { courseRegistrations, subjects, timetableSlots } from './schema.ts';
+
+/** 利用者のポータルの時間割から読んだ、1 つのコマ (検査を通ったもの) */
+export interface PortalCell {
+	readonly lessonId: string;
+	readonly year: number;
+	readonly weekday: number | null;
+	readonly period: number | null;
+	readonly room: string | null;
+	readonly hopeUrl: string | null;
+}
+
+export interface SlotConflict {
+	readonly subjectId: number;
+	readonly weekday: number;
+	readonly period: number;
+	readonly existingRoom: string | null;
+	readonly importedRoom: string | null;
+}
+
+export interface ImportResult {
+	/** 新しく履修登録した科目の数 */
+	readonly registered: number;
+	readonly slotsAdded: number;
+	/** 空だった教室を埋めた枠の数 */
+	readonly slotsUpdated: number;
+	/** まだ取り込んでいない科目 (公開シラバスにない、または取り込み前) */
+	readonly unknown: readonly { lessonId: string; year: number }[];
+	readonly conflicts: readonly SlotConflict[];
+}
+
+export interface StoredSlot {
+	readonly weekday: number;
+	readonly period: number;
+	readonly room: string | null;
+	readonly source: 'portal' | 'manual' | 'pdf' | 'admin';
+	readonly createdBy: string | null;
+}
+
+export interface CourseStore {
+	importFromPortal(userId: string, cells: readonly PortalCell[], now: Date): ImportResult;
+	listRegistrations(userId: string): { subjectId: number; hopeCourseUrl: string | null }[];
+	slotsOf(subjectId: number): StoredSlot[];
+}
+
+export function createCourseStore(database: Database): CourseStore {
+	const { db, sqlite } = database;
+	return {
+		importFromPortal(userId, cells, now) {
+			let registered = 0;
+			let slotsAdded = 0;
+			let slotsUpdated = 0;
+			const unknown: { lessonId: string; year: number }[] = [];
+			const conflicts: SlotConflict[] = [];
+
+			sqlite.transaction(() => {
+				for (const cell of cells) {
+					const subject = db
+						.select({ id: subjects.id })
+						.from(subjects)
+						.where(
+							and(eq(subjects.academicYear, cell.year), eq(subjects.syllabusId, cell.lessonId)),
+						)
+						.get();
+					if (!subject) {
+						unknown.push({ lessonId: cell.lessonId, year: cell.year });
+						continue;
+					}
+
+					const inserted = db
+						.insert(courseRegistrations)
+						.values({ userId, subjectId: subject.id, hopeCourseUrl: cell.hopeUrl, createdAt: now })
+						.onConflictDoNothing()
+						.run();
+					if (inserted.changes > 0) registered++;
+					else if (cell.hopeUrl) {
+						// 既に登録済みなら、HOPE の URL が空のときだけ埋める (利用者が手で直した値は変えない)
+						db.update(courseRegistrations)
+							.set({ hopeCourseUrl: cell.hopeUrl })
+							.where(
+								and(
+									eq(courseRegistrations.userId, userId),
+									eq(courseRegistrations.subjectId, subject.id),
+								),
+							)
+							.run();
+					}
+
+					if (cell.weekday === null || cell.period === null) continue;
+					const existing = db
+						.select()
+						.from(timetableSlots)
+						.where(
+							and(
+								eq(timetableSlots.subjectId, subject.id),
+								eq(timetableSlots.weekday, cell.weekday),
+								eq(timetableSlots.period, cell.period),
+							),
+						)
+						.get();
+					if (!existing) {
+						db.insert(timetableSlots)
+							.values({
+								subjectId: subject.id,
+								weekday: cell.weekday,
+								period: cell.period,
+								room: cell.room,
+								source: 'portal',
+								createdBy: userId,
+								updatedAt: now,
+							})
+							.run();
+						slotsAdded++;
+					} else if (existing.room === null && cell.room !== null) {
+						db.update(timetableSlots)
+							.set({ room: cell.room, updatedAt: now })
+							.where(eq(timetableSlots.id, existing.id))
+							.run();
+						slotsUpdated++;
+					} else if (cell.room !== null && existing.room !== cell.room) {
+						conflicts.push({
+							subjectId: subject.id,
+							weekday: cell.weekday,
+							period: cell.period,
+							existingRoom: existing.room,
+							importedRoom: cell.room,
+						});
+					}
+				}
+			})();
+			return { registered, slotsAdded, slotsUpdated, unknown, conflicts };
+		},
+
+		listRegistrations(userId) {
+			return db
+				.select({
+					subjectId: courseRegistrations.subjectId,
+					hopeCourseUrl: courseRegistrations.hopeCourseUrl,
+				})
+				.from(courseRegistrations)
+				.where(eq(courseRegistrations.userId, userId))
+				.orderBy(asc(courseRegistrations.subjectId))
+				.all();
+		},
+
+		slotsOf(subjectId) {
+			return db
+				.select({
+					weekday: timetableSlots.weekday,
+					period: timetableSlots.period,
+					room: timetableSlots.room,
+					source: timetableSlots.source,
+					createdBy: timetableSlots.createdBy,
+				})
+				.from(timetableSlots)
+				.where(eq(timetableSlots.subjectId, subjectId))
+				.orderBy(asc(timetableSlots.weekday), asc(timetableSlots.period))
+				.all();
+		},
+	};
+}

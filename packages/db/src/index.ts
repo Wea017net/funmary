@@ -48,3 +48,11 @@ export {
 	type SubjectInput,
 	type SubjectStore,
 } from './subject-store.ts';
+export {
+	createCourseStore,
+	type CourseStore,
+	type ImportResult,
+	type PortalCell,
+	type SlotConflict,
+	type StoredSlot,
+} from './course-store.ts';

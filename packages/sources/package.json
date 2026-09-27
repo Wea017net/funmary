@@ -21,6 +21,7 @@
 	"devDependencies": {
 		"@types/hast": "^3.0.5",
 		"@types/papaparse": "^5.5.2",
-		"fast-check": "catalog:"
+		"fast-check": "catalog:",
+		"linkedom": "^0.18.13"
 	}
 }

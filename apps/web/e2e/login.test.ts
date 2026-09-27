@@ -95,3 +95,70 @@ test('知らない理由を URL に書いても、画面には何も出ない', 
 	await page.goto('/login?error=%3Cscript%3Ealert(1)%3C/script%3E');
 	await expect(page.getByRole('alert')).toHaveCount(0);
 });
+
+test.describe('ポータルの時間割の取り込み', () => {
+	const loginAs = async (page: import('@playwright/test').Page) => {
+		oidc.setIdentity({
+			sub: 'e2e-import',
+			email: 'import@fun.ac.jp',
+			email_verified: true,
+			hd: 'fun.ac.jp',
+		});
+		await page.goto('/auth/google');
+		await expect(page).toHaveURL('/');
+	};
+
+	test('ログインしていなければ、ログインの画面に移る', async ({ page }) => {
+		await page.goto('/courses/import');
+		await expect(page).toHaveURL('/login');
+	});
+
+	test('使い方と、自動では取れないため利用者どうしで登録している旨、ブックマークレットを出す', async ({
+		page,
+	}) => {
+		await loginAs(page);
+		await page.goto('/courses/import');
+		await expect(page.getByText('大学から自動では取得できません')).toBeVisible();
+		const link = page.getByRole('link', { name: 'Funmary に時間割を取り込む' });
+		await expect(link).toHaveAttribute('href', /^javascript:/);
+	});
+
+	test('# 以降の内容は、ボタンを押したときだけ送り、結果を出す。URL からは内容を消す', async ({
+		page,
+	}) => {
+		await loginAs(page);
+		const payload = Buffer.from(
+			JSON.stringify({
+				v: 1,
+				c: [
+					{
+						l: '999999',
+						y: 2026,
+						t: '20',
+						w: 1,
+						p: 1,
+						r: '595',
+						s: '',
+						n: '架空の科目',
+						h: '',
+						x: '',
+					},
+				],
+			}),
+		).toString('base64url');
+		await page.goto(`/courses/import#${payload}`);
+		await expect(page.getByRole('button', { name: '取り込む' })).toBeVisible();
+		expect(new URL(page.url()).hash).toBe('');
+		await page.getByRole('button', { name: '取り込む' }).click();
+		await expect(page.getByText('読み取ったコマ: 1 件')).toBeVisible();
+		// まだシラバスを取り込んでいない科目は、登録しない
+		await expect(page.getByText('まだ Funmary に取り込まれていない科目: 1 件')).toBeVisible();
+	});
+
+	test('壊れた内容は、取り込まずに理由を出す', async ({ page }) => {
+		await loginAs(page);
+		await page.goto('/courses/import#AAAA');
+		await page.getByRole('button', { name: '取り込む' }).click();
+		await expect(page.getByRole('alert')).toContainText('内容を読めませんでした');
+	});
+});
