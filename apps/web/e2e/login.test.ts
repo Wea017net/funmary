@@ -1,10 +1,13 @@
 // Google のログインの通し (設計書 21 章)。Google の代わりに、テスト用の OpenID Connect のサーバーを使う。
 // サーバーは本物の RS256 で署名した ID トークンを返すので、アプリは本番と同じ手順 (PKCE、state、nonce、署名の検証) を通る。
+import { join } from 'node:path';
 import { expect, test } from '@playwright/test';
+import { createSubjectStore, openDatabase } from '@funmary/db';
 import {
 	startMockOidcServer,
 	type MockOidcServer,
 } from '../../../packages/auth/src/testing/mock-oidc-server.ts';
+import { E2E_DATA_DIR } from '../e2e-data-dir.ts';
 import { OIDC_PORT } from '../oidc-port.ts';
 
 // サーバーの状態 (次にログインする人) を共有するので、テストは 1 つずつ動かす
@@ -160,5 +163,87 @@ test.describe('ポータルの時間割の取り込み', () => {
 		await page.goto('/courses/import#AAAA');
 		await page.getByRole('button', { name: '取り込む' }).click();
 		await expect(page.getByRole('alert')).toContainText('内容を読めませんでした');
+	});
+});
+
+// Google の代わりのサーバーを 1 つのポートで立てるので、ログインが要る画面のテストもこのファイルに置く
+test.describe('履修科目の登録', () => {
+	// 手元では DB がテストのたびに消えないので、利用者を毎回変えて、前回の登録を持ち越さない
+	const sub = `e2e-courses-${Date.now()}`;
+
+	test.beforeAll(() => {
+		const database = openDatabase(join(E2E_DATA_DIR, 'funmary.db'), {
+			backupDir: join(E2E_DATA_DIR, 'backups'),
+		});
+		try {
+			const subjects = createSubjectStore(database);
+			const base = {
+				academicYear: 2026,
+				credits: 2,
+				attributes: {},
+				syllabus: {},
+				syllabusUrl: null,
+			};
+			subjects.upsert(
+				{
+					...base,
+					syllabusId: '900001',
+					name: '架空の演習Ⅱ1-AB',
+					teacher: '架空 一郎',
+					term: 'fall',
+				},
+				new Date(),
+			);
+			subjects.upsert(
+				{ ...base, syllabusId: '900002', name: '架空の講義', teacher: null, term: 'q3' },
+				new Date(),
+			);
+		} finally {
+			database.close();
+		}
+	});
+
+	const loginAs = async (page: import('@playwright/test').Page) => {
+		oidc.setIdentity({ sub, email: `${sub}@fun.ac.jp`, email_verified: true, hd: 'fun.ac.jp' });
+		await page.goto('/auth/google');
+		await expect(page).toHaveURL('/');
+	};
+
+	test('ログインしていなければ、ログインの画面に移る', async ({ page }) => {
+		await page.goto('/courses');
+		await expect(page).toHaveURL('/login');
+	});
+
+	test('科目を探して登録し、曜日と時限を足し、登録を取り消せる', async ({ page }) => {
+		await loginAs(page);
+		await page.getByRole('link', { name: '履修科目' }).click();
+		await expect(page.getByText('まだ登録していません')).toBeVisible();
+
+		// ローマ数字を II と打っても見つかる
+		await page.getByRole('searchbox').fill('架空の演習II');
+		await page.getByRole('button', { name: '探す' }).click();
+		const found = page.getByRole('region', { name: '科目を探す' }).getByRole('listitem');
+		await expect(found).toHaveCount(1);
+		await expect(found).toContainText('後期、架空 一郎');
+		await found.getByRole('button', { name: '登録する' }).click();
+		await expect(page.getByRole('status')).toHaveText('架空の演習Ⅱ1-AB を履修科目に登録しました。');
+
+		const registered = page
+			.getByRole('region', { name: '登録した科目' })
+			.getByRole('listitem')
+			.filter({ hasText: '架空の演習Ⅱ1-AB' });
+		await expect(registered).toContainText('曜日と時限が、まだ登録されていません');
+
+		await registered.getByText('曜日と時限を登録する').click();
+		await registered.getByLabel('曜日').selectOption('火曜');
+		await registered.getByLabel('時限').selectOption('3 限');
+		await registered.getByLabel('教室').fill(' 363 ');
+		await registered.getByRole('button', { name: '登録する' }).click();
+		await expect(page.getByRole('status')).toHaveText('曜日と時限を登録しました。');
+		await expect(registered).toContainText('火曜 3 限、363');
+
+		await registered.getByRole('button', { name: '登録を取り消す' }).click();
+		await expect(page.getByRole('status')).toHaveText('架空の演習Ⅱ1-AB の登録を取り消しました。');
+		await expect(page.getByText('まだ登録していません')).toBeVisible();
 	});
 });

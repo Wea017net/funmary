@@ -1,0 +1,221 @@
+<script lang="ts">
+	import { enhance } from '$app/forms';
+	import { resolve } from '$app/paths';
+	import { DEFAULT_PERIODS } from '@funmary/core';
+	import { formatSlot, formatTerm, WEEKDAY_LABELS } from '$lib/term-label.ts';
+
+	interface Slot {
+		weekday: number;
+		period: number;
+		room: string | null;
+	}
+	interface RegisteredSubject {
+		id: number;
+		name: string;
+		teacher: string | null;
+		term: string;
+		slots: Slot[];
+	}
+	interface FoundSubject {
+		id: number;
+		name: string;
+		teacher: string | null;
+		term: string;
+	}
+
+	let {
+		data,
+		form,
+	}: {
+		data: {
+			academicYear: number | null;
+			registered: RegisteredSubject[];
+			query: string;
+			results: FoundSubject[];
+		};
+		form: { error?: string; message?: string } | null;
+	} = $props();
+</script>
+
+<svelte:head>
+	<title>履修科目 - Funmary</title>
+	<meta name="robots" content="noindex" />
+</svelte:head>
+
+<main>
+	<h1>履修科目</h1>
+
+	{#if form?.error}
+		<p class="error" role="alert">{form.error}</p>
+	{:else if form?.message}
+		<p class="message" role="status">{form.message}</p>
+	{/if}
+
+	{#if data.academicYear === null}
+		<p>まだシラバスを取り込んでいません。取り込みが済むまで、お待ちください。</p>
+	{:else}
+		<p>{data.academicYear} 年度の科目から登録します。</p>
+
+		<section aria-labelledby="registered-heading">
+			<h2 id="registered-heading">登録した科目</h2>
+			{#if data.registered.length === 0}
+				<p>まだ登録していません。下の「科目を探す」から登録してください。</p>
+			{:else}
+				<ul class="subjects">
+					{#each data.registered as subject (subject.id)}
+						<li>
+							<h3>{subject.name}</h3>
+							<p class="meta">
+								{formatTerm(subject.term)}{#if subject.teacher}、{subject.teacher}{/if}
+							</p>
+							{#if subject.slots.length === 0}
+								<p>曜日と時限が、まだ登録されていません。</p>
+							{:else}
+								<ul class="slots">
+									{#each subject.slots as slot (`${slot.weekday}-${slot.period}`)}
+										<li>
+											{formatSlot(slot)}{#if slot.room}、{slot.room}{/if}
+										</li>
+									{/each}
+								</ul>
+							{/if}
+
+							<details>
+								<summary>曜日と時限を登録する</summary>
+								<form method="POST" action="?/addSlot" use:enhance class="slot-form">
+									<input type="hidden" name="subjectId" value={subject.id} />
+									<label>
+										曜日
+										<select name="weekday" required>
+											{#each WEEKDAY_LABELS as day (day.weekday)}
+												<option value={day.weekday}>{day.label}曜</option>
+											{/each}
+										</select>
+									</label>
+									<label>
+										時限
+										<select name="period" required>
+											{#each DEFAULT_PERIODS as period (period.number)}
+												<option value={period.number}>{period.number} 限</option>
+											{/each}
+										</select>
+									</label>
+									<label>
+										教室 (分からなければ空のまま)
+										<input name="room" maxlength="100" autocomplete="off" />
+									</label>
+									<button type="submit">登録する</button>
+								</form>
+								<p class="note">
+									曜日、時限、教室は、大学から自動では取得できないため、利用者どうしで登録しています。登録した内容は、同じ科目を履修しているほかの利用者の時間割にも使われます。
+								</p>
+							</details>
+
+							<form method="POST" action="?/unregister" use:enhance>
+								<input type="hidden" name="subjectId" value={subject.id} />
+								<button type="submit" class="secondary">登録を取り消す</button>
+							</form>
+						</li>
+					{/each}
+				</ul>
+			{/if}
+		</section>
+
+		<section aria-labelledby="search-heading">
+			<h2 id="search-heading">科目を探す</h2>
+			<form method="GET" role="search" data-sveltekit-keepfocus>
+				<label>
+					科目名、教員、シラバスの番号
+					<input type="search" name="q" value={data.query} maxlength="100" />
+				</label>
+				<button type="submit">探す</button>
+			</form>
+
+			{#if data.query.trim() !== ''}
+				{#if data.results.length === 0}
+					<p>見つかりませんでした。</p>
+				{:else}
+					<ul class="subjects">
+						{#each data.results as subject (subject.id)}
+							<li>
+								<h3>{subject.name}</h3>
+								<p class="meta">
+									{formatTerm(subject.term)}{#if subject.teacher}、{subject.teacher}{/if}
+								</p>
+								<form method="POST" action="?/register" use:enhance>
+									<input type="hidden" name="subjectId" value={subject.id} />
+									<button type="submit">登録する</button>
+								</form>
+							</li>
+						{/each}
+					</ul>
+				{/if}
+			{/if}
+		</section>
+
+		<p>
+			学生ポータルの時間割から、まとめて登録することもできます:
+			<a href={resolve('/courses/import')}>ポータルの時間割から取り込む</a>
+		</p>
+	{/if}
+</main>
+
+<style>
+	main {
+		max-width: 40rem;
+		margin: 0 auto;
+		padding: 1rem;
+		font-family: system-ui, sans-serif;
+		line-height: 1.7;
+	}
+	.subjects {
+		padding: 0;
+		list-style: none;
+	}
+	.subjects > li {
+		margin: 0.75rem 0;
+		padding: 0.75rem 1rem;
+		border: 1px solid #dddddd;
+		border-radius: 0.5rem;
+	}
+	h3 {
+		margin: 0;
+		font-size: 1.05rem;
+	}
+	.meta {
+		margin: 0;
+		color: #666666;
+	}
+	.slot-form {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem 1rem;
+		align-items: end;
+	}
+	.slot-form label {
+		display: flex;
+		flex-direction: column;
+	}
+	button,
+	select,
+	input {
+		min-height: 48px;
+		font: inherit;
+	}
+	.note {
+		padding: 0.5rem 0.75rem;
+		border-left: 4px solid currentcolor;
+		background: color-mix(in srgb, currentcolor 6%, transparent);
+	}
+	.message {
+		padding: 0.75rem 1rem;
+		border: 1px solid currentcolor;
+		border-radius: 0.25rem;
+	}
+	.error {
+		padding: 0.75rem 1rem;
+		border: 1px solid currentcolor;
+		border-radius: 0.25rem;
+		color: #b3261e;
+	}
+</style>

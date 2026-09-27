@@ -3,6 +3,7 @@
 import { fail, redirect, type Actions, type ServerLoad } from '@sveltejs/kit';
 import { buildBookmarklet, decodeImportFragment } from '@funmary/sources';
 import { getServices } from '$lib/server/services.ts';
+import { alertSlotConflicts } from '$lib/server/slot-conflicts.ts';
 
 export const load: ServerLoad = ({ locals }) => {
 	if (!locals.user) redirect(303, '/login');
@@ -40,20 +41,7 @@ export const actions: Actions = {
 			})),
 			new Date(),
 		);
-		// 教室の食い違いは、利用者どうしの登録の誤りか、教室変更の可能性がある。管理者が確かめる
-		if (result.conflicts.length > 0) {
-			await services.alertAdmin({
-				severity: 'warn',
-				title: '時間割の枠の教室が、利用者どうしで食い違っています',
-				message: result.conflicts
-					.map(
-						(c) =>
-							`科目 ${c.subjectId} の ${c.weekday} 曜 ${c.period} 限: 登録済み ${c.existingRoom ?? '(空)'}、取り込み ${c.importedRoom ?? '(空)'}`,
-					)
-					.join('\n'),
-				key: `slot-conflict:${result.conflicts.map((c) => `${c.subjectId}-${c.weekday}-${c.period}`).join(',')}`,
-			});
-		}
+		await alertSlotConflicts(services, result.conflicts);
 		return {
 			result: {
 				read: decoded.cells.length,
