@@ -31,13 +31,14 @@ describe('academicYearOf', () => {
 });
 
 describe('startOfWeek', () => {
-	it('その週の月曜を返す', () => {
-		expect(startOfWeek('2026-10-05')).toBe('2026-10-05');
-		expect(startOfWeek('2026-10-08')).toBe('2026-10-05');
-		expect(startOfWeek('2026-10-11')).toBe('2026-10-05');
+	it('日曜から土曜を 1 週とし、その週の日曜を返す', () => {
+		expect(startOfWeek('2026-10-04')).toBe('2026-10-04');
+		expect(startOfWeek('2026-10-05')).toBe('2026-10-04');
+		expect(startOfWeek('2026-10-10')).toBe('2026-10-04');
+		expect(startOfWeek('2026-10-11')).toBe('2026-10-11');
 	});
 
 	it('月や年をまたぐ週も扱う', () => {
-		expect(startOfWeek('2027-01-01')).toBe('2026-12-28');
+		expect(startOfWeek('2027-01-01')).toBe('2026-12-27');
 	});
 });

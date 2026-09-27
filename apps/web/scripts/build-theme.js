@@ -59,9 +59,28 @@ function compile(theme, packages) {
 const light = compile('smui-theme', smuiPackages);
 // 部品のスタイルは色を CSS 変数で読むので、ダーク用は変数だけにする (部品のスタイルを 2 回出さない)
 const dark = compile('dark/smui-theme', []);
+/**
+ * ダーク用の CSS から、:root の色の変数だけを取り出し、設定に合わせた選択子にする。
+ * SMUI の補助のクラス (.mdc-theme--primary-bg など) も色を変数から読むので、ライト用の定義だけで足りる
+ * @param {string} css
+ * @param {string} selector
+ */
+function darkVariables(css, selector) {
+	const blocks = css.match(/:root\{[^{}]*\}/g) ?? [];
+	if (blocks.length === 0) throw new Error('ダーク用のテーマに :root の変数がありません');
+	return blocks.map((block) => block.replace(':root', selector)).join('');
+}
+
 mkdirSync(dirname(output), { recursive: true });
 writeFileSync(
 	output,
-	`/* scripts/build-theme.js が作る。手で直さない */\n${light}\n@media (prefers-color-scheme: dark){${dark}}\n`,
+	[
+		'/* scripts/build-theme.js が作る。手で直さない */',
+		light,
+		// 画面の色の設定 (<html data-theme>) がシステムなら端末の設定に従い、ダークならいつでもダークにする
+		`@media (prefers-color-scheme: dark){${darkVariables(dark, ':root:not([data-theme="light"])')}}`,
+		darkVariables(dark, ':root[data-theme="dark"]'),
+		'',
+	].join('\n'),
 );
 console.log(`テーマの CSS を作りました (${smuiPackages.join('、')}): ${output}`);

@@ -48,9 +48,14 @@ test('大学のアカウントでログインでき、ログアウトできる',
 	await page.getByRole('link', { name: 'Google でログイン' }).click();
 
 	await expect(page).toHaveURL('/');
-	await expect(
-		page.getByRole('navigation', { name: 'メニュー' }).getByText('taro@fun.ac.jp'),
-	).toBeVisible();
+	// メールアドレスの @ より前は、押すまで出さない
+	const menu = page.getByRole('navigation', { name: 'メニュー' });
+	await expect(menu).toContainText('••••••••@fun.ac.jp');
+	await expect(menu).not.toContainText('taro@');
+	await menu.getByRole('button', { name: 'メールアドレスを表示する' }).click();
+	await expect(menu.getByText('taro@fun.ac.jp')).toBeVisible();
+	await menu.getByRole('button', { name: 'メールアドレスを隠す' }).click();
+	await expect(menu).not.toContainText('taro@');
 
 	// セッションは HttpOnly の Cookie で、画面の JavaScript から読めない
 	const cookies = await page.context().cookies();
@@ -439,12 +444,46 @@ test.describe('今日と週の時間割', () => {
 		// 次の週の月曜 (2026-10-12) はスポーツの日
 		await page.getByRole('link', { name: '次の週' }).click();
 		await expect(page.getByRole('heading', { level: 1 })).toHaveText('10/12 (月) からの週');
-		await expect(table.getByRole('columnheader', { name: /10\/12 \(月\)/ })).toContainText(
-			'スポーツの日',
-		);
+		const holiday = table.getByRole('columnheader', { name: /10\/12 \(月\)/ });
+		await expect(holiday).toContainText('祝日');
+		await expect(holiday).toContainText('スポーツの日');
+
+		// 週は日曜から土曜なので、日曜の日付は次の月曜からの週になる
+		await page.goto('/week?date=2026-10-11');
+		await expect(page.getByRole('heading', { level: 1 })).toHaveText('10/12 (月) からの週');
+
+		// カレンダーで日付を選ぶと、その日を含む週に移る
+		await page.getByRole('button', { name: 'カレンダーで日付を選んで、その週を出す' }).click();
+		await page.locator('.picker input[type="date"]').fill('2026-11-04');
+		await expect(page).toHaveURL('/week?date=2026-11-04');
+		await expect(page.getByRole('heading', { level: 1 })).toHaveText('11/2 (月) からの週');
+		for (let i = 0; i < 3; i++) await page.getByRole('link', { name: '前の週' }).click();
+		await expect(page.getByRole('heading', { level: 1 })).toHaveText('10/12 (月) からの週');
 
 		await table.getByRole('link', { name: '架空の時間割演習' }).first().click();
 		await expect(page.getByRole('heading', { level: 1 })).toHaveText('架空の時間割演習');
+	});
+
+	test('画面の色は、端末の設定、ライト、ダークの順に切り替わり、読み込み直しても保たれる', async ({
+		page,
+	}) => {
+		await loginAs(page);
+		const html = page.locator('html');
+		const toggle = page
+			.getByRole('navigation', { name: 'メニュー' })
+			.getByRole('button', { name: /^画面の色/ });
+		await expect(html).toHaveAttribute('data-theme', 'system');
+		await expect(toggle).toHaveAccessibleName('画面の色: 端末の設定 (押すとライトに切り替えます)');
+		await toggle.click();
+		await expect(html).toHaveAttribute('data-theme', 'light');
+		await toggle.click();
+		await expect(html).toHaveAttribute('data-theme', 'dark');
+		await page.reload();
+		await expect(html).toHaveAttribute('data-theme', 'dark');
+		await expect(page.locator('body')).toHaveCSS('color', 'rgb(230, 225, 225)');
+		await toggle.click();
+		await expect(html).toHaveAttribute('data-theme', 'system');
+		expect((await page.context().cookies()).some((c) => c.name === 'fm-theme')).toBe(false);
 	});
 
 	test('暦にない日付の週は、今週に移る', async ({ page }) => {
