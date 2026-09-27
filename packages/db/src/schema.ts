@@ -110,6 +110,16 @@ export const timetableSlots = sqliteTable(
 		weekday: integer('weekday').notNull(),
 		period: integer('period').notNull(),
 		room: text('room'),
+		/**
+		 * 枠をどこから得たか。大学から自動では取れないので、利用者どうしで登録している。
+		 * portal (利用者がポータルの時間割から取り込んだ)、manual (利用者が手で入力した)、pdf (管理者が時間割の PDF から取り込んだ)、admin (管理者が直した)
+		 */
+		source: text('source', { enum: ['portal', 'manual', 'pdf', 'admin'] })
+			.notNull()
+			.default('manual'),
+		/** 登録した利用者。退会したら null */
+		createdBy: text('created_by').references(() => users.id, { onDelete: 'set null' }),
+		updatedAt: integer('updated_at', { mode: 'timestamp_ms' }),
 	},
 	(table) => [
 		uniqueIndex('timetable_slots_unique').on(table.subjectId, table.weekday, table.period),

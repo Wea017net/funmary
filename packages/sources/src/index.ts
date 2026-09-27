@@ -70,3 +70,17 @@ export {
 	type TimetablePdfOptions,
 	type TimetablePdfQuality,
 } from './timetable-pdf/grid.ts';
+export {
+	IMPORT_PATH,
+	buildBookmarklet,
+	collectTimetableCells,
+	type RawCell,
+} from './timetable-import/bookmarklet.ts';
+export {
+	decodeImportFragment,
+	encodeImportPayload,
+	parseImportPayload,
+	roomFromLabel,
+	type ImportPayloadResult,
+	type ImportedCell,
+} from './timetable-import/payload.ts';
