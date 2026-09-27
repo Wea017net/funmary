@@ -73,6 +73,17 @@ describe('matchLessonName: 類似度', () => {
 		});
 	});
 
+	it('末尾の番号が数字でも、番号が違えば別の科目として選ばない', () => {
+		const numbered: SubjectName[] = [{ id: 20, name: '情報処理演習 2' }];
+		expect(matchLessonName('情報処理演習 1', numbered)).toEqual({ kind: 'unmatched' });
+		// 全角の数字も、NFKC で半角にしてから比べる
+		expect(matchLessonName('情報処理演習１', numbered)).toEqual({ kind: 'unmatched' });
+	});
+
+	it('末尾の番号のあとに空白があっても、番号として比べる', () => {
+		expect(matchLessonName('線形代数 III ', subjects)).toEqual({ kind: 'unmatched' });
+	});
+
 	it('似ていなければ、照合できない', () => {
 		expect(matchLessonName('まったく別の授業', subjects)).toEqual({ kind: 'unmatched' });
 	});
