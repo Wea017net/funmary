@@ -486,6 +486,47 @@ test.describe('今日と週の時間割', () => {
 		expect((await page.context().cookies()).some((c) => c.name === 'fm-theme')).toBe(false);
 	});
 
+	test('ボタンは、表示や状態が変わっても、押せる範囲の大きさと位置を変えない', async ({ page }) => {
+		await loginAs(page);
+		const menu = page.getByRole('navigation', { name: 'メニュー' });
+		const toggle = menu.getByRole('button', { name: /^画面の色/ });
+		const logout = menu.getByRole('button', { name: 'ログアウト' });
+		const show = menu.getByRole('button', { name: /^メールアドレスを/ });
+
+		// 画面の色のボタンは、表示名が変わっても同じ大きさ。ログアウトのボタンとも同じ大きさ
+		const first = await toggle.boundingBox();
+		for (let i = 0; i < 3; i++) {
+			await toggle.click();
+			expect(await toggle.boundingBox()).toEqual(first);
+		}
+		const logoutBox = await logout.boundingBox();
+		expect([logoutBox?.width, logoutBox?.height]).toEqual([first?.width, first?.height]);
+
+		// メールアドレスを表示しても、ボタンの位置は変わらない
+		const hidden = await show.boundingBox();
+		await show.click();
+		expect(await show.boundingBox()).toEqual(hidden);
+
+		// 今週と次の週で、次の週のボタンの位置は変わらない
+		await page.goto('/week');
+		const next = page.getByRole('link', { name: '次の週' });
+		const thisWeek = await next.boundingBox();
+		await next.click();
+		await expect(page).toHaveURL(/date=/);
+		expect(await next.boundingBox()).toEqual(thisWeek);
+
+		// スマホの幅では、上部の 2 つのボタンは同じ 48px 四方
+		await page.setViewportSize({ width: 412, height: 915 });
+		const header = page.getByRole('banner');
+		for (const button of [
+			header.getByRole('button', { name: /^画面の色/ }),
+			header.getByRole('button', { name: 'ログアウト' }),
+		]) {
+			const box = await button.boundingBox();
+			expect([box?.width, box?.height]).toEqual([48, 48]);
+		}
+	});
+
 	test('暦にない日付の週は、今週に移る', async ({ page }) => {
 		await loginAs(page);
 		await page.goto('/week?date=2026-02-30');

@@ -64,12 +64,18 @@
 	</ul>
 {/snippet}
 
-{#snippet logout()}
+{#snippet logout(compact: boolean)}
 	<!-- /auth は、サーバーが処理する。SvelteKit の form の処理を通さず、通常の送信にする -->
 	<form method="POST" action="/auth/logout" data-sveltekit-reload>
-		<button type="submit" class="logout">
+		<!-- 狭い画面ではアイコンだけにし、画面の色のボタンと同じ 48px 四方にそろえる -->
+		<button
+			type="submit"
+			class={['logout', { compact }]}
+			aria-label={compact ? 'ログアウト' : undefined}
+			title={compact ? 'ログアウト' : undefined}
+		>
 			<IconLogout aria-hidden="true" class="icon" />
-			<span>ログアウト</span>
+			{#if !compact}<span>ログアウト</span>{/if}
 		</button>
 	</form>
 {/snippet}
@@ -84,7 +90,7 @@
 			<a class="brand" href={resolve('/')}>Funmary</a>
 			<div class="top-actions">
 				<ThemeToggle initial={data.theme} compact />
-				{@render logout()}
+				{@render logout(true)}
 			</div>
 		</header>
 
@@ -94,7 +100,7 @@
 			<div class="account">
 				<div class="email"><MaskedEmail email={data.user.email} /></div>
 				<ThemeToggle initial={data.theme} />
-				{@render logout()}
+				{@render logout(false)}
 			</div>
 		</nav>
 
@@ -180,6 +186,25 @@
 			background: var(--fm-surface-muted);
 			color: var(--fm-text);
 		}
+
+		&.compact {
+			justify-content: center;
+			width: 48px;
+			height: 48px;
+			padding: 0;
+		}
+	}
+
+	/* 左のメニューでは、画面の色のボタンとログアウトのボタンを、横幅いっぱいの同じ大きさにそろえる */
+	.account form {
+		width: 100%;
+	}
+
+	.account .logout,
+	.account :global(.toggle) {
+		justify-content: flex-start;
+		width: 100%;
+		height: 48px;
 	}
 
 	/* スマホ: 上に名前、下にタブ */
@@ -329,7 +354,6 @@
 	}
 
 	.email {
-		padding-left: 0.75rem;
 		color: var(--fm-text-muted);
 		font-size: 0.8125rem;
 	}

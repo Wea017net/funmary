@@ -37,7 +37,14 @@
 	aria-label={`画面の色: ${LABELS[theme]} (押すと${LABELS[nextThemePreference(theme)]}に切り替えます)`}
 >
 	<Icon aria-hidden="true" class="icon" />
-	{#if !compact}<span>{LABELS[theme]}</span>{/if}
+	{#if !compact}
+		<!-- 3 つの表示名を重ねて置き、いちばん長いものの幅にそろえる (設定を変えても、押せる範囲が変わらない) -->
+		<span class="labels">
+			{#each Object.entries(LABELS) as [key, label] (key)}
+				<span class={{ current: key === theme }} aria-hidden="true">{label}</span>
+			{/each}
+		</span>
+	{/if}
 </button>
 
 <style>
@@ -60,8 +67,20 @@
 		background: var(--fm-surface-muted);
 		color: var(--fm-text);
 	}
+	.labels {
+		display: inline-grid;
+		text-align: left;
+	}
+	.labels > span {
+		grid-area: 1 / 1;
+	}
+	.labels > span:not(.current) {
+		visibility: hidden;
+	}
 	.compact {
 		justify-content: center;
+		width: 48px;
+		height: 48px;
 		padding: 0;
 	}
 	.toggle :global(.icon) {
