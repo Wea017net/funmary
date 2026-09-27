@@ -464,7 +464,7 @@ test.describe('今日と週の時間割', () => {
 		await expect(page.getByRole('heading', { level: 1 })).toHaveText('架空の時間割演習');
 	});
 
-	test('画面の色は、端末の設定、ライト、ダークの順に切り替わり、読み込み直しても保たれる', async ({
+	test('画面の色は、自動、ライト、ダークの順に切り替わり、読み込み直しても保たれる', async ({
 		page,
 	}) => {
 		await loginAs(page);
@@ -473,7 +473,7 @@ test.describe('今日と週の時間割', () => {
 			.getByRole('navigation', { name: 'メニュー' })
 			.getByRole('button', { name: /^画面の色/ });
 		await expect(html).toHaveAttribute('data-theme', 'system');
-		await expect(toggle).toHaveAccessibleName('画面の色: 端末の設定 (押すとライトに切り替えます)');
+		await expect(toggle).toHaveAccessibleName('画面の色: 自動 (押すとライトに切り替えます)');
 		await toggle.click();
 		await expect(html).toHaveAttribute('data-theme', 'light');
 		await toggle.click();
