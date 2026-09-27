@@ -148,3 +148,24 @@ export function matchLessonNames(
 	}
 	return { matched, unmatched };
 }
+
+/** 候補として出す、類似度の下限。照合で選ぶ閾値より低くし、人が選ぶ候補を広めに出す */
+const CANDIDATE_THRESHOLD = 0.3;
+
+/** 管理画面で、手で紐付けるときの候補。似ている順に返す */
+export function rankCandidates<T extends SubjectName>(
+	lessonName: string,
+	subjects: readonly T[],
+	limit: number,
+): T[] {
+	const target = normalize(removeOldName(lessonName));
+	return subjects
+		.map((subject) => ({
+			subject,
+			score: similarity(target, normalize(removeOldName(subject.name))),
+		}))
+		.filter((candidate) => candidate.score >= CANDIDATE_THRESHOLD)
+		.sort((a, b) => b.score - a.score)
+		.slice(0, limit)
+		.map((candidate) => candidate.subject);
+}

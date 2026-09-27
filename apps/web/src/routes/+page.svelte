@@ -3,7 +3,7 @@
 	import { DEFAULT_PERIODS } from '@funmary/core';
 	import { formatPeriod } from '$lib/period-label.ts';
 
-	let { data }: { data: { user: { email: string } | null } } = $props();
+	let { data }: { data: { user: { email: string; isAdmin: boolean } | null } } = $props();
 </script>
 
 <svelte:head>
@@ -21,6 +21,9 @@
 	{#if data.user}
 		<p>{data.user.email} でログインしています。</p>
 		<p><a href={resolve('/courses')}>履修科目</a></p>
+		{#if data.user.isAdmin}
+			<p><a href={resolve('/admin')}>管理</a></p>
+		{/if}
 		<!-- /auth は、サーバーが処理する。SvelteKit の form の処理を通さず、通常の送信にする -->
 		<form method="POST" action="/auth/logout" data-sveltekit-reload>
 			<button type="submit">ログアウト</button>

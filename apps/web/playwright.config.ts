@@ -15,6 +15,8 @@ const serverEnv = {
 	OIDC_ISSUER: `http://127.0.0.1:${OIDC_PORT}`,
 	// 大学のアカウントなら誰でも登録できる形にする (招待コードの流れは単体テストで確かめている)
 	REGISTRATION: 'open',
+	// このアドレスでログインした利用者は管理者になる (管理画面のテストに使う)
+	ADMIN_EMAILS: 'e2e-admin@fun.ac.jp',
 	PORTAL_USER_ID: 'e2e-student',
 	PORTAL_PASSWORD: 'e2e-password',
 	DATA_DIR: E2E_DATA_DIR,

@@ -17,6 +17,8 @@ export interface UnmatchedLessonStore {
 	listUnresolved(academicYear: number): UnmatchedLesson[];
 	/** 管理者が科目に紐付けた名前と、その科目の ID */
 	resolvedNames(academicYear: number): Map<string, number>;
+	/** 管理者が、授業名を科目に紐付ける。記録のない名前なら false */
+	resolve(academicYear: number, lessonName: string, subjectId: number): boolean;
 }
 
 export function createUnmatchedLessonStore(database: Database): UnmatchedLessonStore {
@@ -65,6 +67,20 @@ export function createUnmatchedLessonStore(database: Database): UnmatchedLessonS
 				)
 				.orderBy(asc(unmatchedLessons.lessonName))
 				.all();
+		},
+
+		resolve(academicYear, lessonName, subjectId) {
+			const updated = db
+				.update(unmatchedLessons)
+				.set({ resolvedSubjectId: subjectId })
+				.where(
+					and(
+						eq(unmatchedLessons.academicYear, academicYear),
+						eq(unmatchedLessons.lessonName, lessonName),
+					),
+				)
+				.run();
+			return updated.changes > 0;
 		},
 
 		resolvedNames(academicYear) {

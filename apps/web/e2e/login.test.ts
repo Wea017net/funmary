@@ -2,7 +2,7 @@
 // サーバーは本物の RS256 で署名した ID トークンを返すので、アプリは本番と同じ手順 (PKCE、state、nonce、署名の検証) を通る。
 import { join } from 'node:path';
 import { expect, test } from '@playwright/test';
-import { createSubjectStore, openDatabase } from '@funmary/db';
+import { createSubjectStore, openDatabase, type Database } from '@funmary/db';
 import {
 	startMockOidcServer,
 	type MockOidcServer,
@@ -166,41 +166,50 @@ test.describe('ポータルの時間割の取り込み', () => {
 	});
 });
 
+/** テストのサーバーと同じ DB を開いて架空の科目を入れ (何度入れても同じになる)、演習の科目の ID と DB を fn に渡す */
+function seedSubjects<T>(fn: (database: Database, exerciseId: number) => T): T {
+	const database = openDatabase(join(E2E_DATA_DIR, 'funmary.db'), {
+		backupDir: join(E2E_DATA_DIR, 'backups'),
+	});
+	try {
+		const subjects = createSubjectStore(database);
+		const base = {
+			academicYear: 2026,
+			credits: 2,
+			attributes: {},
+			syllabus: {},
+			syllabusUrl: null,
+		};
+		const exerciseId = subjects.upsert(
+			{
+				...base,
+				syllabusId: '900001',
+				name: '架空の演習Ⅱ1-AB',
+				teacher: '架空 一郎',
+				term: 'fall',
+				attributes: { 配当年次: '2年' },
+				syllabus: { 授業の概要: '架空の演習の概要です。' },
+				syllabusUrl: 'https://syllabus.example.com/900001',
+			},
+			new Date(),
+		);
+		subjects.upsert(
+			{ ...base, syllabusId: '900002', name: '架空の講義', teacher: null, term: 'q3' },
+			new Date(),
+		);
+		return fn(database, exerciseId);
+	} finally {
+		database.close();
+	}
+}
+
 // Google の代わりのサーバーを 1 つのポートで立てるので、ログインが要る画面のテストもこのファイルに置く
 test.describe('履修科目の登録', () => {
 	// 手元では DB がテストのたびに消えないので、利用者を毎回変えて、前回の登録を持ち越さない
 	const sub = `e2e-courses-${Date.now()}`;
 
 	test.beforeAll(() => {
-		const database = openDatabase(join(E2E_DATA_DIR, 'funmary.db'), {
-			backupDir: join(E2E_DATA_DIR, 'backups'),
-		});
-		try {
-			const subjects = createSubjectStore(database);
-			const base = {
-				academicYear: 2026,
-				credits: 2,
-				attributes: {},
-				syllabus: {},
-				syllabusUrl: null,
-			};
-			const exerciseId = subjects.upsert(
-				{
-					...base,
-					syllabusId: '900001',
-					name: '架空の演習Ⅱ1-AB',
-					teacher: '架空 一郎',
-					term: 'fall',
-					attributes: { 配当年次: '2年' },
-					syllabus: { 授業の概要: '架空の演習の概要です。' },
-					syllabusUrl: 'https://syllabus.example.com/900001',
-				},
-				new Date(),
-			);
-			subjects.upsert(
-				{ ...base, syllabusId: '900002', name: '架空の講義', teacher: null, term: 'q3' },
-				new Date(),
-			);
+		seedSubjects((database, exerciseId) => {
 			// 前回の実行で足した枠を消し、休講を 1 件入れておく (科目との照合は、済んだものとして入れる)
 			database.sqlite.prepare('DELETE FROM timetable_slots WHERE subject_id = ?').run(exerciseId);
 			database.sqlite
@@ -210,9 +219,7 @@ test.describe('履修科目の登録', () => {
 						VALUES ('cancellation', ?, '架空の演習Ⅱ1-AB', '2026-10-06', 3, 'planned', 0, 0)`,
 				)
 				.run(exerciseId);
-		} finally {
-			database.close();
-		}
+		});
 	});
 
 	const loginAs = async (page: import('@playwright/test').Page) => {
@@ -279,5 +286,54 @@ test.describe('履修科目の登録', () => {
 			const response = await page.goto(`/subjects/${id}`);
 			expect(response?.status()).toBe(404);
 		}
+	});
+});
+
+test.describe('管理画面', () => {
+	test.beforeAll(() => {
+		seedSubjects((database) => {
+			// 照合できなかった授業名と、その名前の休講を、紐付け前の状態に戻して入れる
+			database.sqlite
+				.prepare(
+					`INSERT INTO unmatched_lessons (academic_year, lesson_name, first_seen_at, last_seen_at)
+						VALUES (2026, '架空の演習Ⅱ (再)', 0, 0)
+						ON CONFLICT DO UPDATE SET resolved_subject_id = NULL`,
+				)
+				.run();
+			database.sqlite
+				.prepare(
+					`INSERT INTO class_changes (kind, lesson_name, date, period, first_seen_at, last_seen_at)
+						VALUES ('cancellation', '架空の演習Ⅱ (再)', '2026-10-13', 2, 0, 0)
+						ON CONFLICT DO UPDATE SET subject_id = NULL`,
+				)
+				.run();
+		});
+	});
+
+	const loginAs = async (page: import('@playwright/test').Page, email: string) => {
+		oidc.setIdentity({ sub: email, email, email_verified: true, hd: 'fun.ac.jp' });
+		await page.goto('/auth/google');
+		await expect(page).toHaveURL('/');
+	};
+
+	test('管理者でなければ、管理画面は見つからないことにする', async ({ page }) => {
+		await loginAs(page, 'e2e-not-admin@fun.ac.jp');
+		await expect(page.getByRole('link', { name: '管理', exact: true })).toHaveCount(0);
+		const response = await page.goto('/admin/lessons');
+		expect(response?.status()).toBe(404);
+	});
+
+	test('照合できなかった授業名を、候補の科目に紐付けられる', async ({ page }) => {
+		await loginAs(page, 'e2e-admin@fun.ac.jp');
+		await page.getByRole('link', { name: '管理', exact: true }).click();
+		await page.getByRole('link', { name: '照合できなかった授業名' }).click();
+
+		const lesson = page.getByRole('listitem').filter({ hasText: '架空の演習Ⅱ (再)' });
+		await lesson.getByRole('radio', { name: /架空の演習Ⅱ1-AB \(900001、後期\)/ }).check();
+		await lesson.getByRole('button', { name: '紐付ける' }).click();
+		await expect(page.getByRole('status')).toHaveText(
+			'架空の演習Ⅱ (再) を 架空の演習Ⅱ1-AB に紐付けました (休講などの 1 件に科目を入れました)。',
+		);
+		await expect(page.getByRole('heading', { name: '架空の演習Ⅱ (再)' })).toHaveCount(0);
 	});
 });

@@ -84,3 +84,28 @@ describe('resolvedNames', () => {
 		expect(store.resolvedNames(2024)).toEqual(new Map());
 	});
 });
+
+describe('resolve', () => {
+	it('授業名を科目に紐付け、未解決の一覧から外す。記録のない名前なら false を返す', () => {
+		const subjectId = createSubjectStore(database).upsert(
+			{
+				academicYear: 2026,
+				syllabusId: '100001',
+				name: '架空の科目',
+				teacher: null,
+				credits: 2,
+				term: 'fall',
+				attributes: {},
+				syllabus: {},
+				syllabusUrl: null,
+			},
+			T0,
+		);
+		const store = createUnmatchedLessonStore(database);
+		store.record(2026, ['架空の科目 (再)', '別の名前'], T0);
+		expect(store.resolve(2026, '架空の科目 (再)', subjectId)).toBe(true);
+		expect(store.listUnresolved(2026).map((l) => l.lessonName)).toEqual(['別の名前']);
+		expect(store.resolvedNames(2026)).toEqual(new Map([['架空の科目 (再)', subjectId]]));
+		expect(store.resolve(2026, '記録のない名前', subjectId)).toBe(false);
+	});
+});

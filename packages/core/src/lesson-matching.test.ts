@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { matchLessonName, matchLessonNames, type SubjectName } from './lesson-matching.ts';
+import {
+	matchLessonName,
+	matchLessonNames,
+	rankCandidates,
+	type SubjectName,
+} from './lesson-matching.ts';
 
 const subjects: SubjectName[] = [
 	{ id: 1, name: '線形代数 I' },
@@ -142,5 +147,13 @@ describe('matchLessonNames', () => {
 			matched: [{ lessonName: '線形代数 I', subjectId: 1 }],
 			unmatched: [],
 		});
+	});
+});
+
+describe('rankCandidates', () => {
+	it('似ている順に、上限の数まで候補を返す。似ていないものは返さない', () => {
+		const ranked = rankCandidates('線形代数 I (再)', subjects, 2);
+		expect(ranked.map((c) => c.id)).toEqual([1, 2]);
+		expect(rankCandidates('まったく関係のない名前', subjects, 5)).toEqual([]);
 	});
 });
