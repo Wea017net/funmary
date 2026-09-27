@@ -83,7 +83,10 @@
 			<a class="icon-button" href={weekUrl(data.previous)} aria-label="前の週" title="前の週">
 				<IconPrevious aria-hidden="true" />
 			</a>
-			{#if !data.isThisWeek}
+			<!-- 今週を見ているときも同じ場所に置き、ほかのボタンの位置を変えない -->
+			{#if data.isThisWeek}
+				<span class="text-button current" aria-current="date">今週</span>
+			{:else}
 				<a class="text-button" href={resolve('/week')}>今週</a>
 			{/if}
 			<a class="icon-button" href={weekUrl(data.next)} aria-label="次の週" title="次の週">
@@ -217,6 +220,13 @@
 	}
 	.text-button {
 		padding: 0 1rem;
+	}
+	.text-button.current {
+		color: var(--fm-text-muted);
+		cursor: default;
+	}
+	.text-button.current:hover {
+		background: var(--fm-surface);
 	}
 	.picker {
 		position: relative;

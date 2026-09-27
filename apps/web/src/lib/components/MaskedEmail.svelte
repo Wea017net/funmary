@@ -13,12 +13,7 @@
 </script>
 
 <span class="masked-email">
-	<span class="address"
-		>{#if revealed}{name}{:else}<span aria-hidden="true">••••••••</span
-			>{/if}{domain}{#if !revealed}<span class="visually-hidden">
-				(名前の部分は隠しています)</span
-			>{/if}</span
-	>
+	<!-- ボタンはアドレスの前に置く。表示してアドレスが伸びても、ボタンの位置が変わらないようにする -->
 	<button
 		type="button"
 		aria-pressed={revealed}
@@ -27,6 +22,12 @@
 	>
 		{#if revealed}<IconHidden aria-hidden="true" />{:else}<IconShown aria-hidden="true" />{/if}
 	</button>
+	<span class="address"
+		>{#if revealed}{name}{:else}<span aria-hidden="true">••••••••</span
+			>{/if}{domain}{#if !revealed}<span class="visually-hidden">
+				(名前の部分は隠しています)</span
+			>{/if}</span
+	>
 </span>
 
 <style>
