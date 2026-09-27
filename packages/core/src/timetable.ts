@@ -59,7 +59,8 @@ export type ClassChange =
 			readonly subjectId: string;
 			readonly date: CalendarDate;
 			readonly period: number;
-			readonly room: string;
+			/** 移動先の教室。分からなければ null で、ふだんの教室のまま印だけ付ける */
+			readonly room: string | null;
 	  };
 
 export interface TimetableInput {
@@ -164,7 +165,9 @@ function applyClassChanges(lessons: Map<string, Lesson>, input: TimetableInput):
 				break;
 			}
 			case 'roomChange':
-				if (lesson) lessons.set(key, { ...lesson, room: change.room, status: 'roomChanged' });
+				if (lesson) {
+					lessons.set(key, { ...lesson, room: change.room ?? lesson.room, status: 'roomChanged' });
+				}
 				break;
 		}
 	}

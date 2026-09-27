@@ -1,7 +1,7 @@
 // 休講、補講、教室変更の、前回までの記録 (設計書 9.2、11 章)。@funmary/core の detectChanges の入出力を保存する。
 // 科目との照合 (subject_id) は、apply では変えず、照合のあとに assignSubject で入れる。
 import type { ScrapedChange, TrackedChange } from '@funmary/core';
-import { and, asc, desc, eq, isNull } from 'drizzle-orm';
+import { and, asc, between, desc, eq, isNotNull, isNull } from 'drizzle-orm';
 import type { Database } from './database.ts';
 import { classChanges } from './schema.ts';
 
@@ -18,6 +18,11 @@ export interface ClassChangeStore {
 	seenAt(change: ScrapedChange): { firstSeenAt: Date; lastSeenAt: Date } | null;
 	/** 科目と照合できた休講などを、日付の新しい順に返す (授業の詳細の履歴に使う) */
 	listBySubject(subjectId: number): SubjectClassChange[];
+	/**
+	 * start から end まで (両端を含む) の、科目と照合できた休講などを、日付と時限の順に返す (時間割の展開に使う)。
+	 * 取り消されたものは除く
+	 */
+	listAssignedBetween(start: string, end: string): AssignedClassChange[];
 	/** まだ科目が決まっていない授業名を、重なりなく名前の順に返す */
 	unassignedLessonNames(): string[];
 	/** 科目が決まっていない、その授業名の行に科目を入れ、変えた行の数を返す。決まっている行は変えない */
@@ -35,6 +40,15 @@ export interface SubjectClassChange {
 	readonly makeupPlan: TrackedChange['makeupPlan'];
 	/** ポータルの一覧から消え、取り消されたとみなしたもの */
 	readonly withdrawn: boolean;
+}
+
+export interface AssignedClassChange {
+	readonly kind: TrackedChange['kind'];
+	readonly subjectId: number;
+	readonly date: string;
+	readonly period: number;
+	/** 補講の教室、または教室変更の移動先 */
+	readonly room: string | null;
 }
 
 type Row = typeof classChanges.$inferSelect;
@@ -139,6 +153,27 @@ export function createClassChangeStore(database: Database): ClassChangeStore {
 					makeupPlan: row.makeupPlan,
 					withdrawn: row.withdrawnAt !== null,
 				}));
+		},
+		listAssignedBetween(start, end) {
+			return db
+				.select({
+					kind: classChanges.kind,
+					subjectId: classChanges.subjectId,
+					date: classChanges.date,
+					period: classChanges.period,
+					room: classChanges.room,
+				})
+				.from(classChanges)
+				.where(
+					and(
+						between(classChanges.date, start, end),
+						isNotNull(classChanges.subjectId),
+						isNull(classChanges.withdrawnAt),
+					),
+				)
+				.orderBy(classChanges.date, classChanges.period, classChanges.id)
+				.all()
+				.flatMap(({ subjectId, ...rest }) => (subjectId === null ? [] : [{ ...rest, subjectId }]));
 		},
 		unassignedLessonNames() {
 			return db

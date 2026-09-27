@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
 	INITIAL_SOURCE_HEALTH,
 	isSourceDisabled,
+	isStale,
 	isUnhealthy,
 	recordFailure,
 	recordSuccess,
@@ -141,5 +142,18 @@ describe('isSourceDisabled', () => {
 		expect(isSourceDisabled(['portal', 'hope'], 'hope')).toBe(true);
 		expect(isSourceDisabled(['portal'], 'syllabus')).toBe(false);
 		expect(isSourceDisabled([], 'portal')).toBe(false);
+	});
+});
+
+describe('isStale', () => {
+	const now = new Date('2026-10-05T12:00:00Z');
+
+	it('最後の成功から 12 時間以上たつと古いとみなす', () => {
+		expect(isStale(new Date(now.getTime() - 12 * 60 * MINUTE + 1), now)).toBe(false);
+		expect(isStale(new Date(now.getTime() - 12 * 60 * MINUTE), now)).toBe(true);
+	});
+
+	it('一度も成功していなければ古いとみなす', () => {
+		expect(isStale(null, now)).toBe(true);
 	});
 });

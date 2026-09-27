@@ -1,16 +1,24 @@
 // 画面のサーバー側の処理 (load、action) が使う部品。起動時に hooks.server.ts の init が 1 回だけ入れる。
 import type {
+	AcademicCalendarStore,
 	ClassChangeStore,
 	CourseStore,
+	HolidayStore,
+	SourceHealthStore,
 	SubjectStore,
 	UnmatchedLessonStore,
 } from '@funmary/db';
+import type { TimetableSources } from './user-timetable.ts';
 
 export interface Services {
 	readonly courses: CourseStore;
 	readonly subjects: SubjectStore;
 	readonly classChanges: ClassChangeStore;
 	readonly unmatchedLessons: UnmatchedLessonStore;
+	readonly academicCalendar: AcademicCalendarStore;
+	readonly holidays: HolidayStore;
+	readonly sourceHealth: SourceHealthStore;
+	readonly estimateHolidays: TimetableSources['estimateHolidays'];
 	/** 公開 URL の origin (ブックマークレットの戻り先に使う) */
 	readonly origin: string;
 	/** 管理者への知らせ。秘密の値を含めない */

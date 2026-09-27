@@ -105,6 +105,31 @@ describe('expandTimetable', () => {
 			['2026-07-20', 'english'],
 		]);
 	});
+	it('学期の境目の日の振替授業日は、その日の学期の科目だけを行う', () => {
+		// 1Q は 2026-06-01 (月) まで、2Q は 2026-06-02 (火) から。境目の 2 日を、どちらも金曜の授業にする
+		const lessons = expandTimetable(
+			input({
+				range: { start: '2026-06-01', end: '2026-06-02' },
+				terms: [
+					{ term: 'q1', start: '2026-04-06', end: '2026-06-01' },
+					{ term: 'q2', start: '2026-06-02', end: '2026-08-07' },
+				],
+				registrations: [
+					{ subjectId: 'first', term: 'q1', slots: [{ weekday: 5, period: 2, room: '363' }] },
+					{ subjectId: 'second', term: 'q2', slots: [{ weekday: 5, period: 2, room: '364' }] },
+				],
+				holidays: ['2026-06-02'],
+				substituteDays: [
+					{ date: '2026-06-01', weekday: 5 },
+					{ date: '2026-06-02', weekday: 5 },
+				],
+			}),
+		);
+		expect(lessons.map((lesson) => [lesson.date, lesson.subjectId])).toEqual([
+			['2026-06-01', 'first'],
+			['2026-06-02', 'second'],
+		]);
+	});
 
 	it('休講の授業は消さずに、休講の印を付ける', () => {
 		const lessons = expandTimetable(
@@ -137,6 +162,21 @@ describe('expandTimetable', () => {
 			['2026-04-07', '363', 'normal'],
 			['2026-04-09', '講堂', 'roomChanged'],
 		]);
+	});
+
+	it('移動先の分からない教室変更は、ふだんの教室のまま印を付ける', () => {
+		const lessons = expandTimetable(
+			input({
+				classChanges: [
+					{ kind: 'roomChange', subjectId: 'english', date: '2026-04-09', period: 1, room: null },
+				],
+			}),
+		);
+		expect(lessons.at(-1)).toMatchObject({
+			date: '2026-04-09',
+			room: '363',
+			status: 'roomChanged',
+		});
 	});
 
 	it('補講は授業として足し、日付と時限の順に並べる。教室がなければふだんの教室を仮に出す', () => {

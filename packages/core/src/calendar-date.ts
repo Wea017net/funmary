@@ -34,3 +34,23 @@ export function* eachDate(start: CalendarDate, end: CalendarDate): Generator<Cal
 		yield fromUtcMs(ms);
 	}
 }
+
+/** 日本時間は UTC より 9 時間進んでいる (夏時間はない) */
+const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
+
+/** 日本時間での日付と、"HH:MM" の時刻 */
+export function jstDateTime(now: Date): { date: CalendarDate; time: string } {
+	const iso = new Date(now.getTime() + JST_OFFSET_MS).toISOString();
+	return { date: iso.slice(0, 10), time: iso.slice(11, 16) };
+}
+
+/** 日付の属する年度。4 月から翌年の 3 月までを 1 つの年度とする */
+export function academicYearOf(date: CalendarDate): number {
+	const year = Number(date.slice(0, 4));
+	return Number(date.slice(5, 7)) >= 4 ? year : year - 1;
+}
+
+/** その週の月曜の日付 */
+export function startOfWeek(date: CalendarDate): CalendarDate {
+	return addDays(date, 1 - isoWeekday(date));
+}

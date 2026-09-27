@@ -94,3 +94,11 @@ export function recordFailure(
 		becameUnhealthy: consecutiveFailures === UNHEALTHY_AFTER,
 	};
 }
+
+/** 最後の取得の成功からこれだけたったら、画面で情報が古いと警告する (設計書 4.4) */
+export const STALE_AFTER_MS = 12 * 60 * 60 * 1000;
+
+/** 情報が古いか。一度も取得に成功していなければ古いとみなす */
+export function isStale(lastSuccessAt: Date | null, now: Date): boolean {
+	return lastSuccessAt === null || now.getTime() - lastSuccessAt.getTime() >= STALE_AFTER_MS;
+}

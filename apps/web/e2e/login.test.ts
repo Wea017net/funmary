@@ -2,7 +2,7 @@
 // サーバーは本物の RS256 で署名した ID トークンを返すので、アプリは本番と同じ手順 (PKCE、state、nonce、署名の検証) を通る。
 import { join } from 'node:path';
 import { expect, test } from '@playwright/test';
-import { createSubjectStore, openDatabase, type Database } from '@funmary/db';
+import { createCourseStore, createSubjectStore, openDatabase, type Database } from '@funmary/db';
 import {
 	startMockOidcServer,
 	type MockOidcServer,
@@ -235,7 +235,7 @@ test.describe('履修科目の登録', () => {
 
 	test('科目を探して登録し、曜日と時限を足し、登録を取り消せる', async ({ page }) => {
 		await loginAs(page);
-		await page.getByRole('link', { name: '履修科目' }).click();
+		await page.getByRole('link', { name: '履修科目', exact: true }).click();
 		await expect(page.getByText('まだ登録していません')).toBeVisible();
 
 		// ローマ数字を II と打っても見つかる
@@ -273,7 +273,7 @@ test.describe('履修科目の登録', () => {
 			'href',
 			'https://syllabus.example.com/900001',
 		);
-		await page.getByRole('link', { name: '履修科目' }).click();
+		await page.getByRole('link', { name: '履修科目', exact: true }).click();
 
 		await registered.getByRole('button', { name: '登録を取り消す' }).click();
 		await expect(page.getByRole('status')).toHaveText('架空の演習Ⅱ1-AB の登録を取り消しました。');
@@ -335,5 +335,113 @@ test.describe('管理画面', () => {
 			'架空の演習Ⅱ (再) を 架空の演習Ⅱ1-AB に紐付けました (休講などの 1 件に科目を入れました)。',
 		);
 		await expect(page.getByRole('heading', { name: '架空の演習Ⅱ (再)' })).toHaveCount(0);
+	});
+});
+
+test.describe('今日と週の時間割', () => {
+	// 手元では DB がテストのたびに消えないので、利用者を毎回変える
+	const sub = `e2e-week-${Date.now()}`;
+	const email = `${sub}@fun.ac.jp`;
+
+	const loginAs = async (page: import('@playwright/test').Page) => {
+		oidc.setIdentity({ sub, email, email_verified: true, hd: 'fun.ac.jp' });
+		await page.goto('/auth/google');
+		await expect(page).toHaveURL('/');
+	};
+
+	/** ログインした利用者に、架空の科目を履修登録し、火曜 3 限の枠と、休講などを入れる */
+	const registerSubject = () =>
+		seedSubjects((database) => {
+			const subjectId = createSubjectStore(database).upsert(
+				{
+					academicYear: 2026,
+					syllabusId: '900003',
+					name: '架空の時間割演習',
+					teacher: null,
+					credits: 2,
+					term: 'fall',
+					attributes: {},
+					syllabus: {},
+					syllabusUrl: null,
+				},
+				new Date(),
+			);
+			const user = database.sqlite.prepare('SELECT id FROM users WHERE email = ?').get(email) as {
+				id: string;
+			};
+			const courses = createCourseStore(database);
+			courses.register(user.id, subjectId, new Date());
+			database.sqlite.prepare('DELETE FROM timetable_slots WHERE subject_id = ?').run(subjectId);
+			courses.addSharedSlots(
+				[{ subjectId, weekday: 2, period: 3, room: '363' }],
+				{ source: 'manual', createdBy: user.id },
+				new Date(),
+			);
+			const insertChange = database.sqlite.prepare(
+				`INSERT INTO class_changes
+					(kind, subject_id, lesson_name, date, period, room, from_room, first_seen_at, last_seen_at)
+					VALUES (?, ?, '架空の時間割演習', ?, ?, ?, ?, 0, 0)
+					ON CONFLICT DO UPDATE SET subject_id = excluded.subject_id`,
+			);
+			insertChange.run('roomChange', subjectId, '2026-10-06', 3, '講堂', '363');
+			insertChange.run('makeup', subjectId, '2026-10-08', 5, null, null);
+		});
+
+	test('ログインしていなければ、週の時間割はログインの画面に移る', async ({ page }) => {
+		await page.goto('/week');
+		await expect(page).toHaveURL('/login');
+	});
+
+	test('履修科目がなければ、今日の画面に登録への案内が出る', async ({ page }) => {
+		await loginAs(page);
+		await expect(page.getByRole('heading', { name: '次の授業' })).toBeVisible();
+		await expect(page.getByRole('link', { name: '履修科目を登録する' })).toBeVisible();
+		await expect(page.getByText('休講情報をまだ取得していません')).toBeVisible();
+	});
+
+	test('週の時間割に、教室変更と補講を文字で出し、補講の仮の教室を示す', async ({ page }) => {
+		await loginAs(page);
+		registerSubject();
+		await page.getByRole('link', { name: '週の時間割' }).click();
+		await expect(page).toHaveURL('/week');
+
+		await page.goto('/week?date=2026-10-07');
+		await expect(page.getByRole('heading', { level: 1 })).toHaveText('10/5 (月) からの週');
+		const table = page.getByRole('table');
+		await expect(table.getByRole('columnheader')).toHaveText([
+			'時限',
+			'10/5 (月)',
+			'10/6 (火)',
+			'10/7 (水)',
+			'10/8 (木)',
+			'10/9 (金)',
+		]);
+		const third = table
+			.getByRole('row')
+			.filter({ has: page.getByRole('rowheader', { name: /^3 限/ }) });
+		await expect(third).toContainText('架空の時間割演習');
+		await expect(third).toContainText('教室変更');
+		await expect(third).toContainText('講堂');
+		const fifth = table
+			.getByRole('row')
+			.filter({ has: page.getByRole('rowheader', { name: /^5 限/ }) });
+		await expect(fifth).toContainText('補講');
+		await expect(fifth).toContainText('363 (仮。ふだんの教室)');
+
+		// 次の週の月曜 (2026-10-12) はスポーツの日
+		await page.getByRole('link', { name: '次の週' }).click();
+		await expect(page.getByRole('heading', { level: 1 })).toHaveText('10/12 (月) からの週');
+		await expect(table.getByRole('columnheader', { name: /10\/12 \(月\)/ })).toContainText(
+			'スポーツの日',
+		);
+
+		await table.getByRole('link', { name: '架空の時間割演習' }).first().click();
+		await expect(page.getByRole('heading', { level: 1 })).toHaveText('架空の時間割演習');
+	});
+
+	test('暦にない日付の週は、今週に移る', async ({ page }) => {
+		await loginAs(page);
+		await page.goto('/week?date=2026-02-30');
+		await expect(page).toHaveURL('/week');
 	});
 });

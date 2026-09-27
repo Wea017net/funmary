@@ -77,3 +77,18 @@ describe('振替授業日', () => {
 		expect(store.listSubstituteDays('2026-04-01', '2026-04-30')).toEqual([]);
 	});
 });
+
+describe('全学の休講日', () => {
+	it('日付を保存し、期間で絞って読み戻せる。削除もできる', () => {
+		const store = createAcademicCalendarStore(database);
+		store.saveNoClassDay('2026-10-24', '大学祭', 'manual');
+		store.saveNoClassDay('2026-12-28', null, 'manual');
+		expect(store.listNoClassDays('2026-10-01', '2026-10-31')).toEqual([
+			{ date: '2026-10-24', label: '大学祭' },
+		]);
+		store.deleteNoClassDay('2026-10-24');
+		expect(store.listNoClassDays('2026-10-01', '2026-12-31')).toEqual([
+			{ date: '2026-12-28', label: null },
+		]);
+	});
+});
