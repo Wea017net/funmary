@@ -15,6 +15,8 @@ export default defineConfig(
 			'**/coverage/',
 			'**/playwright-report/',
 			'**/test-results/',
+			// pnpm package-release が作るリリース
+			'release/',
 			'.agents/',
 			'.private/',
 		],

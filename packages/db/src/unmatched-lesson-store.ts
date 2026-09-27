@@ -1,0 +1,68 @@
+// 科目と照合できなかった授業名の記録 (設計書 11 章)。管理者が確かめて、手で科目に紐付ける。
+// 同じ名前は年度ごとに 1 行にまとめ、最初に見た時刻と、最後に見た時刻を残す。
+import { and, asc, eq, isNull } from 'drizzle-orm';
+import type { Database } from './database.ts';
+import { unmatchedLessons } from './schema.ts';
+
+export interface UnmatchedLesson {
+	readonly lessonName: string;
+	readonly firstSeenAt: Date;
+	readonly lastSeenAt: Date;
+}
+
+export interface UnmatchedLessonStore {
+	/** 授業名を記録し、新しく記録した数を返す。既にあれば、最後に見た時刻だけ変える */
+	record(academicYear: number, lessonNames: readonly string[], now: Date): number;
+	/** まだ科目に紐付けていないものを、名前の順に返す */
+	listUnresolved(academicYear: number): UnmatchedLesson[];
+}
+
+export function createUnmatchedLessonStore(database: Database): UnmatchedLessonStore {
+	const { db, sqlite } = database;
+	return {
+		record(academicYear, lessonNames, now) {
+			let added = 0;
+			sqlite.transaction(() => {
+				for (const lessonName of new Set(lessonNames)) {
+					const inserted = db
+						.insert(unmatchedLessons)
+						.values({ academicYear, lessonName, firstSeenAt: now, lastSeenAt: now })
+						.onConflictDoNothing()
+						.run();
+					if (inserted.changes > 0) {
+						added++;
+						continue;
+					}
+					db.update(unmatchedLessons)
+						.set({ lastSeenAt: now })
+						.where(
+							and(
+								eq(unmatchedLessons.academicYear, academicYear),
+								eq(unmatchedLessons.lessonName, lessonName),
+							),
+						)
+						.run();
+				}
+			})();
+			return added;
+		},
+
+		listUnresolved(academicYear) {
+			return db
+				.select({
+					lessonName: unmatchedLessons.lessonName,
+					firstSeenAt: unmatchedLessons.firstSeenAt,
+					lastSeenAt: unmatchedLessons.lastSeenAt,
+				})
+				.from(unmatchedLessons)
+				.where(
+					and(
+						eq(unmatchedLessons.academicYear, academicYear),
+						isNull(unmatchedLessons.resolvedSubjectId),
+					),
+				)
+				.orderBy(asc(unmatchedLessons.lessonName))
+				.all();
+		},
+	};
+}

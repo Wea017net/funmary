@@ -140,3 +140,51 @@ describe('CourseStore.importFromPortal', () => {
 		]);
 	});
 });
+
+describe('CourseStore.addSharedSlots', () => {
+	it('管理者が時間割の PDF から取り込んだ枠を、出どころ pdf、登録者なしで足す', () => {
+		const { subjectId, courses } = setup();
+		const result = courses.addSharedSlots(
+			[{ subjectId, weekday: 2, period: 3, room: '363,364' }],
+			{ source: 'pdf', createdBy: null },
+			T0,
+		);
+		expect(result).toEqual({ added: 1, updated: 0, conflicts: [] });
+		expect(courses.slotsOf(subjectId)).toEqual([
+			{ weekday: 2, period: 3, room: '363,364', source: 'pdf', createdBy: null },
+		]);
+	});
+
+	it('既にある枠は上書きせず、教室の食い違いを返す。空の教室は埋める', () => {
+		const { alice, subjectId, courses } = setup();
+		courses.importFromPortal(alice, [cell(), cell({ period: 2, room: null })], T0);
+		const result = courses.addSharedSlots(
+			[
+				{ subjectId, weekday: 1, period: 1, room: '595' },
+				{ subjectId, weekday: 1, period: 2, room: '363' },
+			],
+			{ source: 'pdf', createdBy: null },
+			T0,
+		);
+		expect(result).toEqual({
+			added: 0,
+			updated: 1,
+			conflicts: [
+				{ subjectId, weekday: 1, period: 1, existingRoom: '494C&D', importedRoom: '595' },
+			],
+		});
+		expect(courses.slotsOf(subjectId).map((s) => [s.room, s.source])).toEqual([
+			['494C&D', 'portal'],
+			['363', 'portal'],
+		]);
+	});
+
+	it('同じ取り込みを 2 回しても、枠は増えない', () => {
+		const { subjectId, courses } = setup();
+		const slots = [{ subjectId, weekday: 2, period: 3, room: '363' }];
+		courses.addSharedSlots(slots, { source: 'pdf', createdBy: null }, T0);
+		const again = courses.addSharedSlots(slots, { source: 'pdf', createdBy: null }, T0);
+		expect(again).toEqual({ added: 0, updated: 0, conflicts: [] });
+		expect(courses.slotsOf(subjectId)).toHaveLength(1);
+	});
+});

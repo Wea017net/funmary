@@ -54,3 +54,11 @@ export {
 	type MatchResult,
 	type SubjectName,
 } from './lesson-matching.ts';
+export {
+	planSlotImport,
+	subjectsInSemester,
+	type PlannedSlot,
+	type SlotImportPlan,
+	type TimetableCell,
+	type UnmatchedName,
+} from './slot-import.ts';

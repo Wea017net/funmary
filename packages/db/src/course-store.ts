@@ -42,14 +42,89 @@ export interface StoredSlot {
 	readonly createdBy: string | null;
 }
 
+export type SlotSource = StoredSlot['source'];
+
+/** 科目ごとに共有する枠を 1 つ足すための値 */
+export interface SharedSlotInput {
+	readonly subjectId: number;
+	readonly weekday: number;
+	readonly period: number;
+	readonly room: string | null;
+}
+
+export interface AddSlotsResult {
+	readonly added: number;
+	/** 空だった教室を埋めた枠の数 */
+	readonly updated: number;
+	readonly conflicts: readonly SlotConflict[];
+}
+
 export interface CourseStore {
 	importFromPortal(userId: string, cells: readonly PortalCell[], now: Date): ImportResult;
+	/** 科目ごとに共有する枠を足す。既にある枠は上書きせず、教室の食い違いを返す */
+	addSharedSlots(
+		slots: readonly SharedSlotInput[],
+		origin: { readonly source: SlotSource; readonly createdBy: string | null },
+		now: Date,
+	): AddSlotsResult;
 	listRegistrations(userId: string): { subjectId: number; hopeCourseUrl: string | null }[];
 	slotsOf(subjectId: number): StoredSlot[];
 }
 
 export function createCourseStore(database: Database): CourseStore {
 	const { db, sqlite } = database;
+
+	/** 枠を 1 つ足す。トランザクションの中で呼ぶ */
+	function addSlot(
+		slot: SharedSlotInput,
+		source: SlotSource,
+		createdBy: string | null,
+		now: Date,
+	): 'added' | 'updated' | 'unchanged' | SlotConflict {
+		const existing = db
+			.select()
+			.from(timetableSlots)
+			.where(
+				and(
+					eq(timetableSlots.subjectId, slot.subjectId),
+					eq(timetableSlots.weekday, slot.weekday),
+					eq(timetableSlots.period, slot.period),
+				),
+			)
+			.get();
+		if (!existing) {
+			db.insert(timetableSlots)
+				.values({
+					subjectId: slot.subjectId,
+					weekday: slot.weekday,
+					period: slot.period,
+					room: slot.room,
+					source,
+					createdBy,
+					updatedAt: now,
+				})
+				.run();
+			return 'added';
+		}
+		if (existing.room === null && slot.room !== null) {
+			db.update(timetableSlots)
+				.set({ room: slot.room, updatedAt: now })
+				.where(eq(timetableSlots.id, existing.id))
+				.run();
+			return 'updated';
+		}
+		if (slot.room !== null && existing.room !== slot.room) {
+			return {
+				subjectId: slot.subjectId,
+				weekday: slot.weekday,
+				period: slot.period,
+				existingRoom: existing.room,
+				importedRoom: slot.room,
+			};
+		}
+		return 'unchanged';
+	}
+
 	return {
 		importFromPortal(userId, cells, now) {
 			let registered = 0;
@@ -92,48 +167,33 @@ export function createCourseStore(database: Database): CourseStore {
 					}
 
 					if (cell.weekday === null || cell.period === null) continue;
-					const existing = db
-						.select()
-						.from(timetableSlots)
-						.where(
-							and(
-								eq(timetableSlots.subjectId, subject.id),
-								eq(timetableSlots.weekday, cell.weekday),
-								eq(timetableSlots.period, cell.period),
-							),
-						)
-						.get();
-					if (!existing) {
-						db.insert(timetableSlots)
-							.values({
-								subjectId: subject.id,
-								weekday: cell.weekday,
-								period: cell.period,
-								room: cell.room,
-								source: 'portal',
-								createdBy: userId,
-								updatedAt: now,
-							})
-							.run();
-						slotsAdded++;
-					} else if (existing.room === null && cell.room !== null) {
-						db.update(timetableSlots)
-							.set({ room: cell.room, updatedAt: now })
-							.where(eq(timetableSlots.id, existing.id))
-							.run();
-						slotsUpdated++;
-					} else if (cell.room !== null && existing.room !== cell.room) {
-						conflicts.push({
-							subjectId: subject.id,
-							weekday: cell.weekday,
-							period: cell.period,
-							existingRoom: existing.room,
-							importedRoom: cell.room,
-						});
-					}
+					const outcome = addSlot(
+						{ subjectId: subject.id, weekday: cell.weekday, period: cell.period, room: cell.room },
+						'portal',
+						userId,
+						now,
+					);
+					if (outcome === 'added') slotsAdded++;
+					else if (outcome === 'updated') slotsUpdated++;
+					else if (outcome !== 'unchanged') conflicts.push(outcome);
 				}
 			})();
 			return { registered, slotsAdded, slotsUpdated, unknown, conflicts };
+		},
+
+		addSharedSlots(slots, origin, now) {
+			let added = 0;
+			let updated = 0;
+			const conflicts: SlotConflict[] = [];
+			sqlite.transaction(() => {
+				for (const slot of slots) {
+					const outcome = addSlot(slot, origin.source, origin.createdBy, now);
+					if (outcome === 'added') added++;
+					else if (outcome === 'updated') updated++;
+					else if (outcome !== 'unchanged') conflicts.push(outcome);
+				}
+			})();
+			return { added, updated, conflicts };
 		},
 
 		listRegistrations(userId) {

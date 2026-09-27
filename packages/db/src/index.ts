@@ -50,9 +50,17 @@ export {
 } from './subject-store.ts';
 export {
 	createCourseStore,
+	type AddSlotsResult,
 	type CourseStore,
 	type ImportResult,
 	type PortalCell,
+	type SharedSlotInput,
 	type SlotConflict,
+	type SlotSource,
 	type StoredSlot,
 } from './course-store.ts';
+export {
+	createUnmatchedLessonStore,
+	type UnmatchedLesson,
+	type UnmatchedLessonStore,
+} from './unmatched-lesson-store.ts';
