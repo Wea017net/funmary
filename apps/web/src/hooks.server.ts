@@ -42,6 +42,7 @@ import { createLogger, type Logger } from '@funmary/log';
 import { parseConfig } from '$lib/server/config.ts';
 import { findMigrationsFolder } from '$lib/server/migrations-path.ts';
 import { setServices } from '$lib/server/services.ts';
+import { parseThemePreference, THEME_COOKIE } from '$lib/theme.ts';
 
 /** Hono に渡すパス。これ自身か、この下のパスが対象になる */
 const API_PATHS = ['/api', '/auth', '/cal', '/feed', '/healthz', '/mcp', '/signup'];
@@ -245,6 +246,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 	const path = event.url.pathname;
 	const started = performance.now();
 	event.locals.user = null;
+	event.locals.theme = parseThemePreference(event.cookies.get(THEME_COOKIE));
 	const sessionToken = event.cookies.get(sessionCookieName(publicOrigin));
 	if (authStore && sessionToken) {
 		// 使うたびに DB の有効期限が延びるので、Cookie の期限も延ばす
@@ -262,7 +264,10 @@ export const handle: Handle = async ({ event, resolve }) => {
 	const response =
 		api && API_PATHS.some((prefix) => path === prefix || path.startsWith(`${prefix}/`))
 			? await api.fetch(event.request)
-			: await resolve(event);
+			: await resolve(event, {
+					// 画面の色の設定を <html data-theme> に入れる。値は parseThemePreference で決めた 3 つのどれかだけ
+					transformPageChunk: ({ html }) => html.replace('%fm.theme%', event.locals.theme),
+				});
 	// 死活監視は 5 分ごとに来るので、info には出さない。トークンは logger が伏せる
 	const log = logger?.withTag('http');
 	const line = `${event.request.method} ${path} ${response.status} ${Math.round(performance.now() - started)} ms`;

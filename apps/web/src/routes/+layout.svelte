@@ -4,6 +4,9 @@
 	import type { Snippet } from 'svelte';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
+	import MaskedEmail from '$lib/components/MaskedEmail.svelte';
+	import ThemeToggle from '$lib/components/ThemeToggle.svelte';
+	import type { ThemePreference } from '$lib/theme.ts';
 	import IconAdmin from '~icons/material-symbols/shield-person-outline';
 	import IconCourses from '~icons/material-symbols/menu-book-outline';
 	import IconLogout from '~icons/material-symbols/logout';
@@ -14,7 +17,7 @@
 		data,
 		children,
 	}: {
-		data: { user: { email: string; isAdmin: boolean } | null };
+		data: { user: { email: string; isAdmin: boolean } | null; theme: ThemePreference };
 		children: Snippet;
 	} = $props();
 
@@ -79,14 +82,18 @@
 	<div class="shell">
 		<header class="top">
 			<a class="brand" href={resolve('/')}>Funmary</a>
-			{@render logout()}
+			<div class="top-actions">
+				<ThemeToggle initial={data.theme} compact />
+				{@render logout()}
+			</div>
 		</header>
 
 		<nav class="side" aria-label="メニュー">
 			<a class="brand" href={resolve('/')}>Funmary</a>
 			{@render navItems('side-items')}
 			<div class="account">
-				<p class="email">{data.user.email}</p>
+				<div class="email"><MaskedEmail email={data.user.email} /></div>
+				<ThemeToggle initial={data.theme} />
 				{@render logout()}
 			</div>
 		</nav>
@@ -103,7 +110,10 @@
 {:else}
 	<main class="solo">
 		{@render children()}
-		<footer>{@render unofficial()}</footer>
+		<footer>
+			{@render unofficial()}
+			<ThemeToggle initial={data.theme} />
+		</footer>
 	</main>
 {/if}
 
@@ -310,18 +320,22 @@
 	}
 
 	.account {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
 		margin-top: auto;
 		padding-top: 1rem;
 		border-top: 1px dashed var(--fm-divider);
 	}
 
 	.email {
-		margin: 0 0 0.25rem;
-		padding: 0 0.75rem;
-		overflow: hidden;
+		padding-left: 0.75rem;
 		color: var(--fm-text-muted);
 		font-size: 0.8125rem;
-		text-overflow: ellipsis;
-		white-space: nowrap;
+	}
+
+	.top-actions {
+		display: flex;
+		align-items: center;
 	}
 </style>
