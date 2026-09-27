@@ -5,6 +5,7 @@ import { detectChanges, type ScrapedChange } from '@funmary/core';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createClassChangeStore } from './class-change-store.ts';
 import { openDatabase, type Database } from './database.ts';
+import { createSubjectStore } from './subject-store.ts';
 
 let dir: string;
 let database: Database;
@@ -100,5 +101,65 @@ describe('createClassChangeStore', () => {
 		store.apply([{ ...item(), missingCount: 0, withdrawn: false }], t2);
 		store.apply([{ ...item(), missingCount: 1, withdrawn: false }], t3);
 		expect(store.seenAt(item())).toEqual({ firstSeenAt: t1, lastSeenAt: t2 });
+	});
+});
+
+describe('listBySubject', () => {
+	it('科目と照合できた休講などを、日付の新しい順に返す。取り消されたものには印を付ける', () => {
+		const subjectId = createSubjectStore(database).upsert(
+			{
+				academicYear: 2026,
+				syllabusId: '100001',
+				name: '線形代数 I',
+				teacher: null,
+				credits: 2,
+				term: 'fall',
+				attributes: {},
+				syllabus: {},
+				syllabusUrl: null,
+			},
+			t1,
+		);
+		const store = createClassChangeStore(database);
+		const result = detectChanges({
+			previous: [],
+			scraped: [
+				item(),
+				item({ kind: 'cancellation', date: '2026-10-12', room: null, fromRoom: null }),
+				item({ lessonName: 'ほかの科目' }),
+			],
+			today: '2026-10-01',
+		});
+		if (result.kind !== 'ok') throw new Error('ok のはず');
+		store.apply(result.next, t1);
+		database.sqlite
+			.prepare("UPDATE class_changes SET subject_id = ? WHERE lesson_name = '線形代数 I'")
+			.run(subjectId);
+		database.sqlite
+			.prepare("UPDATE class_changes SET withdrawn_at = 1 WHERE kind = 'cancellation'")
+			.run();
+
+		expect(store.listBySubject(subjectId)).toEqual([
+			{
+				kind: 'cancellation',
+				date: '2026-10-12',
+				period: 3,
+				room: null,
+				fromRoom: null,
+				comment: null,
+				makeupPlan: null,
+				withdrawn: true,
+			},
+			{
+				kind: 'roomChange',
+				date: '2026-10-05',
+				period: 3,
+				room: '502',
+				fromRoom: '401',
+				comment: null,
+				makeupPlan: null,
+				withdrawn: false,
+			},
+		]);
 	});
 });

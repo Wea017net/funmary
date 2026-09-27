@@ -1,7 +1,7 @@
 // 休講、補講、教室変更の、前回までの記録 (設計書 9.2、11 章)。@funmary/core の detectChanges の入出力を保存する。
 // 科目との照合 (subject_id) は、ここでは変えない。
 import type { ScrapedChange, TrackedChange } from '@funmary/core';
-import { and, eq } from 'drizzle-orm';
+import { and, desc, eq } from 'drizzle-orm';
 import type { Database } from './database.ts';
 import { classChanges } from './schema.ts';
 
@@ -16,6 +16,21 @@ export interface ClassChangeStore {
 	apply(next: readonly TrackedChange[], now: Date): void;
 	withdrawnAt(change: ScrapedChange): Date | null;
 	seenAt(change: ScrapedChange): { firstSeenAt: Date; lastSeenAt: Date } | null;
+	/** 科目と照合できた休講などを、日付の新しい順に返す (授業の詳細の履歴に使う) */
+	listBySubject(subjectId: number): SubjectClassChange[];
+}
+
+export interface SubjectClassChange {
+	readonly kind: TrackedChange['kind'];
+	readonly date: string;
+	readonly period: number;
+	/** 補講の教室、または教室変更の移動先 */
+	readonly room: string | null;
+	readonly fromRoom: string | null;
+	readonly comment: string | null;
+	readonly makeupPlan: TrackedChange['makeupPlan'];
+	/** ポータルの一覧から消え、取り消されたとみなしたもの */
+	readonly withdrawn: boolean;
 }
 
 type Row = typeof classChanges.$inferSelect;
@@ -102,6 +117,24 @@ export function createClassChangeStore(database: Database): ClassChangeStore {
 		seenAt(change) {
 			const row = db.select().from(classChanges).where(sameKey(change)).get();
 			return row ? { firstSeenAt: row.firstSeenAt, lastSeenAt: row.lastSeenAt } : null;
+		},
+		listBySubject(subjectId) {
+			return db
+				.select()
+				.from(classChanges)
+				.where(eq(classChanges.subjectId, subjectId))
+				.orderBy(desc(classChanges.date), desc(classChanges.period), desc(classChanges.id))
+				.all()
+				.map((row) => ({
+					kind: row.kind,
+					date: row.date,
+					period: row.period,
+					room: row.room,
+					fromRoom: row.fromRoom,
+					comment: row.comment,
+					makeupPlan: row.makeupPlan,
+					withdrawn: row.withdrawnAt !== null,
+				}));
 		},
 	};
 }
