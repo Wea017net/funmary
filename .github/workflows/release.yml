@@ -29,11 +29,14 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
+          # リリースノートに、前回のリリースからの変更を書くために、履歴がすべて要る
+          fetch-depth: 0
       - uses: ./.github/actions/setup
       - run: pnpm build
       - name: tar.gz を作り、GitHub Releases に置く
         env:
           GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
         run: node scripts/workflows/release/publish-release.ts
       - name: 古い自動リリースを消す
         env:
