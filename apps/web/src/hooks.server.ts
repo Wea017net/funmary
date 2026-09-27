@@ -210,6 +210,7 @@ export const init: ServerInit = () => {
 		holidays: holidayStore,
 		sourceHealth: createSourceHealthStore(database),
 		jobRuns: jobRunStore,
+		registration: result.config.registration,
 		estimateHolidays,
 		origin: publicOrigin,
 		alertAdmin: (alert) => alerter.send(alert),

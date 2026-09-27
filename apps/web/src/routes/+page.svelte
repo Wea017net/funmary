@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
+	import Landing from '$lib/components/Landing.svelte';
 	import LessonRoom from '$lib/components/LessonRoom.svelte';
 	import StatusBadge from '$lib/components/StatusBadge.svelte';
 	import type { LessonView } from '$lib/server/lesson-view.ts';
@@ -22,7 +23,11 @@
 	let {
 		data,
 	}: {
-		data: { user: { email: string; isAdmin: boolean } | null; today: TodayView | null };
+		data: {
+			user: { email: string; isAdmin: boolean } | null;
+			today: TodayView | null;
+			registration?: 'invite' | 'open' | 'closed';
+		};
 	} = $props();
 </script>
 
@@ -34,7 +39,7 @@
 	/>
 </svelte:head>
 
-<div class="page">
+<div class={['page', { guest: !data.user }]}>
 	{#if data.user && data.today}
 		{@const today = data.today}
 		<h1>今日 <time datetime={today.date}>{formatDate(today.date)}</time></h1>
@@ -112,15 +117,18 @@
 			</p>
 		{/if}
 	{:else}
-		<h1>Funmary</h1>
-		<p>公立はこだて未来大学の学生向けの便利な総合 Web アプリです。</p>
-		<p><a href={resolve('/login')}>ログイン</a></p>
+		<Landing registration={data.registration ?? 'invite'} />
 	{/if}
 </div>
 
 <style lang="scss">
 	.page {
 		max-width: 44rem;
+	}
+
+	/* 紹介の画面は、外枠の幅いっぱいに使う */
+	.guest {
+		max-width: none;
 	}
 
 	h1 time {
@@ -152,7 +160,7 @@
 			margin: 0;
 		}
 
-		// 淡い赤の上では、リンクの青のコントラストが足りないので、本文の色にする
+		/* 淡い赤の上では、リンクの青のコントラストが足りないので、本文の色にする */
 		a {
 			color: var(--fm-text);
 			font-weight: 700;

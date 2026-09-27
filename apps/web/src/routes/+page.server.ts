@@ -14,7 +14,7 @@ export const load: ServerLoad = ({ locals }) => {
 	const user = locals.user
 		? { email: locals.user.email, isAdmin: locals.user.role === 'admin' }
 		: null;
-	if (!locals.user) return { user, today: null };
+	if (!locals.user) return { user, today: null, registration: getServices().registration };
 
 	const now = new Date();
 	const current = jstDateTime(now);

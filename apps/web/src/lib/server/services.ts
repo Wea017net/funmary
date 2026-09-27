@@ -21,6 +21,8 @@ export interface Services {
 	readonly sourceHealth: SourceHealthStore;
 	readonly jobRuns: StoredJobRunStore;
 	readonly estimateHolidays: TimetableSources['estimateHolidays'];
+	/** 新規登録の方式 (設計書 8.2)。紹介の画面の案内に使う */
+	readonly registration: 'invite' | 'open' | 'closed';
 	/** 公開 URL の origin (ブックマークレットの戻り先に使う) */
 	readonly origin: string;
 	/** 管理者への知らせ。秘密の値を含めない */

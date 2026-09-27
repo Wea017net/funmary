@@ -1,0 +1,386 @@
+<script lang="ts">
+	import Button, { Label } from '@smui/button';
+	import IconCalendar from '~icons/material-symbols/calendar-view-week-outline';
+	import IconDetail from '~icons/material-symbols/menu-book-outline';
+	import IconImport from '~icons/material-symbols/bookmark-add-outline';
+	import IconNotice from '~icons/material-symbols/swap-horiz';
+	import IconToday from '~icons/material-symbols/today-outline';
+	import LessonRoom from '$lib/components/LessonRoom.svelte';
+	import StatusBadge from '$lib/components/StatusBadge.svelte';
+
+	// ログインしていない人に見せる紹介の画面。できることだけを書き、準備中のものは準備中と書く
+	let { registration }: { registration: 'invite' | 'open' | 'closed' } = $props();
+
+	const FEATURES = [
+		{
+			icon: IconToday,
+			title: '今日の授業と、次の授業の教室',
+			text: '今日の画面のいちばん上に、次の授業の時刻と教室を大きく出します。授業中なら、その授業を出します。',
+		},
+		{
+			icon: IconNotice,
+			title: '休講、補講、教室変更を時間割に反映',
+			text: '学生ポータルの休講などの一覧を定期的に確かめ、履修している授業の分を時間割に入れます。色だけでなく、文字とアイコンでも示します。',
+		},
+		{
+			icon: IconCalendar,
+			title: '祝日や振替授業日も入った週の時間割',
+			text: '祝日、振替授業日、全学の休講日を反映した 1 週間の時間割です。カレンダーから、見たい週へすぐ移れます。',
+		},
+		{
+			icon: IconDetail,
+			title: '授業のことを 1 画面で',
+			text: '教員、曜日と時限、教室、シラバスの内容、その授業の休講などの履歴を、まとめて見られます。',
+		},
+		{
+			icon: IconImport,
+			title: '履修科目は、ポータルの時間割から取り込める',
+			text: 'ブックマークを 1 回押すと、学生ポータルの時間割から履修科目を取り込めます。科目を探して 1 つずつ登録することもできます。',
+		},
+	];
+</script>
+
+<div class="landing">
+	<section class="hero" aria-labelledby="hero-heading">
+		<div class="hero-text">
+			<h1 id="hero-heading">次の授業と教室が、<br />開いてすぐ分かる。</h1>
+			<p class="lead">
+				Funmary
+				は、公立はこだて未来大学の学生のための時間割アプリです。学生ポータルの休講、補講、教室変更を、あなたの時間割にまとめて出します。
+			</p>
+
+			<div class="start">
+				{#if registration === 'closed'}
+					<p class="muted">
+						いまは、新しい登録を受け付けていません。登録済みの方はログインできます。
+					</p>
+				{/if}
+				<!-- /auth は SvelteKit の画面ではなく、サーバーが処理するので、通常の移動にする -->
+				<Button href="/auth/google" variant="unelevated" data-sveltekit-reload>
+					<Label
+						>{registration === 'open'
+							? '大学のアカウントではじめる'
+							: '大学のアカウントでログイン'}</Label
+					>
+				</Button>
+				<p class="note">@fun.ac.jp の Google アカウントを使います。スマホでも PC でも使えます。</p>
+
+				{#if registration === 'invite'}
+					<form method="GET" action="/signup" class="invite" data-sveltekit-reload>
+						<label for="invite-code">はじめての方は、招待コードで登録します</label>
+						<div class="invite-row">
+							<input
+								id="invite-code"
+								name="code"
+								required
+								autocomplete="off"
+								spellcheck="false"
+								maxlength="100"
+							/>
+							<Button type="submit" variant="outlined"><Label>招待コードで登録</Label></Button>
+						</div>
+					</form>
+				{/if}
+			</div>
+		</div>
+
+		<figure class="preview">
+			<div class="device">
+				<div class="next">
+					<p class="next-label">次の授業</p>
+					<p class="next-time">13:10-14:40 <span>3 限</span></p>
+					<p class="next-room">講堂</p>
+					<p class="next-subject">
+						架空の情報演習 <StatusBadge status="roomChanged" />
+					</p>
+				</div>
+				<ul class="lessons">
+					<li>
+						<span class="when">1 限</span>
+						<span class="what">架空の線形代数</span>
+						<span class="room"><LessonRoom room="363" tentative={false} /></span>
+					</li>
+					<li class="cancelled">
+						<span class="when">2 限</span>
+						<span class="what">架空の英語 <StatusBadge status="cancelled" /></span>
+						<span class="room"><LessonRoom room="484" tentative={false} /></span>
+					</li>
+					<li>
+						<span class="when">5 限</span>
+						<span class="what">架空の物理 <StatusBadge status="makeup" /></span>
+						<span class="room"><LessonRoom room="495" tentative={true} /></span>
+					</li>
+				</ul>
+			</div>
+			<figcaption>画面の例 (授業は架空のものです)</figcaption>
+		</figure>
+	</section>
+
+	<section aria-labelledby="features-heading">
+		<h2 id="features-heading">できること</h2>
+		<ul class="features">
+			{#each FEATURES as feature (feature.title)}
+				<li>
+					<feature.icon aria-hidden="true" class="feature-icon" />
+					<div>
+						<h3>{feature.title}</h3>
+						<p>{feature.text}</p>
+					</div>
+				</li>
+			{/each}
+		</ul>
+		<p class="soon">準備中: Google カレンダーなどへの予定の配信、Discord への休講などの通知。</p>
+	</section>
+
+	<section aria-labelledby="trust-heading">
+		<h2 id="trust-heading">安心して使うために</h2>
+		<ul class="trust">
+			<li>
+				ログインには大学の Google アカウントを使います。Funmary
+				にパスワードを入れることはありません。
+			</li>
+			<li>
+				ポータルの時間割の読み取りは、あなたのブラウザの中で行います。ポータルのパスワードは Funmary
+				に送られません。
+			</li>
+			<li>
+				Funmary
+				は公立はこだて未来大学の公式のアプリではありません。休講などは、大学の案内もあわせて確かめてください。
+			</li>
+		</ul>
+	</section>
+</div>
+
+<style lang="scss">
+	@use 'breakpoints';
+
+	.landing {
+		max-width: 64rem;
+	}
+
+	.hero {
+		display: grid;
+		gap: 2.5rem;
+		padding: 1rem 0 2rem;
+
+		@include breakpoints.wide {
+			grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+			align-items: center;
+			padding: 3rem 0 3.5rem;
+		}
+	}
+
+	h1 {
+		margin: 0 0 1rem;
+		font-size: 2rem;
+		line-height: 1.3;
+		letter-spacing: -0.01em;
+
+		@include breakpoints.wide {
+			font-size: 2.75rem;
+		}
+	}
+
+	.lead {
+		margin: 0 0 1.75rem;
+		color: var(--fm-text-muted);
+		font-size: 1.0625rem;
+		max-width: 34em;
+	}
+
+	.start {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 0.5rem;
+	}
+
+	.note {
+		margin: 0;
+		color: var(--fm-text-muted);
+		font-size: 0.8125rem;
+	}
+
+	.invite {
+		display: flex;
+		flex-direction: column;
+		gap: 0.375rem;
+		width: 100%;
+		max-width: 26rem;
+		margin-top: 1.25rem;
+		padding-top: 1.25rem;
+		border-top: 1px dashed var(--fm-divider);
+
+		label {
+			font-size: 0.875rem;
+		}
+	}
+
+	.invite-row {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+
+		input {
+			flex: 1 1 10rem;
+		}
+	}
+
+	/* 画面の例。本物の部品 (教室、休講などのラベル) で描く */
+	.preview {
+		margin: 0;
+	}
+
+	.device {
+		padding: 1rem;
+		border: 1px solid var(--fm-divider);
+		border-radius: 1.25rem;
+		background: var(--fm-surface);
+		box-shadow: 0 12px 32px -16px rgb(0 0 0 / 0.35);
+	}
+
+	.next {
+		padding: 1rem 1.25rem;
+		border-radius: 0.75rem;
+		background: var(--fm-primary-soft);
+
+		p {
+			margin: 0;
+		}
+	}
+
+	.next-label {
+		color: var(--fm-primary);
+		font-size: 0.8125rem;
+		font-weight: 700;
+	}
+
+	.next-time {
+		font-size: 1.5rem;
+		font-weight: 700;
+		font-variant-numeric: tabular-nums;
+
+		span {
+			font-size: 0.875rem;
+			font-weight: 400;
+		}
+	}
+
+	.next-room {
+		font-size: 1.25rem;
+		font-weight: 700;
+	}
+
+	.next .next-subject {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.25rem 0.5rem;
+		margin-top: 0.25rem;
+		font-size: 0.9375rem;
+	}
+
+	.lessons {
+		margin: 0.75rem 0 0;
+		padding: 0;
+		list-style: none;
+		font-size: 0.875rem;
+
+		li {
+			display: grid;
+			grid-template-columns: 2.5rem minmax(0, 1fr) auto;
+			align-items: baseline;
+			gap: 0.5rem;
+			padding: 0.5rem 0.25rem;
+			border-bottom: 1px dashed var(--fm-divider);
+		}
+
+		li:last-child {
+			border-bottom: 0;
+		}
+	}
+
+	.when {
+		font-weight: 700;
+		font-variant-numeric: tabular-nums;
+	}
+
+	.what {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.25rem 0.5rem;
+	}
+
+	.cancelled .what {
+		text-decoration: line-through;
+	}
+
+	figcaption {
+		margin-top: 0.5rem;
+		color: var(--fm-text-muted);
+		font-size: 0.8125rem;
+		text-align: center;
+	}
+
+	h2 {
+		margin: 2.5rem 0 1rem;
+		font-size: 1.25rem;
+	}
+
+	.features {
+		display: grid;
+		margin: 0;
+		padding: 0;
+		list-style: none;
+
+		@include breakpoints.wide {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+			column-gap: 2.5rem;
+		}
+
+		li {
+			display: flex;
+			gap: 1rem;
+			padding: 1.25rem 0;
+			border-top: 1px dashed var(--fm-divider);
+		}
+
+		h3 {
+			margin: 0 0 0.25rem;
+			font-size: 1rem;
+		}
+
+		p {
+			margin: 0;
+			color: var(--fm-text-muted);
+			font-size: 0.9375rem;
+		}
+	}
+
+	.features :global(.feature-icon) {
+		flex: none;
+		width: 1.75rem;
+		height: 1.75rem;
+		color: var(--fm-primary);
+	}
+
+	.soon {
+		margin: 0.5rem 0 0;
+		padding: 0.75rem 1rem;
+		border-radius: 0.5rem;
+		background: var(--fm-surface-muted);
+		color: var(--fm-text-muted);
+		font-size: 0.875rem;
+	}
+
+	.trust {
+		margin: 0;
+		padding-left: 1.25rem;
+		color: var(--fm-text-muted);
+
+		li + li {
+			margin-top: 0.5rem;
+		}
+	}
+</style>

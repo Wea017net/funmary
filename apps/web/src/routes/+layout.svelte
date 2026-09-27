@@ -114,12 +114,14 @@
 		</nav>
 	</div>
 {:else}
+	<!-- ログインしていないときは、名前と画面の色のボタンだけを上に置く -->
+	<header class="guest-top">
+		<a class="brand" href={resolve('/')}>Funmary</a>
+		<ThemeToggle initial={data.theme} compact />
+	</header>
 	<main class="solo">
 		{@render children()}
-		<footer>
-			{@render unofficial()}
-			<ThemeToggle initial={data.theme} />
-		</footer>
+		<footer>{@render unofficial()}</footer>
 	</main>
 {/if}
 
@@ -136,8 +138,17 @@
 		padding: 1rem 1rem 6rem;
 	}
 
+	.guest-top {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		max-width: 64rem;
+		margin: 0 auto;
+		padding: 0.25rem 0.5rem 0.25rem 1rem;
+	}
+
 	.solo {
-		max-width: 40rem;
+		max-width: 64rem;
 		margin: 0 auto;
 		padding-bottom: 2rem;
 	}
@@ -354,6 +365,7 @@
 	}
 
 	.email {
+		width: 100%;
 		color: var(--fm-text-muted);
 		font-size: 0.8125rem;
 	}

@@ -33,11 +33,15 @@
 <style>
 	.masked-email {
 		display: flex;
+		width: 100%;
 		align-items: center;
 		gap: 0.25rem;
 		min-width: 0;
 	}
+	/* 伏せても表示しても、欄の幅は変えない (長いときは末尾を省く) */
 	.address {
+		flex: 1;
+		min-width: 0;
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;

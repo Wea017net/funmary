@@ -33,7 +33,7 @@ test.afterEach(() => {
 
 test('ログインしていないと、トップページにログインへのリンクが出る', async ({ page }) => {
 	await page.goto('/');
-	await expect(page.getByRole('link', { name: 'ログイン' })).toBeVisible();
+	await expect(page.getByRole('link', { name: '大学のアカウントではじめる' })).toBeVisible();
 });
 
 test('大学のアカウントでログインでき、ログアウトできる', async ({ page }) => {
@@ -70,7 +70,7 @@ test('大学のアカウントでログインでき、ログアウトできる',
 
 	await page.getByRole('button', { name: 'ログアウト' }).click();
 	await expect(page).toHaveURL('/');
-	await expect(page.getByRole('link', { name: 'ログイン' })).toBeVisible();
+	await expect(page.getByRole('link', { name: '大学のアカウントではじめる' })).toBeVisible();
 	expect((await page.context().cookies()).some((c) => c.name === 'funmary_session')).toBe(false);
 });
 
@@ -502,10 +502,13 @@ test.describe('今日と週の時間割', () => {
 		const logoutBox = await logout.boundingBox();
 		expect([logoutBox?.width, logoutBox?.height]).toEqual([first?.width, first?.height]);
 
-		// メールアドレスを表示しても、ボタンの位置は変わらない
+		// メールアドレスを表示しても、ボタンの位置とアドレスの欄の大きさは変わらない
+		const address = menu.locator('.masked-email');
 		const hidden = await show.boundingBox();
+		const hiddenAddress = await address.boundingBox();
 		await show.click();
 		expect(await show.boundingBox()).toEqual(hidden);
+		expect(await address.boundingBox()).toEqual(hiddenAddress);
 
 		// 今週と次の週で、次の週のボタンの位置は変わらない
 		await page.goto('/week');
