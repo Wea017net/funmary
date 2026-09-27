@@ -61,7 +61,12 @@ export function importTimetable(
 	const subjects = deps.subjects.list(academicYear);
 	if (subjects.length === 0) return { kind: 'no-subjects', academicYear };
 
-	const plan = planSlotImport(parsed.entries, subjectsInSemester(subjects, parsed.term));
+	const plan = planSlotImport(
+		parsed.entries,
+		subjectsInSemester(subjects, parsed.term),
+		// 管理者が管理画面で紐付けた名前は、照合より優先する
+		deps.unmatched.resolvedNames(academicYear),
+	);
 	let applied = null;
 	if (options.apply) {
 		const result = deps.courses.addSharedSlots(

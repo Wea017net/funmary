@@ -127,6 +127,7 @@ const METHOD_LABELS = {
 	exact: '完全一致',
 	normalized: '表記の揺れを除いて一致',
 	'old-name-removed': '旧名を除いて一致',
+	manual: '管理画面で紐付け済み',
 } as const;
 
 /** 取り込みの結果を、管理者が確かめられる形で出す */

@@ -24,7 +24,9 @@ export interface PlannedSlot {
 	readonly room: string | null;
 	/** 照合に使った名前 (科目名 + クラス) */
 	readonly lessonName: string;
-	readonly method: Exclude<Extract<MatchResult, { kind: 'matched' }>['method'], 'similarity'>;
+	/** manual は、管理者が手で紐付けた名前 */
+	readonly method:
+		Exclude<Extract<MatchResult, { kind: 'matched' }>['method'], 'similarity'> | 'manual';
 }
 
 /**
@@ -39,6 +41,9 @@ export interface SlotImportPlan {
 	readonly slots: readonly PlannedSlot[];
 	readonly unmatched: readonly UnmatchedName[];
 }
+
+type PlannedMatch =
+	MatchResult | { readonly kind: 'matched'; readonly subjectId: number; readonly method: 'manual' };
 
 const MAX_WEEKDAY = 6;
 const MAX_PERIOD = 6;
@@ -61,12 +66,18 @@ export function subjectsInSemester<T extends { readonly term: string }>(
 	return subjects.filter((subject) => terms.includes(subject.term));
 }
 
+/**
+ * resolved は、管理者が手で紐付けた名前と科目の ID (照合より優先する)。
+ * 紐付けた科目が subjects (学期で絞ったもの) になければ、通常の照合に回す
+ */
 export function planSlotImport(
 	cells: readonly TimetableCell[],
 	subjects: readonly SubjectName[],
+	resolved: ReadonlyMap<string, number> = new Map(),
 ): SlotImportPlan {
+	const ids = new Set(subjects.map((subject) => subject.id));
 	// 同じ名前は何度も出てくる (週に 2 コマの科目など) ので、照合の結果を使い回す
-	const matches = new Map<string, MatchResult>();
+	const matches = new Map<string, PlannedMatch>();
 	const slots = new Map<string, { slot: PlannedSlot; rooms: string[] }>();
 	const unmatched = new Map<string, UnmatchedName>();
 
@@ -77,7 +88,11 @@ export function planSlotImport(
 		const lessonName = `${cell.subject}${cell.classes ?? ''}`;
 		let match = matches.get(lessonName);
 		if (!match) {
-			match = matchLessonName(lessonName, subjects);
+			const manual = resolved.get(lessonName);
+			match =
+				manual !== undefined && ids.has(manual)
+					? { kind: 'matched', subjectId: manual, method: 'manual' }
+					: matchLessonName(lessonName, subjects);
 			matches.set(lessonName, match);
 		}
 		if (match.kind !== 'matched' || match.method === 'similarity') {

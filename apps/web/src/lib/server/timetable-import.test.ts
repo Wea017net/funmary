@@ -115,6 +115,20 @@ describe('importTimetable', () => {
 		).toEqual(['架空の別の授業2']);
 	});
 
+	it('管理画面で紐付けた名前は、次の取り込みで、その科目の枠になる', () => {
+		const subjectId = addSubject('架空演習1-AB', 'spring', '1');
+		const other = parsed({ entries: [entry({ subject: '架空演習 (再)', classes: '1-AB' })] });
+		importTimetable(other, deps(), { apply: true, now: NOW });
+		deps().unmatched.resolve(2027, '架空演習 (再)1-AB', subjectId);
+
+		const report = importTimetable(other, deps(), { apply: true, now: NOW });
+		expect(report).toMatchObject({
+			unmatched: [],
+			slots: [{ subjectId, method: 'manual' }],
+			applied: { added: 1 },
+		});
+	});
+
 	it('時間割の学期に合う科目だけと照合する (後期に同じ名前の科目があっても、前期の時間割は前期の科目に付ける)', () => {
 		const spring = addSubject('架空演習1-AB', 'spring', '1');
 		addSubject('架空演習1-AB', 'fall', '2');
