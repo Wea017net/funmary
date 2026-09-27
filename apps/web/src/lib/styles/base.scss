@@ -1,0 +1,73 @@
+// 画面全体の基本のスタイル。色はテーマ (src/theme) の CSS 変数で書き、ライトとダークの両方に効かせる
+@use 'fonts';
+
+html {
+	background: var(--fm-background);
+	color: var(--fm-text);
+	-webkit-text-size-adjust: 100%;
+}
+
+body {
+	margin: 0;
+	font-family: fonts.$system;
+	font-size: 1rem;
+	line-height: 1.7;
+}
+
+h1,
+h2,
+h3 {
+	line-height: 1.35;
+	letter-spacing: 0.01em;
+	text-wrap: balance;
+}
+
+h1 {
+	margin: 0 0 1rem;
+	font-size: 1.5rem;
+}
+
+h2 {
+	margin: 2rem 0 0.75rem;
+	font-size: 1.125rem;
+}
+
+a {
+	color: var(--fm-link);
+	text-underline-offset: 0.2em;
+}
+
+:focus-visible {
+	outline: 2px solid var(--fm-primary);
+	outline-offset: 2px;
+}
+
+::selection {
+	background: var(--fm-primary-soft);
+	color: var(--fm-text);
+}
+
+// 時刻や件数の数字は、桁をそろえる
+time,
+.numeric {
+	font-variant-numeric: tabular-nums;
+}
+
+.muted {
+	color: var(--fm-text-muted);
+}
+
+.visually-hidden {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+	clip-path: inset(50%);
+	white-space: nowrap;
+}
+
+// 押せる部分は 48px 四方以上にする (設計書 12.4)。SMUI のボタンの既定 (36px) を広げる
+.mdc-button {
+	height: 48px;
+	border-radius: 0.5rem;
+}

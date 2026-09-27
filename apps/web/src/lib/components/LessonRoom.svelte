@@ -12,7 +12,7 @@
 
 <style>
 	.tentative {
-		color: #666666;
+		color: var(--fm-text-muted);
 		font-size: 0.875em;
 	}
 </style>

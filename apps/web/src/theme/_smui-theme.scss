@@ -1,0 +1,43 @@
+// ライト用のテーマ (設計書 12.3)。色は大学の公式サイトとロゴから拾った値。
+// scripts/build-theme.js が、SMUI の部品のスタイルと一緒に CSS へ変換する。
+@use '../lib/styles/fonts';
+
+@use '@smui/common/theme/index' as theme with (
+	$primary: #9d2126,
+	$on-primary: #ffffff,
+	$secondary: #3d6cbc,
+	$on-secondary: #ffffff,
+	$surface: #ffffff,
+	$on-surface: #333333,
+	$background: #ffffff,
+	$error: #b3261e
+);
+
+// テーマの色を先に決める (文字の設定も、中でテーマを読むため)
+@use '@smui/common/typography/index' as typography with (
+	$font-family: fonts.$system
+);
+
+// SMUI の部品が読む色の CSS 変数 (--mdc-theme-*) を出す。ダークでは、この変数だけを置き換える
+@include theme.core-styles;
+
+:root {
+	color-scheme: light;
+	--fm-text: #333333;
+	--fm-text-muted: #666666;
+	--fm-divider: #dddddd;
+	--fm-background: #ffffff;
+	--fm-surface: #ffffff;
+	--fm-surface-muted: #f3f2f2;
+	--fm-primary: #9d2126;
+	--fm-on-primary: #ffffff;
+	--fm-primary-soft: #f9e9ea;
+	--fm-link: #3d6cbc;
+	--fm-error: #b3261e;
+	--fm-cancelled: #b3261e;
+	--fm-cancelled-soft: #fdecea;
+	--fm-makeup: #2e7d32;
+	--fm-makeup-soft: #edf7ee;
+	--fm-room-changed: #8a6d00;
+	--fm-room-changed-soft: #fdf6d3;
+}

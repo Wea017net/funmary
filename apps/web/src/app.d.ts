@@ -1,3 +1,4 @@
+/// <reference types="unplugin-icons/types/svelte" />
 // SvelteKit の型の拡張。https://svelte.dev/docs/kit/types#app.d.ts
 import type { AuthUser } from '@funmary/db';
 

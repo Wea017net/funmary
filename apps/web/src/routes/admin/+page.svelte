@@ -9,7 +9,7 @@
 	<meta name="robots" content="noindex" />
 </svelte:head>
 
-<main>
+<div class="page">
 	<h1>管理</h1>
 	<ul>
 		<li>
@@ -17,14 +17,10 @@
 			({data.unresolvedLessons} 件)
 		</li>
 	</ul>
-</main>
+</div>
 
 <style>
-	main {
+	.page {
 		max-width: 40rem;
-		margin: 0 auto;
-		padding: 1rem;
-		font-family: system-ui, sans-serif;
-		line-height: 1.7;
 	}
 </style>

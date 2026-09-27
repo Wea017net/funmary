@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button, { Label } from '@smui/button';
 	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
 
@@ -26,7 +27,7 @@
 	<meta name="robots" content="noindex" />
 </svelte:head>
 
-<main>
+<div class="page">
 	<p><a href={resolve('/admin')}>管理</a></p>
 	<h1>照合できなかった授業名</h1>
 
@@ -71,21 +72,17 @@
 								<input name="syllabusId" inputmode="numeric" autocomplete="off" />
 							</label>
 						</fieldset>
-						<button type="submit">紐付ける</button>
+						<Button type="submit" variant="unelevated"><Label>紐付ける</Label></Button>
 					</form>
 				</li>
 			{/each}
 		</ul>
 	{/if}
-</main>
+</div>
 
 <style>
-	main {
+	.page {
 		max-width: 48rem;
-		margin: 0 auto;
-		padding: 1rem;
-		font-family: system-ui, sans-serif;
-		line-height: 1.7;
 	}
 	.lessons {
 		padding: 0;
@@ -94,7 +91,7 @@
 	.lessons > li {
 		margin: 0.75rem 0;
 		padding: 0.75rem 1rem;
-		border: 1px solid #dddddd;
+		border: 1px solid var(--fm-divider);
 		border-radius: 0.5rem;
 	}
 	h2 {
@@ -103,7 +100,7 @@
 	}
 	.meta {
 		margin: 0;
-		color: #666666;
+		color: var(--fm-text-muted);
 	}
 	fieldset {
 		display: flex;
@@ -119,7 +116,6 @@
 		gap: 0.5rem;
 		min-height: 48px;
 	}
-	button,
 	input:not([type='radio']) {
 		min-height: 48px;
 		font: inherit;
@@ -131,6 +127,6 @@
 		border-radius: 0.25rem;
 	}
 	.error {
-		color: #b3261e;
+		color: var(--fm-error);
 	}
 </style>

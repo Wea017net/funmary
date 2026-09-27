@@ -46,3 +46,6 @@ Thumbs.db
 
 # ログ
 *.log
+
+# テーマの CSS (apps/web/scripts/build-theme.js が作る)
+apps/web/src/lib/styles/generated/
