@@ -55,14 +55,18 @@ class Stop extends Error {}
 
 const form = (entries: Iterable<[string, string]>) => new URLSearchParams([...entries]).toString();
 
-/** 検索やページ送りの POST の本文。hidden の値と、年度を送る */
+/**
+ * 検索やページ送りの POST の本文。hidden の値と、年度を送る。
+ * ページには空の __EVENTTARGET と __EVENTARGUMENT があるので、同じ名前は後の値で上書きする。
+ * 重ねて送ると、ASP.NET は値を , でつないで読み、ページ送りと分からずに 1 ページ目を返す
+ */
 function searchBody(
 	searchForm: SearchForm,
 	hidden: ReadonlyMap<string, string>,
 	year: number,
 	extra: readonly [string, string][],
 ): string {
-	return form([...hidden, [searchForm.yearField, String(year)], ...extra]);
+	return form(new Map([...hidden, [searchForm.yearField, String(year)], ...extra]));
 }
 
 export async function fetchSyllabusCatalog(deps: FetchSyllabusDeps): Promise<FetchSyllabusResult> {
