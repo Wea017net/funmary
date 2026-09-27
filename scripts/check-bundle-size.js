@@ -7,19 +7,19 @@ import { gzipSync } from 'node:zlib';
 const LIMIT_BYTES = 60 * 1024;
 const CLIENT_DIR = join(import.meta.dirname, '../apps/web/.svelte-kit/output/client');
 
-interface ManifestChunk {
-	file: string;
-	src?: string;
-	isEntry?: boolean;
-	imports?: string[];
-}
+/** @typedef {{ file: string; src?: string; isEntry?: boolean; imports?: string[] }} ManifestChunk */
 
-const manifest = JSON.parse(
-	readFileSync(join(CLIENT_DIR, '.vite/manifest.json'), 'utf8'),
-) as Record<string, ManifestChunk>;
+/** @type {unknown} */
+const manifestJson = JSON.parse(readFileSync(join(CLIENT_DIR, '.vite/manifest.json'), 'utf8'));
+const manifest = /** @type {Record<string, ManifestChunk>} */ (manifestJson);
 
-const sizeCache = new Map<string, number>();
-function gzipSize(file: string): number {
+/** @type {Map<string, number>} */
+const sizeCache = new Map();
+/**
+ * @param {string} file
+ * @returns {number}
+ */
+function gzipSize(file) {
 	let size = sizeCache.get(file);
 	if (size === undefined) {
 		size = gzipSync(readFileSync(join(CLIENT_DIR, file))).length;
@@ -28,8 +28,13 @@ function gzipSize(file: string): number {
 	return size;
 }
 
-/** チャンクと、そこから静的に読み込まれるチャンクのファイル名をすべて集める */
-function collectFiles(key: string, files = new Set<string>()): Set<string> {
+/**
+ * チャンクと、そこから静的に読み込まれるチャンクのファイル名をすべて集める
+ * @param {string} key
+ * @param {Set<string>} [files]
+ * @returns {Set<string>}
+ */
+function collectFiles(key, files = new Set()) {
 	const chunk = manifest[key];
 	if (!chunk || files.has(chunk.file)) return files;
 	files.add(chunk.file);
@@ -45,7 +50,8 @@ const nodes = entries.filter(([, chunk]) => chunk.file.includes('/nodes/'));
 // レイアウトのノードも含めて多めに見積もるため、ノードごとに共通部分を足して測る
 let failed = false;
 for (const [key, chunk] of nodes) {
-	const files = new Set<string>();
+	/** @type {Set<string>} */
+	const files = new Set();
 	for (const entry of [...shared, key]) collectFiles(entry, files);
 	const total = [...files].reduce((sum, file) => sum + gzipSize(file), 0);
 	const over = total > LIMIT_BYTES;

@@ -37,9 +37,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GITHUB_REPOSITORY: ${{ github.repository }}
-        run: node scripts/workflows/release/publish-release.ts
+        run: node scripts/workflows/release/publish-release.js
       - name: 古い自動リリースを消す
         env:
           GH_TOKEN: ${{ github.token }}
           KEEP: '10'
-        run: node scripts/workflows/release/prune-releases.ts
+        run: node scripts/workflows/release/prune-releases.js

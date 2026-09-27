@@ -1,5 +1,5 @@
 // 公開シラバスの取得を、手元で 1 回だけ確かめる (開発者が行う)。ログインは要らない。
-// 使い方: node scripts/syllabus-check.ts [詳細を取る科目の数 (既定は 3)] [年度 (既定は今年度)]
+// 使い方: node scripts/syllabus-check.js [詳細を取る科目の数 (既定は 3)] [年度 (既定は今年度)]
 // 一覧のすべてのページ (18 ページほど) は取るが、詳細は、指定した数の科目だけ取る。
 // 大学のサーバーに負荷をかけないよう、リクエストの間は 2 秒あける。
 import { fetchSyllabusCatalog } from '../packages/sources/src/index.ts';

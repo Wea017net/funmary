@@ -10,7 +10,7 @@ export default defineConfig({
 				// GitHub Actions から呼ぶスクリプトの、判断の部分を試す
 				test: {
 					name: 'scripts',
-					include: ['scripts/**/*.test.ts'],
+					include: ['scripts/**/*.test.js'],
 					environment: 'node',
 				},
 			},

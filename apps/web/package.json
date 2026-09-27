@@ -6,7 +6,7 @@
 	"license": "(BSD-3-Clause OR Apache-2.0)",
 	"scripts": {
 		"dev": "vite dev",
-		"build": "vite build && node scripts/copy-migrations.ts",
+		"build": "vite build && node scripts/copy-migrations.js",
 		"bundle-cli": "tsdown",
 		"preview": "vite preview",
 		"prepare": "svelte-kit sync || echo \"svelte-kit sync をスキップしました\"",

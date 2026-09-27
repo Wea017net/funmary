@@ -1,7 +1,7 @@
 // 内閣府の「国民の祝日について」の CSV (https://www8.cao.go.jp/chosei/shukujitsu/syukujitsu.csv) を、UTF-8 にして写したもの。
 // 出典: 内閣府「国民の祝日について」。文字コードを UTF-8 にして写している (加工)。
 // 2026-09-26 に取得。2027-11-23 までの祝日と休日 (振替休日を含む) が載っている。
-// このファイルは scripts/update-bundled-holidays.ts が作るので、手で書き換えない。
+// このファイルは scripts/update-bundled-holidays.js が作るので、手で書き換えない。
 // 起動したときに内閣府へ届かなくても、祝日が分かるようにするための備えで、取得できたあとはそちらを使う。
 export const BUNDLED_HOLIDAY_CSV = `国民の祝日・休日月日,国民の祝日・休日名称
 1955/1/1,元日

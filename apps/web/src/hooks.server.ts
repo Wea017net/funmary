@@ -72,7 +72,7 @@ export const init: ServerInit = () => {
 	const dataDir = dev ? resolve(REPO_ROOT, result.config.dataDir) : result.config.dataDir;
 	mkdirSync(dataDir, { recursive: true });
 	// 開くときに、壊れていないかの確認とマイグレーションまで行う。
-	// ビルドしたものでは、scripts/copy-migrations.ts がサーバーの出力に写したマイグレーションを、上の階層へたどって探す
+	// ビルドしたものでは、scripts/copy-migrations.js がサーバーの出力に写したマイグレーションを、上の階層へたどって探す
 	const bundledMigrations = findMigrationsFolder(dirname(fileURLToPath(import.meta.url)));
 	const database = openDatabase(join(dataDir, 'funmary.db'), {
 		backupDir: join(dataDir, 'backups'),

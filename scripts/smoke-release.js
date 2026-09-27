@@ -1,5 +1,5 @@
 // できあがったリリースを、本番と同じ入口 (node server.js) で起動して、応答するかを確かめる。
-// 使い方: node scripts/package-release.ts <版> のあとに、node scripts/smoke-release.ts <版>
+// 使い方: node scripts/package-release.js <版> のあとに、node scripts/smoke-release.js <版>
 // CI で動かす。環境変数ファイルの、空の値 (HOST=、PORT= など) の入ったままの形も、わざと再現する。
 import { execSync, spawn } from 'node:child_process';
 import { mkdtempSync, rmSync } from 'node:fs';
@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 const version = process.argv[2];
-if (!version) throw new Error('使い方: node scripts/smoke-release.ts <版>');
+if (!version) throw new Error('使い方: node scripts/smoke-release.js <版>');
 
 const root = join(import.meta.dirname, '..');
 const releaseDir = join(root, 'release', `funmary-${version}`);
@@ -20,7 +20,8 @@ execSync('npm install --omit=dev --no-audit --no-fund --loglevel=error', {
 });
 
 // 本番の環境変数ファイルを再現する。.env.example を丸ごと写したときの、空の値も入れる
-const env: NodeJS.ProcessEnv = {
+/** @type {NodeJS.ProcessEnv} */
+const env = {
 	PATH: process.env['PATH'],
 	NODE_ENV: 'production',
 	DATA_DIR: dataDir,
@@ -43,10 +44,11 @@ const env: NodeJS.ProcessEnv = {
 
 const child = spawn(process.execPath, ['server.js'], { cwd: releaseDir, env, stdio: 'pipe' });
 let output = '';
-child.stdout.on('data', (chunk: Buffer) => (output += chunk.toString()));
-child.stderr.on('data', (chunk: Buffer) => (output += chunk.toString()));
+child.stdout.on('data', (/** @type {Buffer} */ chunk) => (output += chunk.toString()));
+child.stderr.on('data', (/** @type {Buffer} */ chunk) => (output += chunk.toString()));
 
-async function waitForHealth(): Promise<string> {
+/** @returns {Promise<string>} */
+async function waitForHealth() {
 	const deadline = Date.now() + 30_000;
 	while (Date.now() < deadline) {
 		if (child.exitCode !== null)
