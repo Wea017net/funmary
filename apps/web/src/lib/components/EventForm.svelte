@@ -277,6 +277,33 @@
 		{/if}
 	</fieldset>
 
+	<fieldset>
+		<legend>公開範囲</legend>
+		<label class="choice">
+			<input
+				type="radio"
+				name="visibility"
+				value="private"
+				checked={values.visibility === 'private'}
+			/>自分だけ
+		</label>
+		<label class="choice">
+			<input type="radio" name="visibility" value="link" checked={values.visibility === 'link'} />
+			共有のリンクを知っている人 (Funmary にログインした人だけ)
+		</label>
+		<label class="choice">
+			<input
+				type="radio"
+				name="visibility"
+				value="public"
+				checked={values.visibility === 'public'}
+			/>Funmary にログインしている全員 (「みんなの予定」に載る)
+		</label>
+		<p class="hint">
+			公開した予定に、あなたの名前やメールアドレスは出ません。公開をやめると、ほかの人の時間割から消えます。
+		</p>
+	</fieldset>
+
 	<Button type="submit" variant="unelevated"><Label>{submitLabel}</Label></Button>
 </form>
 

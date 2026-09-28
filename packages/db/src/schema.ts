@@ -248,10 +248,34 @@ export const userEvents = sqliteTable(
 		rrule: text('rrule'),
 		/** 繰り返しから除く日 ("YYYY-MM-DD" の配列) */
 		excludedDates: text('excluded_dates', { mode: 'json' }).$type<string[]>().notNull().default([]),
+		/** 公開範囲。private は本人だけ、link は共有のリンクを知っている人、public はログインしている全員 */
+		visibility: text('visibility', { enum: ['private', 'link', 'public'] })
+			.notNull()
+			.default('private'),
+		/** 限定公開 (link) の共有のリンクの値。限定公開でなければ null。再発行すると変わる */
+		shareToken: text('share_token').unique(),
 		createdAt: createdAt(),
 		updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
 	},
-	(table) => [index('user_events_owner').on(table.ownerId, table.startDate)],
+	(table) => [
+		index('user_events_owner').on(table.ownerId, table.startDate),
+		index('user_events_public').on(table.visibility),
+	],
+);
+
+/** ほかの人の予定を、自分の時間割に加えたもの (Issue #145)。持ち主が直すと、加えた人にも反映される */
+export const eventSubscriptions = sqliteTable(
+	'event_subscriptions',
+	{
+		userId: text('user_id')
+			.notNull()
+			.references(() => users.id, { onDelete: 'cascade' }),
+		eventId: integer('event_id')
+			.notNull()
+			.references(() => userEvents.id, { onDelete: 'cascade' }),
+		createdAt: createdAt(),
+	},
+	(table) => [primaryKey({ columns: [table.userId, table.eventId] })],
 );
 
 // ---------------------------------------------------------------------------

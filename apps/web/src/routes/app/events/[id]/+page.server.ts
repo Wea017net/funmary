@@ -14,7 +14,7 @@ const LOOK_AHEAD_DAYS = 400;
 const parseId = (value: string | undefined) =>
 	value && /^[1-9]\d{0,9}$/.test(value) ? Number(value) : null;
 
-export const load: ServerLoad = ({ locals, params }) => {
+export const load: ServerLoad = ({ locals, params, url }) => {
 	if (!locals.user) redirect(303, '/login');
 	const id = parseId(params['id']);
 	const event = id === null ? null : getServices().userEvents.get(id, locals.user.id);
@@ -36,6 +36,8 @@ export const load: ServerLoad = ({ locals, params }) => {
 		candidates,
 		// 候補の外にある (過去や、遠い先の) 除く日は、消さずに残す
 		keptExclusions: event.excludedDates.filter((date) => !shown.has(date)),
+		// 限定公開のときの、共有のリンク
+		shareUrl: event.shareToken ? `${url.origin}/app/events/shared/${event.shareToken}` : null,
 	};
 };
 
@@ -57,6 +59,15 @@ export const actions: Actions = {
 			error(404, '予定が見つかりません');
 		}
 		redirect(303, '/app/events?saved=updated');
+	},
+	/** 共有のリンクを作り直す。前のリンクは使えなくなる */
+	rotate: ({ locals, params }) => {
+		if (!locals.user) redirect(303, '/login');
+		const id = parseId(params['id']);
+		if (id === null || !getServices().userEvents.rotateShareToken(id, locals.user.id)) {
+			error(404, '共有のリンクが見つかりません');
+		}
+		return { message: '共有のリンクを作り直しました。前のリンクは、使えなくなりました。' };
 	},
 	delete: ({ locals, params }) => {
 		if (!locals.user) redirect(303, '/login');

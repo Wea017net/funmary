@@ -1267,6 +1267,93 @@ test.describe('自分の予定', () => {
 		await expect(row).toContainText('終日');
 	});
 
+	test('公開範囲を選べる。全体に公開した予定は、ほかの人が探して加えられ、限定公開は、リンクの値でだけ開ける', async ({
+		browser,
+		page,
+	}) => {
+		// テスト用の DB は実行をまたいで残るので、予定の名前は、実行ごとに変える
+		const suffix = String(Date.now());
+		const publicTitle = `全体の架空の予定${suffix}`;
+		const linkTitle = `限定の架空の予定${suffix}`;
+		const privateTitle = `自分だけの架空の予定${suffix}`;
+		const create = async (
+			target: import('@playwright/test').Page,
+			title: string,
+			visibility: '自分だけ' | '共有のリンクを知っている人' | 'Funmary にログインしている全員',
+		) => {
+			await target.goto('/app/events');
+			await target.getByRole('link', { name: '予定を足す' }).click();
+			await expect(target.getByRole('heading', { name: '予定を足す' })).toBeVisible();
+			await target.getByLabel('予定の名前').fill(title);
+			await target.getByLabel('開始日').fill('2026-12-07');
+			await target.getByRole('radio', { name: '終日' }).check();
+			await target.getByRole('radio', { name: new RegExp(`^${visibility}`) }).check();
+			await target.getByRole('button', { name: '足す' }).click();
+			await expect(target.getByRole('status')).toHaveText('予定を足しました。');
+		};
+
+		await login(page, `e2e-events-owner-${Date.now()}@fun.ac.jp`);
+		await create(page, publicTitle, 'Funmary にログインしている全員');
+		await create(page, linkTitle, '共有のリンクを知っている人');
+		await create(page, privateTitle, '自分だけ');
+
+		// 限定公開の予定には、共有のリンクが出る。自分だけの予定には出ない
+		await page
+			.getByRole('listitem')
+			.filter({ hasText: linkTitle })
+			.getByRole('link', { name: /^編集/ })
+			.click();
+		const linkField = page.getByLabel('リンク', { exact: true });
+		const firstLink = await linkField.inputValue();
+		expect(firstLink).toMatch(/\/app\/events\/shared\/[\w-]{43}$/);
+		await page.goto('/app/events');
+		await page
+			.getByRole('listitem')
+			.filter({ hasText: privateTitle })
+			.getByRole('link', { name: /^編集/ })
+			.click();
+		await expect(page.getByRole('heading', { name: '共有のリンク' })).toHaveCount(0);
+
+		// ほかの人: みんなの予定には、全体の予定だけが出る。持ち主の情報は出ない
+		const viewer = await (await browser.newContext()).newPage();
+		await login(viewer, `e2e-events-viewer-${Date.now()}@fun.ac.jp`);
+		await viewer.goto('/app/events');
+		await viewer.getByRole('link', { name: 'みんなの予定を探す' }).click();
+		const publicItem = viewer.getByRole('listitem').filter({ hasText: publicTitle });
+		await expect(publicItem).toBeVisible();
+		await expect(viewer.getByText(linkTitle)).toHaveCount(0);
+		await expect(viewer.getByText(privateTitle)).toHaveCount(0);
+		await expect(viewer.getByText('e2e-events-owner')).toHaveCount(0);
+
+		// 加える。自分の予定の一覧に「加えた予定」が出る。外せる
+		await publicItem.getByRole('link', { name: publicTitle }).click();
+		await viewer.getByRole('button', { name: '自分の時間割に加える' }).click();
+		await expect(viewer.getByRole('status')).toHaveText('自分の時間割に加えました。');
+		await viewer.goto('/app/events');
+		await expect(viewer.getByRole('region', { name: '加えた予定' })).toContainText(publicTitle);
+		await viewer
+			.getByRole('region', { name: '加えた予定' })
+			.getByRole('link', { name: /^開く/ })
+			.click();
+		await viewer.getByRole('button', { name: '自分の時間割から外す' }).click();
+		await expect(viewer.getByRole('status')).toHaveText('自分の時間割から外しました。');
+
+		// 限定公開は、リンクの値で開ける。番号では開けない。作り直すと、前のリンクは開けない
+		await viewer.goto(firstLink);
+		await expect(viewer.getByRole('heading', { name: linkTitle })).toBeVisible();
+		expect((await viewer.goto(firstLink.replace(/[\w-]{43}$/, '1')))?.status()).toBe(404);
+		await page.goto('/app/events');
+		await page
+			.getByRole('listitem')
+			.filter({ hasText: linkTitle })
+			.getByRole('link', { name: /^編集/ })
+			.click();
+		await page.getByRole('button', { name: 'リンクを作り直す' }).click();
+		await expect(page.getByRole('status')).toContainText('共有のリンクを作り直しました');
+		await expect(linkField).not.toHaveValue(firstLink);
+		expect((await viewer.goto(firstLink))?.status()).toBe(404);
+	});
+
 	test('ログインしていなければ、ログインの画面に移る', async ({ page }) => {
 		await page.goto('/app/events');
 		await expect(page).toHaveURL('/login');

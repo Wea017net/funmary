@@ -1,11 +1,32 @@
-// 利用者が自分の時間割に足した予定の保存 (Issue #144)。ここでは、持ち主だけが読み書きできる。
-// 公開範囲 (#145) は、別に足す。繰り返しは RRULE の文字列のまま保存し、展開は @funmary/core が行う。
-import { and, asc, eq } from 'drizzle-orm';
+// 利用者が自分の時間割に足した予定の保存 (Issue #144、#145)。
+// 持ち主は、自分の予定を読み書きできる。ほかの人が見られるのは、公開範囲で許された予定だけで、持ち主の情報は返さない。
+// 繰り返しは RRULE の文字列のまま保存し、展開は @funmary/core が行う。
+import { randomBytes } from 'node:crypto';
+import { and, asc, eq, inArray, ne } from 'drizzle-orm';
 import type { EventTime, UserEvent } from '@funmary/core';
 import type { Database } from './database.ts';
-import { userEvents } from './schema.ts';
+import { eventSubscriptions, userEvents } from './schema.ts';
 
-export type UserEventInput = Omit<UserEvent, 'id'>;
+/** private は本人だけ、link は共有のリンクを知っている人、public はログインしている全員 */
+export type EventVisibility = 'private' | 'link' | 'public';
+
+export type UserEventInput = Omit<UserEvent, 'id'> & { readonly visibility: EventVisibility };
+
+/** 持ち主が読む予定。公開範囲と、共有のリンクの値を持つ */
+export interface UserEventRecord extends UserEvent {
+	readonly visibility: EventVisibility;
+	/** 限定公開のときだけある */
+	readonly shareToken: string | null;
+}
+
+/** ほかの人に見せる予定。持ち主の情報は含めない */
+export interface SharedEvent {
+	readonly event: UserEvent;
+	readonly visibility: EventVisibility;
+	readonly isOwner: boolean;
+	/** 自分の時間割に加えている */
+	readonly subscribed: boolean;
+}
 
 export interface UserEventStore {
 	/** 予定を足し、その ID を返す */
@@ -15,9 +36,23 @@ export interface UserEventStore {
 	/** 持ち主の予定を消す。持ち主でなければ、何もせず false */
 	delete(id: number, ownerId: string): boolean;
 	/** 持ち主の予定。持ち主でなければ null */
-	get(id: number, ownerId: string): UserEvent | null;
+	get(id: number, ownerId: string): UserEventRecord | null;
 	/** 持ち主の予定を、始まりの日の順に返す */
-	listByOwner(ownerId: string): UserEvent[];
+	listByOwner(ownerId: string): UserEventRecord[];
+	/** 共有のリンクを作り直す。前のリンクは使えなくなる。限定公開でない、または持ち主でなければ false */
+	rotateShareToken(id: number, ownerId: string): boolean;
+	/**
+	 * viewerId の人が開ける予定。ref は共有のリンクの値か、予定の番号。
+	 * リンクの値では限定公開の予定を、番号では全体に公開された予定と、自分の予定を開ける
+	 */
+	findShared(ref: string, viewerId: string): SharedEvent | null;
+	/** 全体に公開された予定 (自分の予定を除く) を、始まりの日の順に返す */
+	listPublic(viewerId: string): SharedEvent[];
+	/** ほかの人の予定を、自分の時間割に加える。加えられない (自分の予定、非公開、ない) なら false */
+	subscribe(userId: string, eventId: number, now: Date): boolean;
+	unsubscribe(userId: string, eventId: number): boolean;
+	/** 加えた予定のうち、いま公開されているもの。持ち主が非公開にしたものは含めない */
+	listSubscribed(userId: string): UserEvent[];
 }
 
 type Row = typeof userEvents.$inferSelect;
@@ -44,6 +79,14 @@ const toEvent = (row: Row): UserEvent => ({
 	excludedDates: row.excludedDates,
 });
 
+const toRecord = (row: Row): UserEventRecord => ({
+	...toEvent(row),
+	visibility: row.visibility,
+	shareToken: row.shareToken,
+});
+
+const newShareToken = () => randomBytes(32).toString('base64url');
+
 function toColumns(input: UserEventInput) {
 	return {
 		title: input.title,
@@ -58,6 +101,7 @@ function toColumns(input: UserEventInput) {
 		endPeriod: input.time.kind === 'period' ? input.time.to : null,
 		rrule: input.rrule,
 		excludedDates: [...input.excludedDates],
+		visibility: input.visibility,
 	};
 }
 
@@ -65,35 +109,130 @@ export function createUserEventStore(database: Database): UserEventStore {
 	const { db } = database;
 	const owned = (id: number, ownerId: string) =>
 		and(eq(userEvents.id, id), eq(userEvents.ownerId, ownerId));
+	const subscribedIds = (userId: string) =>
+		new Set(
+			db
+				.select({ id: eventSubscriptions.eventId })
+				.from(eventSubscriptions)
+				.where(eq(eventSubscriptions.userId, userId))
+				.all()
+				.map((row) => row.id),
+		);
+
 	return {
 		create(ownerId, input, now) {
 			return db
 				.insert(userEvents)
-				.values({ ownerId, ...toColumns(input), createdAt: now, updatedAt: now })
+				.values({
+					ownerId,
+					...toColumns(input),
+					shareToken: input.visibility === 'link' ? newShareToken() : null,
+					createdAt: now,
+					updatedAt: now,
+				})
 				.returning({ id: userEvents.id })
 				.get().id;
 		},
 		update(id, ownerId, input, now) {
-			return (
-				db
-					.update(userEvents)
-					.set({ ...toColumns(input), updatedAt: now })
-					.where(owned(id, ownerId))
-					.run().changes > 0
-			);
+			const current = db.select().from(userEvents).where(owned(id, ownerId)).get();
+			if (!current) return false;
+			// 限定公開のままなら、リンクの値は変えない。限定公開でなくなったら、リンクは使えなくする
+			const shareToken =
+				input.visibility === 'link' ? (current.shareToken ?? newShareToken()) : null;
+			db.update(userEvents)
+				.set({ ...toColumns(input), shareToken, updatedAt: now })
+				.where(owned(id, ownerId))
+				.run();
+			return true;
 		},
 		delete(id, ownerId) {
 			return db.delete(userEvents).where(owned(id, ownerId)).run().changes > 0;
 		},
 		get(id, ownerId) {
 			const row = db.select().from(userEvents).where(owned(id, ownerId)).get();
-			return row ? toEvent(row) : null;
+			return row ? toRecord(row) : null;
 		},
 		listByOwner(ownerId) {
 			return db
 				.select()
 				.from(userEvents)
 				.where(eq(userEvents.ownerId, ownerId))
+				.orderBy(asc(userEvents.startDate), asc(userEvents.id))
+				.all()
+				.map(toRecord);
+		},
+		rotateShareToken(id, ownerId) {
+			return (
+				db
+					.update(userEvents)
+					.set({ shareToken: newShareToken() })
+					.where(and(owned(id, ownerId), eq(userEvents.visibility, 'link')))
+					.run().changes > 0
+			);
+		},
+		findShared(ref, viewerId) {
+			const byId = /^[1-9]\d{0,9}$/.test(ref)
+				? db
+						.select()
+						.from(userEvents)
+						.where(eq(userEvents.id, Number(ref)))
+						.get()
+				: undefined;
+			const row = byId ?? db.select().from(userEvents).where(eq(userEvents.shareToken, ref)).get();
+			if (!row) return null;
+			const isOwner = row.ownerId === viewerId;
+			// 番号で開けるのは、全体に公開された予定と、自分の予定だけ。限定公開の予定は、リンクの値でだけ開ける
+			const byToken = row.shareToken !== null && row.shareToken === ref;
+			if (!isOwner && !byToken && row.visibility !== 'public') return null;
+			if (!isOwner && row.visibility === 'private') return null;
+			return {
+				event: toEvent(row),
+				visibility: row.visibility,
+				isOwner,
+				subscribed: subscribedIds(viewerId).has(row.id),
+			};
+		},
+		listPublic(viewerId) {
+			const subscribed = subscribedIds(viewerId);
+			return db
+				.select()
+				.from(userEvents)
+				.where(and(eq(userEvents.visibility, 'public'), ne(userEvents.ownerId, viewerId)))
+				.orderBy(asc(userEvents.startDate), asc(userEvents.id))
+				.all()
+				.map((row) => ({
+					event: toEvent(row),
+					visibility: row.visibility,
+					isOwner: false,
+					subscribed: subscribed.has(row.id),
+				}));
+		},
+		subscribe(userId, eventId, now) {
+			const row = db.select().from(userEvents).where(eq(userEvents.id, eventId)).get();
+			if (!row || row.ownerId === userId || row.visibility === 'private') return false;
+			db.insert(eventSubscriptions)
+				.values({ userId, eventId, createdAt: now })
+				.onConflictDoNothing()
+				.run();
+			return true;
+		},
+		unsubscribe(userId, eventId) {
+			return (
+				db
+					.delete(eventSubscriptions)
+					.where(
+						and(eq(eventSubscriptions.userId, userId), eq(eventSubscriptions.eventId, eventId)),
+					)
+					.run().changes > 0
+			);
+		},
+		listSubscribed(userId) {
+			const ids = [...subscribedIds(userId)];
+			if (ids.length === 0) return [];
+			return db
+				.select()
+				.from(userEvents)
+				.where(and(inArray(userEvents.id, ids), ne(userEvents.visibility, 'private')))
 				.orderBy(asc(userEvents.startDate), asc(userEvents.id))
 				.all()
 				.map(toEvent);
