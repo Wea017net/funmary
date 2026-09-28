@@ -114,6 +114,14 @@ export const subjects = sqliteTable(
 		syllabus: text('syllabus', { mode: 'json' }).$type<Record<string, string>>(),
 		syllabusUrl: text('syllabus_url'),
 		updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
+		/** syllabus は公開シラバスから取り込んだもの、user はシラバスにない授業として利用者か管理者が足したもの */
+		source: text('source', { enum: ['syllabus', 'user'] })
+			.notNull()
+			.default('syllabus'),
+		/** 足した人 (source が user のとき) */
+		createdBy: text('created_by').references((): AnySQLiteColumn => users.id, {
+			onDelete: 'set null',
+		}),
 	},
 	(table) => [uniqueIndex('subjects_year_syllabus').on(table.academicYear, table.syllabusId)],
 );

@@ -55,6 +55,7 @@ export {
 	type StoredSubject,
 	type SubjectInput,
 	type SubjectStore,
+	type UserSubjectInput,
 } from './subject-store.ts';
 export {
 	createCourseStore,

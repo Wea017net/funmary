@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { openDatabase, type Database } from './database.ts';
+import { createAuthStore } from './auth-store.ts';
 import { createSubjectStore, type SubjectInput } from './subject-store.ts';
 
 let dir: string;
@@ -101,5 +102,79 @@ describe('SubjectStore', () => {
 		const found = store.findBySyllabus(2026, '100201');
 		expect(found?.attributes).toBeTruthy();
 		expect(({} as Record<string, unknown>)['x']).toBeUndefined();
+	});
+});
+
+describe('シラバスにない授業', () => {
+	const addUser = () =>
+		createAuthStore(database).createUser(
+			{ googleSub: 'u', email: 'u@fun.ac.jp', name: null, role: 'user' },
+			T0,
+		);
+
+	it('足した科目は、出どころと足した人を持ち、一覧にも入る', () => {
+		const store = createSubjectStore(database);
+		const userId = addUser();
+		const id = store.createUserSubject(
+			{ academicYear: 2026, name: 'キャリアガイダンス', term: 'fall', teacher: null },
+			userId,
+			T0,
+		);
+		const stored = store.findById(id);
+		expect(stored).toMatchObject({
+			name: 'キャリアガイダンス',
+			term: 'fall',
+			source: 'user',
+			createdBy: userId,
+			syllabusUrl: null,
+		});
+		expect(stored?.syllabusId).toMatch(/^user-/);
+		expect(store.list(2026).map((s) => s.id)).toContain(id);
+	});
+
+	it('最も新しい年度は、シラバスから取り込んだ科目だけで決める', () => {
+		const store = createSubjectStore(database);
+		store.upsert(subject(), T0);
+		store.createUserSubject(
+			{ academicYear: 2027, name: '先の授業', term: 'spring', teacher: null },
+			null,
+			T0,
+		);
+		expect(store.latestYear()).toBe(2026);
+	});
+
+	it('直せるのと消せるのは、足した科目だけ', () => {
+		const store = createSubjectStore(database);
+		const syllabusId = store.upsert(subject(), T0);
+		const id = store.createUserSubject(
+			{ academicYear: 2026, name: '高度ICT演習', term: 'spring', teacher: null },
+			null,
+			T0,
+		);
+		expect(
+			store.updateUserSubject(
+				id,
+				{ name: '高度ICT演習 (M1,2)', term: 'fall', teacher: '未来 花子' },
+				T1,
+			),
+		).toBe(true);
+		expect(store.findById(id)).toMatchObject({
+			name: '高度ICT演習 (M1,2)',
+			term: 'fall',
+			teacher: '未来 花子',
+		});
+		expect(
+			store.updateUserSubject(syllabusId, { name: '書き換え', term: 'fall', teacher: null }, T1),
+		).toBe(false);
+		expect(store.deleteUserSubject(syllabusId)).toBe(false);
+		expect(store.deleteUserSubject(id)).toBe(true);
+		expect(store.findById(id)).toBeNull();
+		expect(store.findById(syllabusId)?.name).toBe('コンピュータと教育1～4');
+	});
+
+	it('シラバスから取り込んだ科目は、出どころが syllabus', () => {
+		const store = createSubjectStore(database);
+		const id = store.upsert(subject(), T0);
+		expect(store.findById(id)).toMatchObject({ source: 'syllabus', createdBy: null });
 	});
 });

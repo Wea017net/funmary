@@ -313,6 +313,59 @@ test.describe('履修科目の登録', () => {
 		await expect(page.getByText('まだ登録していません')).toBeVisible();
 	});
 
+	test('シラバスにない授業を足して登録でき、足した人は直したり消したりできる', async ({
+		page,
+		browser,
+	}) => {
+		// E2E の DB は実行をまたいで残るので、実行ごとに別の名前にする
+		const name = `E2E の課外講座${Date.now()}`;
+		await loginAs(page);
+		await page.goto('/app/courses');
+		const create = page.getByRole('region', { name: 'シラバスにない授業を足す' });
+		await create.getByText('公開シラバスに載っていない授業を、科目として足す').click();
+		await create.getByLabel(/授業の名前/).fill(name);
+		await create.getByLabel('学期').selectOption('後期');
+		await create.getByRole('button', { name: '足して登録する' }).click();
+		await expect(page.getByRole('status')).toContainText(
+			`${name} を足して、履修科目に登録しました`,
+		);
+		const registered = page
+			.getByRole('region', { name: '登録した科目' })
+			.getByRole('listitem')
+			.filter({ hasText: name });
+		await expect(registered).toContainText('シラバスにない授業');
+
+		// 同じ名前 (全角と半角の違いを除く) は足さない
+		await create.getByLabel(/授業の名前/).fill(name.replace('E2E', 'Ｅ２Ｅ'));
+		await create.getByRole('button', { name: '足して登録する' }).click();
+		await expect(page.getByRole('alert')).toContainText(`同じ名前の科目「${name}」があります`);
+
+		// ほかの利用者は探して登録できるが、直せない
+		const other = await (await browser.newContext()).newPage();
+		const otherEmail = `e2e-other-${Date.now()}@fun.ac.jp`;
+		oidc.setIdentity({ sub: otherEmail, email: otherEmail, email_verified: true, hd: 'fun.ac.jp' });
+		await other.goto('/auth/google');
+		await other.goto(`/app/courses?q=${encodeURIComponent(name)}`);
+		await other.getByRole('link', { name }).click();
+		await expect(other.getByText('公開シラバスにない授業です。')).toBeVisible();
+		await expect(other.getByRole('region', { name: 'この授業を直す' })).toHaveCount(0);
+
+		// 足した人は直せる
+		await registered.getByRole('link', { name }).click();
+		const edit = page.getByRole('region', { name: 'この授業を直す' });
+		await edit.getByLabel('教員 (任意)').fill('未来 花子');
+		await edit.getByRole('button', { name: '直す' }).click();
+		await expect(page.getByRole('status')).toHaveText('授業を直しました。');
+		await expect(page.getByText('未来 花子')).toBeVisible();
+
+		// 消すときは、確かめたことのチェックが要る
+		await edit.getByText('この授業を消す').click();
+		await edit.getByLabel(/元に戻せないことを確かめました/).check();
+		await edit.getByRole('button', { name: '消す' }).click();
+		await expect(page).toHaveURL('/app/courses');
+		await expect(page.getByRole('link', { name })).toHaveCount(0);
+	});
+
 	test('ない科目の詳細は、見つからないと出す', async ({ page }) => {
 		await loginAs(page);
 		for (const id of ['999999999', 'abc']) {

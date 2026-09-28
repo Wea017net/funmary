@@ -1,4 +1,7 @@
 <script lang="ts">
+	import Button, { Label } from '@smui/button';
+	import { enhance } from '$app/forms';
+	import { TERMS } from '@funmary/core';
 	import StatusBadge from '$lib/components/StatusBadge.svelte';
 	import { resolve } from '$app/paths';
 	import { formatSlot, formatTerm } from '$lib/term-label.ts';
@@ -12,6 +15,7 @@
 		attributes: [string, string][];
 		syllabus: [string, string][];
 		syllabusUrl: string | null;
+		userAdded: boolean;
 	}
 	interface ChangeView {
 		key: string;
@@ -25,8 +29,11 @@
 
 	let {
 		data,
+		form,
 	}: {
+		form: { error?: string; message?: string } | null;
 		data: {
+			canEdit: boolean;
 			subject: SubjectView;
 			slots: { weekday: number; period: number; room: string | null }[];
 			registered: boolean;
@@ -47,6 +54,15 @@
 <div class="page">
 	<p><a href={resolve('/app/courses')}>履修科目</a></p>
 	<h1>{data.subject.name}</h1>
+	{#if data.subject.userAdded}
+		<p class="note">公開シラバスにない授業です。利用者が足しました。</p>
+	{/if}
+
+	{#if form?.error}
+		<p class="error" role="alert">{form.error}</p>
+	{:else if form?.message}
+		<p class="message" role="status">{form.message}</p>
+	{/if}
 
 	<dl class="summary">
 		<dt>教員</dt>
@@ -90,6 +106,42 @@
 			</li>
 		{/if}
 	</ul>
+
+	{#if data.canEdit}
+		<section aria-labelledby="edit-heading">
+			<h2 id="edit-heading">この授業を直す</h2>
+			<p class="note">足した人と管理者だけが直したり消したりできます。</p>
+			<form method="POST" action="?/updateSubject" use:enhance class="edit">
+				<label>
+					授業の名前
+					<input name="name" maxlength="100" required value={data.subject.name} />
+				</label>
+				<label>
+					学期
+					<select name="term" required value={data.subject.term}>
+						{#each TERMS as term (term)}
+							<option value={term}>{formatTerm(term)}</option>
+						{/each}
+					</select>
+				</label>
+				<label>
+					教員 (任意)
+					<input name="teacher" maxlength="100" value={data.subject.teacher ?? ''} />
+				</label>
+				<Button type="submit" variant="unelevated"><Label>直す</Label></Button>
+			</form>
+			<details>
+				<summary>この授業を消す</summary>
+				<form method="POST" action="?/deleteSubject" use:enhance class="edit">
+					<label class="confirm">
+						<input type="checkbox" name="confirm" required />
+						ほかの利用者の履修登録と、曜日と時限も消え、元に戻せないことを確かめました
+					</label>
+					<Button type="submit" variant="outlined"><Label>消す</Label></Button>
+				</form>
+			</details>
+		</section>
+	{/if}
 
 	<section aria-labelledby="changes-heading">
 		<h2 id="changes-heading">休講、補講、教室変更</h2>
@@ -141,6 +193,54 @@
 	.page {
 		max-width: 40rem;
 	}
+
+	.note {
+		color: var(--fm-text-muted);
+		font-size: 0.875rem;
+	}
+
+	.message,
+	.error {
+		padding: 0.75rem 1rem;
+		border-radius: 0.5rem;
+		background: var(--fm-surface-muted);
+	}
+
+	.error {
+		color: var(--fm-error);
+	}
+
+	.edit {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: end;
+		gap: 0.75rem 1rem;
+		margin: 0.5rem 0;
+		padding: 1rem;
+		border-radius: 0.75rem;
+		background: var(--fm-surface-muted);
+
+		label {
+			display: flex;
+			flex-direction: column;
+			gap: 0.25rem;
+			font-size: 0.875rem;
+		}
+
+		.confirm {
+			flex-direction: row;
+			align-items: center;
+			gap: 0.5rem;
+			min-height: 44px;
+		}
+	}
+
+	summary {
+		min-height: 44px;
+		align-content: center;
+		cursor: pointer;
+	}
+
 	dl {
 		display: grid;
 		grid-template-columns: max-content 1fr;

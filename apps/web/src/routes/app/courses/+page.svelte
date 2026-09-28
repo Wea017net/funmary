@@ -3,6 +3,7 @@
 	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
 	import { DEFAULT_PERIODS } from '@funmary/core';
+	import { TERMS } from '@funmary/core';
 	import { formatSlot, formatTerm, WEEKDAY_LABELS } from '$lib/term-label.ts';
 
 	interface Slot {
@@ -15,6 +16,7 @@
 		name: string;
 		teacher: string | null;
 		term: string;
+		userAdded: boolean;
 		slots: Slot[];
 	}
 	interface FoundSubject {
@@ -22,6 +24,7 @@
 		name: string;
 		teacher: string | null;
 		term: string;
+		userAdded: boolean;
 	}
 
 	let {
@@ -33,6 +36,7 @@
 			registered: RegisteredSubject[];
 			query: string;
 			results: FoundSubject[];
+			defaultTerm: string;
 		};
 		form: { error?: string; message?: string } | null;
 	} = $props();
@@ -71,7 +75,9 @@
 								>
 							</h3>
 							<p class="meta">
-								{formatTerm(subject.term)}{#if subject.teacher}、{subject.teacher}{/if}
+								{formatTerm(
+									subject.term,
+								)}{#if subject.teacher}、{subject.teacher}{/if}{#if subject.userAdded}、シラバスにない授業{/if}
 							</p>
 							{#if subject.slots.length === 0}
 								<p>曜日と時限が、まだ登録されていません。</p>
@@ -138,7 +144,9 @@
 
 			{#if data.query.trim() !== ''}
 				{#if data.results.length === 0}
-					<p>見つかりませんでした。</p>
+					<p>
+						見つかりませんでした。シラバスにない授業なら、下の「シラバスにない授業を足す」から足せます。
+					</p>
 				{:else}
 					<ul class="subjects">
 						{#each data.results as subject (subject.id)}
@@ -149,7 +157,9 @@
 									>
 								</h3>
 								<p class="meta">
-									{formatTerm(subject.term)}{#if subject.teacher}、{subject.teacher}{/if}
+									{formatTerm(
+										subject.term,
+									)}{#if subject.teacher}、{subject.teacher}{/if}{#if subject.userAdded}、シラバスにない授業{/if}
 								</p>
 								<form method="POST" action="?/register" use:enhance>
 									<input type="hidden" name="subjectId" value={subject.id} />
@@ -160,6 +170,35 @@
 					</ul>
 				{/if}
 			{/if}
+		</section>
+
+		<section aria-labelledby="create-heading">
+			<h2 id="create-heading">シラバスにない授業を足す</h2>
+			<details>
+				<summary>公開シラバスに載っていない授業を、科目として足す</summary>
+				<p class="note">
+					足した授業は、ほかの利用者も探して登録できます。同じ名前の科目があれば、足さずにそちらを案内します。足した授業は、あなたと管理者が直したり消したりできます。
+				</p>
+				<form method="POST" action="?/createSubject" use:enhance class="slot-form">
+					<label>
+						授業の名前 (クラスも含めて、例: キャリアガイダンス)
+						<input name="name" maxlength="100" required autocomplete="off" value={data.query} />
+					</label>
+					<label>
+						学期
+						<select name="term" required value={data.defaultTerm}>
+							{#each TERMS as term (term)}
+								<option value={term}>{formatTerm(term)}</option>
+							{/each}
+						</select>
+					</label>
+					<label>
+						教員 (任意)
+						<input name="teacher" maxlength="100" autocomplete="off" />
+					</label>
+					<Button type="submit" variant="unelevated"><Label>足して登録する</Label></Button>
+				</form>
+			</details>
 		</section>
 
 		<p>
