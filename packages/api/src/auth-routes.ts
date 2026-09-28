@@ -14,6 +14,8 @@ export interface AuthRoutesDeps {
 	readonly flowKey: Buffer;
 	/** 公開 URL の origin。https なら、Cookie に Secure を付ける。ログアウトの送り元の確認にも使う */
 	readonly origin: string;
+	/** 新しい利用者が登録したときに呼ぶ (設計書 14.9)。メールアドレスなど、個人情報は渡さない */
+	readonly onNewUser?: () => void;
 }
 
 /** セッションの Cookie の有効期限 (30 日)。DB の有効期限と同じにする */
@@ -90,6 +92,7 @@ export function createAuthRoutes(deps: AuthRoutesDeps): Hono {
 
 		const result = await deps.service.completeLogin({ callbackUrl: new URL(c.req.url), flow });
 		if (result.kind !== 'signed-in') return c.redirect(loginErrorUrl(result.reason), 302);
+		if (result.isNewUser) deps.onNewUser?.();
 
 		setCookie(c, sessionName, result.sessionToken, sessionCookieOptions(deps.origin));
 		// アプリの画面は /app の下にある (/ は紹介の画面)

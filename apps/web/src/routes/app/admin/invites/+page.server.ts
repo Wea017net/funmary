@@ -60,6 +60,13 @@ export const actions: Actions = {
 			return fail(404, { error: '利用者が見つかりません。' });
 		}
 		auth.setPermission(target.id, 'invite:create', granted, admin.id, new Date());
+		// メールアドレスなど、個人情報は含めない (設計書 14.9)
+		await getServices().alertAdmin({
+			severity: 'info',
+			title: granted ? '招待コードの発行を許可しました' : '招待コードの発行の許可を外しました',
+			category: 'users',
+			key: `permission:${target.id}:${granted}:${Date.now()}`,
+		});
 		return {
 			message: granted
 				? `${target.email} に、招待コードの発行を許可しました。`

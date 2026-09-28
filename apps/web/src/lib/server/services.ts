@@ -13,7 +13,7 @@ import type {
 	UnmatchedLessonStore,
 	UserEventStore,
 } from '@funmary/db';
-import type { DiscordBot, DiscordLayout } from '@funmary/notify';
+import type { AdminChannel, DiscordBot, DiscordLayout } from '@funmary/notify';
 import type { BuildInfo } from './build-info.ts';
 import type { TimetableSources } from './user-timetable.ts';
 
@@ -61,6 +61,8 @@ export interface Services {
 		title: string;
 		message?: string;
 		key?: string;
+		/** 送るチャンネル (設計書 14.9)。省くと、error は errors、それ以外は sources */
+		category?: AdminChannel;
 	}) => Promise<unknown>;
 }
 

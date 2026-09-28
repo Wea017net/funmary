@@ -11,7 +11,7 @@ import {
 	type OidcClient,
 } from '@funmary/auth';
 import { createAuthStore, openDatabase, type AuthStore, type Database } from '@funmary/db';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createApi } from './app.ts';
 
 const ORIGIN = 'https://funmary.example.com';
@@ -40,7 +40,11 @@ const CLAIMS: GoogleClaims = {
 };
 
 function makeApi(
-	options: { claims?: GoogleClaims | Error; registration?: 'invite' | 'open' } = {},
+	options: {
+		claims?: GoogleClaims | Error;
+		registration?: 'invite' | 'open';
+		onNewUser?: () => void;
+	} = {},
 ) {
 	const claims = options.claims ?? CLAIMS;
 	const oidc: OidcClient = {
@@ -67,6 +71,7 @@ function makeApi(
 			deleteSession: (token) => store.deleteSession(token),
 			flowKey: KEY,
 			origin: ORIGIN,
+			...(options.onNewUser ? { onNewUser: options.onNewUser } : {}),
 		},
 	});
 }
@@ -169,6 +174,18 @@ describe('GET /auth/google/callback', () => {
 		expect(session.attributes).toContain('Max-Age=2592000');
 		expect(store.resolveSession(session.value, new Date())?.email).toBe('taro@fun.ac.jp');
 		expect(set.get('__Secure-funmary_login')!.attributes).toContain('Max-Age=0');
+	});
+
+	it('新しい利用者が登録したときだけ、onNewUser を呼ぶ (個人情報は渡さない)', async () => {
+		const onNewUser = vi.fn();
+		await callback(makeApi({ onNewUser }), sealFlow(flowNow(), KEY));
+		expect(onNewUser).toHaveBeenCalledTimes(1);
+		expect(onNewUser).toHaveBeenCalledWith();
+
+		// 同じ人が、もう一度ログインしても呼ばない
+		onNewUser.mockClear();
+		await callback(makeApi({ onNewUser }), sealFlow(flowNow(), KEY));
+		expect(onNewUser).not.toHaveBeenCalled();
 	});
 
 	it('途中の Cookie がなければ、ログインを最初からやり直させる', async () => {
