@@ -15,6 +15,7 @@ BIN_DIR="${FUNMARY_BIN_DIR:-/usr/local/bin}"
 SBIN_DIR="${FUNMARY_SBIN_DIR:-/usr/local/sbin}"
 LOCK_FILE="${FUNMARY_LOCK_FILE:-/run/funmary-update.lock}"
 NPM="${FUNMARY_NPM:-/usr/bin/npm}"
+ADMIN_CMD="${FUNMARY_ADMIN_CMD:-$BIN_DIR/funmary-admin}"
 KEEP=3
 HEALTH_TIMEOUT="${FUNMARY_HEALTH_TIMEOUT:-30}"
 
@@ -34,9 +35,16 @@ env_value() {
   { sed -n "s/^$1=//p" "$ENV_FILE" 2>/dev/null || true; } | tail -n 1 | sed -e 's/^"\(.*\)"$/\1/'
 }
 
-# 管理用の Discord に知らせる。失敗しても反映は止めない。Webhook の URL は画面にもログにも出さない
+# 管理用の Discord に知らせる。失敗しても反映は止めない。トークンと Webhook の URL は画面にもログにも出さない
+# 使い方: notify <本文> [info か warn か error]。Bot (DISCORD_BOT_TOKEN) があれば、管理用コマンドで deploy のチャンネルに送る。
+# 送れなかったとき (Bot がないとき、切り戻した前の版に notify がないときを含む) は、Webhook に送る
 notify() {
-  local url
+  local url severity="${2:-info}"
+  if [ -n "$(env_value DISCORD_BOT_TOKEN)" ] && [ -x "$ADMIN_CMD" ]; then
+    if timeout 60 "$ADMIN_CMD" notify --channel deploy --severity "$severity" "$1" >/dev/null 2>&1; then
+      return 0
+    fi
+  fi
   url="$(env_value ADMIN_DISCORD_WEBHOOK_URL)"
   [ -n "$url" ] || return 0
   curl -fsS --max-time 10 -H 'Content-Type: application/json' \
@@ -127,7 +135,7 @@ if [ "$ok" -ne 1 ]; then
     ln -sfn "$previous" "$BASE/current"
     systemctl restart funmary || true
   fi
-  notify "Funmary: $version の反映に失敗したので、前の版に切り戻しました。journalctl -u funmary で確かめてください"
+  notify "Funmary: $version の反映に失敗したので、前の版に切り戻しました。journalctl -u funmary で確かめてください" error
   exit 1
 fi
 

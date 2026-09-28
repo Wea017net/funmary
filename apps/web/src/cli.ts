@@ -9,6 +9,7 @@ import {
 	createAcademicCalendarStore,
 	createAuthStore,
 	createHolidayStore,
+	createSettingsStore,
 	createSourceHealthStore,
 	createCourseStore,
 	createSubjectStore,
@@ -20,6 +21,10 @@ import {
 import { parseTimetablePdf } from '@funmary/sources/timetable-pdf';
 import { parseAcademicCalendarPdf } from '@funmary/sources/academic-calendar-pdf';
 import { academicYearOf, jstDateTime, resolveAcademicTerms } from '@funmary/core';
+import { createLogger } from '@funmary/log';
+import { ADMIN_CHANNELS, createDiscordBot, parseLayout, type AdminChannel } from '@funmary/notify';
+import { sendAdminNotification } from './lib/server/admin-notify.ts';
+import { DISCORD_LAYOUT_KEY } from './lib/server/discord-admin.ts';
 import { importAcademicCalendar } from './lib/server/academic-calendar-import.ts';
 import { formatCalendarImportReport, formatCalendarReport } from './lib/server/calendar-report.ts';
 import { formatSourcesReport, sourceStatuses } from './lib/server/source-status.ts';
@@ -466,9 +471,63 @@ const sources = defineCommand({
 	subCommands: { status: sourcesStatus },
 });
 
+const notify = defineCommand({
+	meta: {
+		name: 'notify',
+		description:
+			'管理用の Discord に通知を送る (update.sh が使う)。終了コード 0 = 送った、3 = 送り先がない、1 = 送れなかった',
+	},
+	args: {
+		channel: {
+			type: 'string',
+			description: `送るチャンネル (${ADMIN_CHANNELS.join('、')})`,
+			default: 'other',
+		},
+		severity: { type: 'string', description: 'info、warn、error のどれか', default: 'info' },
+		message: { type: 'positional', description: '本文', required: true },
+	},
+	async run({ args }) {
+		const channel = ADMIN_CHANNELS.find((candidate: AdminChannel) => candidate === args.channel);
+		const severity = (['info', 'warn', 'error'] as const).find(
+			(candidate) => candidate === args.severity,
+		);
+		if (!channel || !severity) {
+			console.error(
+				`--channel は ${ADMIN_CHANNELS.join('、')}、--severity は info、warn、error のどれかにしてください`,
+			);
+			process.exit(2);
+		}
+		const config = loadConfigOrExit();
+		const database = openDatabase(join(config.dataDir, 'funmary.db'), {
+			backupDir: join(config.dataDir, 'backups'),
+			...(bundledMigrations && { migrationsFolder: bundledMigrations }),
+		});
+		try {
+			const layout = parseLayout(createSettingsStore(database).get(DISCORD_LAYOUT_KEY));
+			const result = await sendAdminNotification({
+				bot: config.discordBot ? createDiscordBot(config.discordBot) : null,
+				layout,
+				webhookUrl: config.adminDiscordWebhookUrl,
+				dryRun: config.notifyDryRun,
+				log: createLogger({ level: 'error', format: 'text', mode: 'production' }),
+				channel,
+				severity,
+				message: args.message,
+			});
+			if (result === 'sent') console.log('送りました');
+			else if (result === 'no-destination') console.error('送り先 (Bot か Webhook) がありません');
+			else console.error('送れませんでした');
+			// process.exit は finally を飛ばすので、DB を閉じてから終える
+			process.exitCode = result === 'sent' ? 0 : result === 'no-destination' ? 3 : 1;
+		} finally {
+			database.close();
+		}
+	},
+});
+
 const main = defineCommand({
 	meta: { name: 'funmary-admin', description: 'Funmary の管理用コマンド' },
-	subCommands: { init, migrate, backup, restore, timetable, calendar, invite, sources },
+	subCommands: { init, migrate, backup, restore, timetable, calendar, invite, sources, notify },
 });
 
 await runMain(main);

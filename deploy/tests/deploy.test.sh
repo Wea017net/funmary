@@ -164,6 +164,36 @@ check "current は最後の版" equals "$(current)" build-eeeeeee
 check "リリースの数は 3" equals "$(find "$FUNMARY_BASE/releases" -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')" 3
 check "いちばん古い版が消える" test ! -e "$FUNMARY_BASE/releases/build-aaaaaaa"
 
+echo "update.sh: Bot があれば、管理用コマンドで deploy のチャンネルに送る"
+new_scene
+printf '#!/bin/sh
+echo "$*" >> "%s"
+' "$scene/admin-calls" > "$scene/fake-admin"
+chmod +x "$scene/fake-admin"
+export FUNMARY_ADMIN_CMD="$scene/fake-admin"
+echo "DISCORD_BOT_TOKEN=dummy-bot-token-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" > "$FUNMARY_ENV_FILE"
+update build-aaaaaaa >/dev/null 2>&1
+touch "$STUB_DIR/unit" "$STUB_DIR/healthy"
+update build-bbbbbbb >/dev/null 2>&1
+check "切り替えを deploy に、info で送る" grep -q -- "^notify --channel deploy --severity info Funmary: build-bbbbbbb に切り替えました$" "$scene/admin-calls"
+: > "$scene/admin-calls"
+rm "$STUB_DIR/healthy"
+update build-ddddddd >/dev/null 2>&1
+check "切り戻したことを deploy に、error で送る" grep -q -- "^notify --channel deploy --severity error " "$scene/admin-calls"
+
+echo "update.sh: Bot がなければ、管理用コマンドを呼ばない"
+new_scene
+printf '#!/bin/sh
+echo "$*" >> "%s"
+' "$scene/admin-calls" > "$scene/fake-admin"
+chmod +x "$scene/fake-admin"
+export FUNMARY_ADMIN_CMD="$scene/fake-admin"
+update build-aaaaaaa >/dev/null 2>&1
+touch "$STUB_DIR/unit" "$STUB_DIR/healthy"
+update build-bbbbbbb >/dev/null 2>&1
+check "呼ばない" test ! -s "$scene/admin-calls"
+unset FUNMARY_ADMIN_CMD
+
 echo "update.sh: 環境変数ファイルがなくても止まらない"
 new_scene
 rm "$FUNMARY_ENV_FILE"
