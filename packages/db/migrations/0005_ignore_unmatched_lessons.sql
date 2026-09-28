@@ -1,0 +1,1 @@
+ALTER TABLE `unmatched_lessons` ADD `ignored_at` integer;
