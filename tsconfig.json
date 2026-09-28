@@ -18,6 +18,13 @@
 		"skipLibCheck": true,
 		"types": ["node"]
 	},
-	"include": ["packages/*/src/**/*", "packages/*/*.ts", "scripts/**/*", "*.ts"],
+	"include": [
+		"packages/*/src/**/*",
+		"packages/*/*.ts",
+		"packages/*/*.js",
+		"scripts/**/*",
+		"*.ts",
+		"*.js"
+	],
 	"exclude": ["**/node_modules", "apps"]
 }

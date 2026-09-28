@@ -16,8 +16,8 @@ const config = {
 				config['include'].push(
 					'../e2e/**/*.ts',
 					'../scripts/**/*.js',
-					'../playwright.config.ts',
-					'../tsdown.config.ts',
+					'../playwright.config.js',
+					'../tsdown.config.js',
 				);
 			},
 		},
