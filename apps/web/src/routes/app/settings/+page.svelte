@@ -10,7 +10,11 @@
 	import IconSchool from '~icons/material-symbols/event-note-outline';
 	import IconUpload from '~icons/material-symbols/upload-file-outline';
 
-	let { data }: { data: { admin: AdminSummary | null } } = $props();
+	let {
+		data,
+	}: {
+		data: { admin: AdminSummary | null; documents: { title: string; url: string }[] };
+	} = $props();
 
 	interface Item {
 		href: string;
@@ -103,6 +107,26 @@
 	<h1>設定</h1>
 	{@render links(personal)}
 
+	{#if data.documents.length > 0}
+		<section aria-labelledby="documents-heading">
+			<h2 id="documents-heading">大学の公式の資料</h2>
+			<p class="muted">
+				大学が配っている PDF を、大学のサイトで開きます (新しいタブ)。Funmary
+				が作ったものではありません。
+			</p>
+			<ul class="documents">
+				{#each data.documents as document (document.url)}
+					<li>
+						<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- 大学のサイトへの外部リンク。サーバーで大学サイトの https の PDF だと確かめてある -->
+						<a href={document.url} target="_blank" rel="noopener noreferrer">
+							{document.title} (PDF)
+						</a>
+					</li>
+				{/each}
+			</ul>
+		</section>
+	{/if}
+
 	{#if data.admin}
 		<section id="admin" aria-labelledby="admin-heading">
 			<h2 id="admin-heading">管理</h2>
@@ -119,6 +143,18 @@
 
 	section {
 		margin-top: 2rem;
+	}
+
+	.documents {
+		margin: 0;
+		padding: 0;
+		list-style: none;
+
+		a {
+			display: inline-flex;
+			align-items: center;
+			min-height: 44px;
+		}
 	}
 
 	.links {

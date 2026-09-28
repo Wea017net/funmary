@@ -30,6 +30,8 @@ export type AcademicCalendarImportOutcome =
 export interface ImportAcademicCalendarDeps {
 	readonly fetchPdf: () => Promise<FetchAcademicCalendarResult>;
 	readonly importPdf: (bytes: Uint8Array) => Promise<AcademicCalendarImportOutcome>;
+	/** 取れた PDF の年度と URL を、画面から大学の公式の PDF を開けるように記録する */
+	readonly recordOfficialPdf?: (info: { year: number; url: string }) => void;
 	/** SOURCES_DISABLED */
 	readonly disabledSources: readonly string[];
 	readonly health: {
@@ -68,6 +70,7 @@ export function createImportAcademicCalendarJob(deps: ImportAcademicCalendarDeps
 			const fetched = await deps.fetchPdf();
 			if (fetched.kind === 'failed') return failSource(run, `${fetched.message}。${MANUAL_HINT}`);
 
+			deps.recordOfficialPdf?.({ year: fetched.year, url: fetched.url });
 			const contentHash = createHash('sha256').update(fetched.bytes).digest('hex');
 			if (contentHash === health.contentHash) {
 				await succeedSource(run, { contentHash });
