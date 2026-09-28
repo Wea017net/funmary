@@ -69,6 +69,11 @@ export {
 	type StoredSlot,
 } from './course-store.ts';
 export {
+	createUserEventStore,
+	type UserEventInput,
+	type UserEventStore,
+} from './user-event-store.ts';
+export {
 	createUnmatchedLessonStore,
 	type UnmatchedLesson,
 	type UnmatchedLessonStore,

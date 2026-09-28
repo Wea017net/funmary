@@ -43,6 +43,13 @@
       "when": 1790601077754,
       "tag": "0005_ignore_unmatched_lessons",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1790614736794,
+      "tag": "0006_user_events",
+      "breakpoints": true
     }
   ]
 }

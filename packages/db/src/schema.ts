@@ -225,6 +225,35 @@ export const unmatchedLessons = sqliteTable(
 	(table) => [uniqueIndex('unmatched_lessons_unique').on(table.academicYear, table.lessonName)],
 );
 
+/** 利用者が自分の時間割に足す予定 (Issue #144)。繰り返しは RRULE の文字列で持つ */
+export const userEvents = sqliteTable(
+	'user_events',
+	{
+		id: integer('id').primaryKey({ autoIncrement: true }),
+		ownerId: text('owner_id')
+			.notNull()
+			.references(() => users.id, { onDelete: 'cascade' }),
+		title: text('title').notNull(),
+		location: text('location'),
+		notes: text('notes'),
+		/** 始まりの日と、終わりの日 (この日を含む)。単発なら同じ */
+		startDate: text('start_date').notNull(),
+		endDate: text('end_date').notNull(),
+		timeKind: text('time_kind', { enum: ['allDay', 'time', 'period'] }).notNull(),
+		startTime: text('start_time'),
+		endTime: text('end_time'),
+		startPeriod: integer('start_period'),
+		endPeriod: integer('end_period'),
+		/** RFC 5545 の RRULE の値。繰り返さないなら null */
+		rrule: text('rrule'),
+		/** 繰り返しから除く日 ("YYYY-MM-DD" の配列) */
+		excludedDates: text('excluded_dates', { mode: 'json' }).$type<string[]>().notNull().default([]),
+		createdAt: createdAt(),
+		updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
+	},
+	(table) => [index('user_events_owner').on(table.ownerId, table.startDate)],
+);
+
 // ---------------------------------------------------------------------------
 // 暦
 
