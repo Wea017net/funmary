@@ -8,7 +8,7 @@ import type {
 	TermPeriod,
 	Weekday,
 } from '@funmary/core';
-import { and, between, eq } from 'drizzle-orm';
+import { and, between, eq, inArray } from 'drizzle-orm';
 import type { Database } from './database.ts';
 import { academicDays, academicTerms } from './schema.ts';
 
@@ -31,6 +31,17 @@ export interface AcademicCalendarStore {
 	listNoClassDays(start: CalendarDate, end: CalendarDate): NoClassDay[];
 	saveNoClassDay(date: CalendarDate, label: string | null, source: StoredSource): void;
 	deleteNoClassDay(date: CalendarDate): void;
+	/**
+	 * 学年暦から取った日で、range (両端を含む) の中の自動 (auto) の振替授業日と休講日を入れ替える。
+	 * 管理者が入れた日 (manual) は消さず、上書きもしない。上書きしなかった日付を返す
+	 */
+	replaceAutoDays(
+		range: { readonly start: CalendarDate; readonly end: CalendarDate },
+		days: {
+			readonly substituteDays: readonly SubstituteDay[];
+			readonly noClassDays: readonly NoClassDay[];
+		},
+	): { substituteDays: CalendarDate[]; noClassDays: CalendarDate[] };
 }
 
 export interface NoClassDay {
@@ -39,7 +50,7 @@ export interface NoClassDay {
 }
 
 export function createAcademicCalendarStore(database: Database): AcademicCalendarStore {
-	const { db } = database;
+	const { db, sqlite } = database;
 	return {
 		listTerms(academicYear) {
 			return db
@@ -132,6 +143,45 @@ export function createAcademicCalendarStore(database: Database): AcademicCalenda
 			db.delete(academicDays)
 				.where(and(eq(academicDays.date, date), eq(academicDays.kind, 'noClass')))
 				.run();
+		},
+		replaceAutoDays(range, days) {
+			return sqlite.transaction(() => {
+				const inRange = between(academicDays.date, range.start, range.end);
+				db.delete(academicDays)
+					.where(
+						and(
+							eq(academicDays.source, 'auto'),
+							inArray(academicDays.kind, ['substitute', 'noClass']),
+							inRange,
+						),
+					)
+					.run();
+				const manual = db
+					.select({ date: academicDays.date, kind: academicDays.kind })
+					.from(academicDays)
+					.where(and(eq(academicDays.source, 'manual'), inRange))
+					.all();
+				const isManual = (date: CalendarDate, kind: 'substitute' | 'noClass') =>
+					manual.some((row) => row.date === date && row.kind === kind);
+				const skipped = { substituteDays: [] as CalendarDate[], noClassDays: [] as CalendarDate[] };
+				for (const day of days.substituteDays) {
+					if (isManual(day.date, 'substitute')) skipped.substituteDays.push(day.date);
+					else {
+						db.insert(academicDays)
+							.values({ date: day.date, kind: 'substitute', weekday: day.weekday, source: 'auto' })
+							.run();
+					}
+				}
+				for (const day of days.noClassDays) {
+					if (isManual(day.date, 'noClass')) skipped.noClassDays.push(day.date);
+					else {
+						db.insert(academicDays)
+							.values({ date: day.date, kind: 'noClass', label: day.label, source: 'auto' })
+							.run();
+					}
+				}
+				return skipped;
+			})();
 		},
 	};
 }
