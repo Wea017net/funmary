@@ -12,7 +12,16 @@ import {
 	type Weekday,
 } from '@funmary/core';
 
-export type EventInput = Omit<UserEvent, 'id'>;
+/** 公開範囲。private は本人だけ、link は共有のリンクを知っている人、public はログインしている全員 */
+export type Visibility = 'private' | 'link' | 'public';
+export const VISIBILITIES: readonly Visibility[] = ['private', 'link', 'public'];
+
+/** 公開範囲。知らない値や、空は、非公開にする (誤って公開しないため) */
+function parseVisibility(value: string): Visibility {
+	return (VISIBILITIES as readonly string[]).includes(value) ? (value as Visibility) : 'private';
+}
+
+export type EventInput = Omit<UserEvent, 'id'> & { readonly visibility: Visibility };
 
 /** フォームの欄の値。すべて文字列 (入力欄の値のまま) */
 export interface EventFormValues {
@@ -34,6 +43,7 @@ export interface EventFormValues {
 	untilDate: string;
 	count: string;
 	excludedDates: string[];
+	visibility: Visibility;
 }
 
 export type EventFormResult =
@@ -68,6 +78,7 @@ export function emptyFormValues(startDate: string): EventFormValues {
 		untilDate: '',
 		count: '10',
 		excludedDates: [],
+		visibility: 'private',
 	};
 }
 
@@ -213,12 +224,13 @@ export function parseEventForm(form: FormData): EventFormResult {
 			time,
 			rrule: recurrence.rrule,
 			excludedDates,
+			visibility: parseVisibility(text(form, 'visibility')),
 		},
 	};
 }
 
 /** 保存した予定を、編集のフォームの値に戻す。このアプリが作らない繰り返しは、繰り返しなしとして戻す */
-export function toFormValues(event: UserEvent): EventFormValues {
+export function toFormValues(event: UserEvent & { visibility?: Visibility }): EventFormValues {
 	const values: EventFormValues = {
 		...emptyFormValues(event.startDate),
 		title: event.title,
@@ -227,6 +239,7 @@ export function toFormValues(event: UserEvent): EventFormValues {
 		endDate: event.endDate === event.startDate ? '' : event.endDate,
 		timeKind: event.time.kind,
 		excludedDates: [...event.excludedDates],
+		visibility: event.visibility ?? 'private',
 	};
 	if (event.time.kind === 'time') {
 		values.startTime = event.time.start;
@@ -278,5 +291,6 @@ export function echoFormValues(form: FormData, fallbackStartDate: string): Event
 		excludedDates: form
 			.getAll('exclude')
 			.filter((value): value is string => typeof value === 'string'),
+		visibility: parseVisibility(text(form, 'visibility')),
 	};
 }

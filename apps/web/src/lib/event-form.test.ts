@@ -37,8 +37,19 @@ describe('parseEventForm: 予定の基本', () => {
 				time: { kind: 'time', start: '18:00', end: '19:30' },
 				rrule: null,
 				excludedDates: [],
+				visibility: 'private',
 			},
 		});
+	});
+
+	it('公開範囲は、選んだ値を読む。知らない値や空は、非公開にする', () => {
+		const visibility = (value: string | null) =>
+			parseEventForm(form({ ...base, ...(value === null ? {} : { visibility: value }) }));
+		expect(visibility('link')).toMatchObject({ value: { visibility: 'link' } });
+		expect(visibility('public')).toMatchObject({ value: { visibility: 'public' } });
+		expect(visibility('private')).toMatchObject({ value: { visibility: 'private' } });
+		expect(visibility('everyone')).toMatchObject({ value: { visibility: 'private' } });
+		expect(visibility(null)).toMatchObject({ value: { visibility: 'private' } });
 	});
 
 	it('名前がない、長すぎる、日付が誤っている、終わりが始まりより前のときは、理由を返す', () => {
@@ -154,7 +165,7 @@ describe('parseEventForm: 繰り返し', () => {
 });
 
 describe('toFormValues: 編集の画面に、保存した予定の値を戻す', () => {
-	const event: UserEvent = {
+	const event: UserEvent & { visibility: 'link' } = {
 		id: 7,
 		title: '架空のサークル',
 		location: null,
@@ -164,6 +175,7 @@ describe('toFormValues: 編集の画面に、保存した予定の値を戻す',
 		time: { kind: 'period', from: 2, to: 3 },
 		rrule: 'FREQ=MONTHLY;BYDAY=2TU;COUNT=6',
 		excludedDates: ['2026-11-10'],
+		visibility: 'link' as const,
 	};
 
 	it('繰り返し、時間、除く日を、フォームの値の形に戻す', () => {
@@ -202,6 +214,7 @@ describe('toFormValues: 編集の画面に、保存した予定の値を戻す',
 			'monthlyMode',
 			'endKind',
 			'count',
+			'visibility',
 		] as const) {
 			data.set(name, values[name]);
 		}

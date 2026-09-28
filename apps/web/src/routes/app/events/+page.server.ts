@@ -1,13 +1,13 @@
-// 利用者が自分の時間割に足した予定の一覧 (Issue #144)。ここでは、持ち主の予定だけが見える。
+// 自分の予定の一覧 (Issue #144、#145)。自分が足した予定と、ほかの人の予定のうち自分の時間割に加えたもの。
 import { redirect, type ServerLoad } from '@sveltejs/kit';
-import { rruleToRecurrence } from '@funmary/core';
-import { describeRecurrence, formatEventTime } from '$lib/event-label.ts';
+import { summarizeEvent } from '$lib/server/event-summary.ts';
 import { getServices } from '$lib/server/services.ts';
-import { formatDate } from '$lib/timetable-label.ts';
+
+const VISIBILITY_LABELS = { private: '自分だけ', link: '限定公開', public: '全体に公開' } as const;
 
 export const load: ServerLoad = ({ locals, url }) => {
 	if (!locals.user) redirect(303, '/login');
-	const events = getServices().userEvents.listByOwner(locals.user.id);
+	const { userEvents } = getServices();
 	const saved = url.searchParams.get('saved');
 	return {
 		message:
@@ -18,20 +18,11 @@ export const load: ServerLoad = ({ locals, url }) => {
 					: saved === 'deleted'
 						? '予定を消しました。'
 						: null,
-		events: events.map((event) => {
-			const recurrence = event.rrule ? rruleToRecurrence(event.rrule) : null;
-			return {
-				id: event.id,
-				title: event.title,
-				location: event.location,
-				when:
-					event.endDate === event.startDate
-						? formatDate(event.startDate)
-						: `${formatDate(event.startDate)} から ${formatDate(event.endDate)}`,
-				time: formatEventTime(event.time),
-				// このアプリが作らない繰り返しは、読み戻せない。内容は出さずに、繰り返しであることだけ知らせる
-				repeat: event.rrule ? (recurrence ? describeRecurrence(recurrence) : '繰り返し') : null,
-			};
-		}),
+		events: userEvents.listByOwner(locals.user.id).map((event) => ({
+			...summarizeEvent(event),
+			visibility: VISIBILITY_LABELS[event.visibility],
+		})),
+		// 加えた予定は、持ち主が非公開にしていれば出ない。開くのは、予定の番号で (公開されているものだけ)
+		subscribed: userEvents.listSubscribed(locals.user.id).map(summarizeEvent),
 	};
 };

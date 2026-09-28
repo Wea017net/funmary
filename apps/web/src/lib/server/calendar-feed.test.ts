@@ -149,6 +149,7 @@ describe('loadCalendarFeed', () => {
 			time: { kind: 'time' as const, start: '17:00', end: '18:30' },
 			rrule: null,
 			excludedDates: [],
+			visibility: 'private' as const,
 			...overrides,
 		});
 

@@ -70,7 +70,10 @@ export {
 } from './course-store.ts';
 export {
 	createUserEventStore,
+	type EventVisibility,
+	type SharedEvent,
 	type UserEventInput,
+	type UserEventRecord,
 	type UserEventStore,
 } from './user-event-store.ts';
 export {
