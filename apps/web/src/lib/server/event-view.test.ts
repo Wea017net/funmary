@@ -60,6 +60,21 @@ describe('eventViewsByDate', () => {
 	});
 });
 
+describe('加えた予定', () => {
+	it('加えた予定の ID を渡すと、その予定に印を付ける', () => {
+		const views = eventViewsByDate(
+			[base, { ...base, id: 2, title: '加えた予定' }],
+			'2026-10-05',
+			'2026-10-05',
+			new Set([2]),
+		);
+		expect(views.get('2026-10-05')?.map((view) => [view.title, view.added])).toEqual([
+			['架空のサークル', false],
+			['加えた予定', true],
+		]);
+	});
+});
+
 describe('eventsOnDate', () => {
 	it('その日だけの予定を返す', () => {
 		expect(eventsOnDate([base], '2026-10-05').map((view) => view.title)).toEqual([

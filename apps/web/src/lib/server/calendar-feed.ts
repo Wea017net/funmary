@@ -13,7 +13,7 @@ const DAYS_AFTER = 182;
 export interface CalendarFeedSources extends TimetableSources {
 	readonly feedTokens: Pick<FeedTokenStore, 'findOwner' | 'markUsed'>;
 	/** 利用者が足した予定 */
-	readonly userEvents: Pick<UserEventStore, 'listByOwner'>;
+	readonly userEvents: Pick<UserEventStore, 'listByOwner' | 'listSubscribed'>;
 	/** 公開 URL の origin。授業の詳細画面の URL に使う */
 	readonly origin: string;
 }
@@ -63,14 +63,20 @@ export function loadCalendarFeed(
 				note.kind === 'substitute' ? `振替授業日 (${formatDayNote(note)})` : formatDayNote(note),
 		}));
 	const range = { start: addDays(today, -DAYS_BEFORE), end: addDays(today, DAYS_AFTER) };
-	const events = sources.userEvents
+	// 自分の予定と、ほかの人の予定のうち自分の時間割に加えたもの (公開されているものだけ)
+	const own = sources.userEvents
 		.listByOwner(owner.userId)
+		.map((event) => ({ event, added: false }));
+	const added = sources.userEvents
+		.listSubscribed(owner.userId)
+		.map((event) => ({ event, added: true }));
+	const events = [...own, ...added]
 		// 繰り返しは、いつ始まっていても入れる (カレンダーアプリが、自分で展開する)。単発は、載せる期間に掛かるものだけ
 		.filter(
-			(event) =>
+			({ event }) =>
 				event.rrule !== null || (event.endDate >= range.start && event.startDate <= range.end),
 		)
-		.map((event) => toCalendarEvent(event, sources.origin));
+		.map(({ event, added: isAdded }) => toCalendarEvent(event, sources.origin, isAdded));
 	return {
 		feed: { lessons, days, events },
 		// 同じ日のうちは同じ内容になり、ETag で 304 を返せるようにする
@@ -79,7 +85,7 @@ export function loadCalendarFeed(
 }
 
 /** 時限で決めた予定は、時限の時刻にする。時限が分からなければ、終日にする */
-function toCalendarEvent(event: UserEvent, origin: string): CalendarUserEvent {
+function toCalendarEvent(event: UserEvent, origin: string, added: boolean): CalendarUserEvent {
 	let times: { start: string; end: string } | null = null;
 	if (event.time.kind === 'time') times = { start: event.time.start, end: event.time.end };
 	if (event.time.kind === 'period') {
@@ -99,6 +105,7 @@ function toCalendarEvent(event: UserEvent, origin: string): CalendarUserEvent {
 		end: times?.end ?? null,
 		rrule: event.rrule,
 		excludedDates: event.excludedDates,
-		detailUrl: `${origin}/app/events/${event.id}`,
+		// ほかの人の予定は、直せないので、見る画面を指す
+		detailUrl: `${origin}/app/events/${added ? 'shared/' : ''}${event.id}`,
 	};
 }

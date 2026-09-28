@@ -1329,6 +1329,13 @@ test.describe('自分の予定', () => {
 		await publicItem.getByRole('link', { name: publicTitle }).click();
 		await viewer.getByRole('button', { name: '自分の時間割に加える' }).click();
 		await expect(viewer.getByRole('status')).toHaveText('自分の時間割に加えました。');
+		// 加えた予定は、その日の週の時間割に出る
+		await viewer.goto('/app/week?date=2026-12-07');
+		const added = viewer
+			.getByRole('row')
+			.filter({ has: viewer.getByRole('rowheader', { name: '予定' }) });
+		await expect(added).toContainText(publicTitle);
+		await expect(added).toContainText('加えた予定');
 		await viewer.goto('/app/events');
 		await expect(viewer.getByRole('region', { name: '加えた予定' })).toContainText(publicTitle);
 		await viewer

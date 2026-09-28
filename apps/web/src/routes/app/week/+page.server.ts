@@ -29,10 +29,13 @@ export const load: ServerLoad = ({ cookies, locals, url }) => {
 	const timetable = buildUserTimetable(getServices(), locals.user.id, range);
 	const lessons = timetable.lessons.map(toLessonView);
 	// 自分の予定 (日付ごと)。土日は、授業か予定のあるときだけ列を出す
+	const { userEvents } = getServices();
+	const addedEvents = userEvents.listSubscribed(locals.user.id);
 	const events = eventViewsByDate(
-		getServices().userEvents.listByOwner(locals.user.id),
+		[...userEvents.listByOwner(locals.user.id), ...addedEvents],
 		range.start,
 		range.end,
+		new Set(addedEvents.map((event) => event.id)),
 	);
 
 	// 月曜から金曜は必ず出し、土日は授業のある週だけ出す

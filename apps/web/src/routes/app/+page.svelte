@@ -100,7 +100,16 @@
 					<li>
 						<span class="when">{event.time}</span>
 						<span class="what">
-							<a href={resolve('/app/events/[id]', { id: String(event.eventId) })}>{event.title}</a>
+							{#if event.added}
+								<a href={resolve('/app/events/shared/[ref]', { ref: String(event.eventId) })}
+									>{event.title}</a
+								>
+								<span class="muted">(加えた予定)</span>
+							{:else}
+								<a href={resolve('/app/events/[id]', { id: String(event.eventId) })}
+									>{event.title}</a
+								>
+							{/if}
 							{#if event.continued}<span class="muted">(続き)</span>{/if}
 							{#if event.location}<span class="muted">{event.location}</span>{/if}
 						</span>
