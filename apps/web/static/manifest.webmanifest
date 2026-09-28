@@ -1,0 +1,16 @@
+{
+	"name": "Funmary",
+	"short_name": "Funmary",
+	"description": "公立はこだて未来大学の学生向けの、非公式の便利な総合 Web アプリ",
+	"lang": "ja",
+	"start_url": "/app",
+	"scope": "/app",
+	"display": "standalone",
+	"background_color": "#ffffff",
+	"theme_color": "#9d2126",
+	"icons": [
+		{ "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+		{ "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+		{ "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+	]
+}

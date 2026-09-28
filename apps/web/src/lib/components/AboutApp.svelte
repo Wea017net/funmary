@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { isStandalone } from '$lib/standalone.ts';
 
 	export interface About {
 		build: { version: string; commit: string; buildNumber: number | null; builtAt: string } | null;
@@ -14,9 +15,7 @@
 	let copied = $state(false);
 
 	onMount(() => {
-		standalone =
-			window.matchMedia('(display-mode: standalone)').matches ||
-			('standalone' in navigator && navigator.standalone === true);
+		standalone = isStandalone();
 	});
 
 	const version = $derived(
