@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
-	import Landing from '$lib/components/Landing.svelte';
 	import LessonRoom from '$lib/components/LessonRoom.svelte';
 	import StatusBadge from '$lib/components/StatusBadge.svelte';
 	import type { LessonView } from '$lib/server/lesson-view.ts';
@@ -23,112 +22,98 @@
 	let {
 		data,
 	}: {
-		data: {
-			user: { email: string; isAdmin: boolean } | null;
-			today: TodayView | null;
-			registration?: 'invite' | 'open' | 'closed';
-		};
+		data: { today: TodayView };
 	} = $props();
+
+	const today = $derived(data.today);
 </script>
 
 <svelte:head>
-	<title>Funmary</title>
-	<meta
-		name="description"
-		content="公立はこだて未来大学の学生向けの便利な総合 Web アプリ (非公式)"
-	/>
+	<title>今日 - Funmary</title>
 </svelte:head>
 
-<div class={['page', { guest: !data.user }]}>
-	{#if data.user && data.today}
-		{@const today = data.today}
-		<h1>今日 <time datetime={today.date}>{formatDate(today.date)}</time></h1>
-		{#if today.note}
-			<p class="note"><IconInfo aria-hidden="true" class="icon" />{formatDayNote(today.note)}</p>
+<div class="page">
+	<h1>今日 <time datetime={today.date}>{formatDate(today.date)}</time></h1>
+	{#if today.note}
+		<p class="note"><IconInfo aria-hidden="true" class="icon" />{formatDayNote(today.note)}</p>
+	{/if}
+
+	<section aria-labelledby="next-heading" class="next">
+		<h2 id="next-heading">{today.next?.inProgress ? '授業中' : '次の授業'}</h2>
+		{#if today.next}
+			{@const next = today.next}
+			<p class="next-time">
+				{#if next.date !== today.date}<span class="next-date">{formatDate(next.date)}</span>{/if}
+				{#if next.start && next.end}<time>{next.start}-{next.end}</time>{/if}
+				<span class="period">{next.period} 限</span>
+			</p>
+			<p class="next-room"><LessonRoom room={next.room} tentative={next.roomIsTentative} /></p>
+			<p class="next-subject">
+				<a href={resolve('/app/subjects/[id]', { id: String(next.subjectId) })}
+					>{next.subjectName}</a
+				>
+				<StatusBadge status={next.status} />
+			</p>
+		{:else if today.hasRegistrations}
+			<p>この先 2 週間に授業はありません。</p>
+		{:else}
+			<p>履修科目を登録すると、ここに次の授業の時刻と教室が出ます。</p>
+			<p><a href={resolve('/app/courses')}>履修科目を登録する</a></p>
 		{/if}
+	</section>
 
-		<section aria-labelledby="next-heading" class="next">
-			<h2 id="next-heading">{today.next?.inProgress ? '授業中' : '次の授業'}</h2>
-			{#if today.next}
-				{@const next = today.next}
-				<p class="next-time">
-					{#if next.date !== today.date}<span class="next-date">{formatDate(next.date)}</span>{/if}
-					{#if next.start && next.end}<time>{next.start}-{next.end}</time>{/if}
-					<span class="period">{next.period} 限</span>
-				</p>
-				<p class="next-room"><LessonRoom room={next.room} tentative={next.roomIsTentative} /></p>
-				<p class="next-subject">
-					<a href={resolve('/subjects/[id]', { id: String(next.subjectId) })}>{next.subjectName}</a>
-					<StatusBadge status={next.status} />
-				</p>
-			{:else if today.hasRegistrations}
-				<p>この先 2 週間に授業はありません。</p>
-			{:else}
-				<p>履修科目を登録すると、ここに次の授業の時刻と教室が出ます。</p>
-				<p><a href={resolve('/courses')}>履修科目を登録する</a></p>
-			{/if}
-		</section>
-
-		<section aria-labelledby="today-heading">
-			<h2 id="today-heading">今日の授業</h2>
-			{#if today.lessons.length > 0}
-				<ul class="lessons">
-					{#each today.lessons as lesson (lesson.key)}
-						<li class={{ cancelled: lesson.status === 'cancelled' }}>
-							<span class="when">
-								<span class="period-number">{lesson.period} 限</span>
-								{#if lesson.start}<time class="muted">{lesson.start}</time>{/if}
-							</span>
-							<span class="what">
-								<a href={resolve('/subjects/[id]', { id: String(lesson.subjectId) })}
-									>{lesson.subjectName}</a
-								>
-								<StatusBadge status={lesson.status} />
-							</span>
-							<span class="room"
-								><LessonRoom room={lesson.room} tentative={lesson.roomIsTentative} /></span
+	<section aria-labelledby="today-heading">
+		<h2 id="today-heading">今日の授業</h2>
+		{#if today.lessons.length > 0}
+			<ul class="lessons">
+				{#each today.lessons as lesson (lesson.key)}
+					<li class={{ cancelled: lesson.status === 'cancelled' }}>
+						<span class="when">
+							<span class="period-number">{lesson.period} 限</span>
+							{#if lesson.start}<time class="muted">{lesson.start}</time>{/if}
+						</span>
+						<span class="what">
+							<a href={resolve('/app/subjects/[id]', { id: String(lesson.subjectId) })}
+								>{lesson.subjectName}</a
 							>
-						</li>
-					{/each}
-				</ul>
-			{:else}
-				<p class="muted">今日の授業はありません。</p>
-			{/if}
-		</section>
+							<StatusBadge status={lesson.status} />
+						</span>
+						<span class="room"
+							><LessonRoom room={lesson.room} tentative={lesson.roomIsTentative} /></span
+						>
+					</li>
+				{/each}
+			</ul>
+		{:else}
+			<p class="muted">今日の授業はありません。</p>
+		{/if}
+	</section>
 
-		{#if today.stale}
-			<p class="stale" role="alert">
-				<IconWarning aria-hidden="true" class="icon" />
-				<span>
-					{#if today.fetchedAt}
-						休講情報の最終取得: {formatFetchedAt(today.fetchedAt, today.date)}。12
-						時間以上更新されていません。休講などが載っていない可能性があります。
-					{:else}
-						休講情報をまだ取得していません。休講などは載っていません。
-					{/if}
-				</span>
-			</p>
-		{:else if today.fetchedAt}
-			<p class="freshness">休講情報の最終取得: {formatFetchedAt(today.fetchedAt, today.date)}</p>
-		{/if}
-		{#if today.usesEstimatedTerms}
-			<p class="freshness">
-				学期の期間は、大学の学年暦がまだ入っていないため、推定した日付で出しています。
-			</p>
-		{/if}
-	{:else}
-		<Landing registration={data.registration ?? 'invite'} />
+	{#if today.stale}
+		<p class="stale" role="alert">
+			<IconWarning aria-hidden="true" class="icon" />
+			<span>
+				{#if today.fetchedAt}
+					休講情報の最終取得: {formatFetchedAt(today.fetchedAt, today.date)}。12
+					時間以上更新されていません。休講などが載っていない可能性があります。
+				{:else}
+					休講情報をまだ取得していません。休講などは載っていません。
+				{/if}
+			</span>
+		</p>
+	{:else if today.fetchedAt}
+		<p class="freshness">休講情報の最終取得: {formatFetchedAt(today.fetchedAt, today.date)}</p>
+	{/if}
+	{#if today.usesEstimatedTerms}
+		<p class="freshness">
+			学期の期間は、大学の学年暦がまだ入っていないため、推定した日付で出しています。
+		</p>
 	{/if}
 </div>
 
 <style lang="scss">
 	.page {
 		max-width: 44rem;
-	}
-
-	/* 紹介の画面は、外枠の幅いっぱいに使う */
-	.guest {
-		max-width: none;
 	}
 
 	h1 time {

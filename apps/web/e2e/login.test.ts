@@ -47,7 +47,7 @@ test('大学のアカウントでログインでき、ログアウトできる',
 	await page.goto('/login');
 	await page.getByRole('link', { name: 'Google でログイン' }).click();
 
-	await expect(page).toHaveURL('/');
+	await expect(page).toHaveURL('/app');
 	// メールアドレスの @ より前は、押すまで出さない
 	const menu = page.getByRole('navigation', { name: 'メニュー' });
 	await expect(menu).toContainText('••••••••@fun.ac.jp');
@@ -64,9 +64,17 @@ test('大学のアカウントでログインでき、ログアウトできる',
 	expect(session?.sameSite).toBe('Lax');
 	expect(await page.evaluate(() => document.cookie)).not.toContain('funmary_session');
 
-	// ログイン済みなら、ログインの画面は開かず、トップページに戻る
+	// ログイン済みなら、ログインの画面は開かず、アプリに移る
 	await page.goto('/login');
-	await expect(page).toHaveURL('/');
+	await expect(page).toHaveURL('/app');
+
+	// 紹介の画面は、ログインしていても見られ、アプリへの入口を出す
+	await page.goto('/');
+	await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+		'次の授業と教室が、開いてすぐ分かる。',
+	);
+	await page.getByRole('link', { name: 'アプリを開く' }).click();
+	await expect(page).toHaveURL('/app');
 
 	await page.getByRole('button', { name: 'ログアウト' }).click();
 	await expect(page).toHaveURL('/');
@@ -115,11 +123,11 @@ test.describe('ポータルの時間割の取り込み', () => {
 			hd: 'fun.ac.jp',
 		});
 		await page.goto('/auth/google');
-		await expect(page).toHaveURL('/');
+		await expect(page).toHaveURL('/app');
 	};
 
 	test('ログインしていなければ、ログインの画面に移る', async ({ page }) => {
-		await page.goto('/courses/import');
+		await page.goto('/app/courses/import');
 		await expect(page).toHaveURL('/login');
 	});
 
@@ -127,7 +135,7 @@ test.describe('ポータルの時間割の取り込み', () => {
 		page,
 	}) => {
 		await loginAs(page);
-		await page.goto('/courses/import');
+		await page.goto('/app/courses/import');
 		await expect(page.getByText('大学から自動では取得できません')).toBeVisible();
 		const link = page.getByRole('link', { name: 'Funmary に時間割を取り込む' });
 		await expect(link).toHaveAttribute('href', /^javascript:/);
@@ -156,7 +164,7 @@ test.describe('ポータルの時間割の取り込み', () => {
 				],
 			}),
 		).toString('base64url');
-		await page.goto(`/courses/import#${payload}`);
+		await page.goto(`/app/courses/import#${payload}`);
 		await expect(page.getByRole('button', { name: '取り込む' })).toBeVisible();
 		expect(new URL(page.url()).hash).toBe('');
 		await page.getByRole('button', { name: '取り込む' }).click();
@@ -167,7 +175,18 @@ test.describe('ポータルの時間割の取り込み', () => {
 
 	test('壊れた内容は、取り込まずに理由を出す', async ({ page }) => {
 		await loginAs(page);
+		await page.goto('/app/courses/import#AAAA');
+		await page.getByRole('button', { name: '取り込む' }).click();
+		await expect(page.getByRole('alert')).toContainText('内容を読めませんでした');
+	});
+
+	test('前の URL (/courses/import) で開いても、# 以降を残したまま /app の下へ転送する', async ({
+		page,
+	}) => {
+		// 登録済みのブックマークレットは、前の URL を開く
+		await loginAs(page);
 		await page.goto('/courses/import#AAAA');
+		await expect(page).toHaveURL('/app/courses/import');
 		await page.getByRole('button', { name: '取り込む' }).click();
 		await expect(page.getByRole('alert')).toContainText('内容を読めませんでした');
 	});
@@ -232,11 +251,11 @@ test.describe('履修科目の登録', () => {
 	const loginAs = async (page: import('@playwright/test').Page) => {
 		oidc.setIdentity({ sub, email: `${sub}@fun.ac.jp`, email_verified: true, hd: 'fun.ac.jp' });
 		await page.goto('/auth/google');
-		await expect(page).toHaveURL('/');
+		await expect(page).toHaveURL('/app');
 	};
 
 	test('ログインしていなければ、ログインの画面に移る', async ({ page }) => {
-		await page.goto('/courses');
+		await page.goto('/app/courses');
 		await expect(page).toHaveURL('/login');
 	});
 
@@ -297,7 +316,7 @@ test.describe('履修科目の登録', () => {
 	test('ない科目の詳細は、見つからないと出す', async ({ page }) => {
 		await loginAs(page);
 		for (const id of ['999999999', 'abc']) {
-			const response = await page.goto(`/subjects/${id}`);
+			const response = await page.goto(`/app/subjects/${id}`);
 			expect(response?.status()).toBe(404);
 		}
 	});
@@ -327,13 +346,13 @@ test.describe('管理画面', () => {
 	const loginAs = async (page: import('@playwright/test').Page, email: string) => {
 		oidc.setIdentity({ sub: email, email, email_verified: true, hd: 'fun.ac.jp' });
 		await page.goto('/auth/google');
-		await expect(page).toHaveURL('/');
+		await expect(page).toHaveURL('/app');
 	};
 
 	test('管理者でなければ、管理画面は見つからないことにする', async ({ page }) => {
 		await loginAs(page, 'e2e-not-admin@fun.ac.jp');
 		await expect(page.getByRole('link', { name: '管理', exact: true })).toHaveCount(0);
-		const response = await page.goto('/admin/lessons');
+		const response = await page.goto('/app/admin/lessons');
 		expect(response?.status()).toBe(404);
 	});
 
@@ -360,7 +379,7 @@ test.describe('今日と週の時間割', () => {
 	const loginAs = async (page: import('@playwright/test').Page) => {
 		oidc.setIdentity({ sub, email, email_verified: true, hd: 'fun.ac.jp' });
 		await page.goto('/auth/google');
-		await expect(page).toHaveURL('/');
+		await expect(page).toHaveURL('/app');
 	};
 
 	/** ログインした利用者に、架空の科目を履修登録し、火曜 3 限の枠と、休講などを入れる */
@@ -402,7 +421,7 @@ test.describe('今日と週の時間割', () => {
 		});
 
 	test('ログインしていなければ、週の時間割はログインの画面に移る', async ({ page }) => {
-		await page.goto('/week');
+		await page.goto('/app/week');
 		await expect(page).toHaveURL('/login');
 	});
 
@@ -417,9 +436,9 @@ test.describe('今日と週の時間割', () => {
 		await loginAs(page);
 		registerSubject();
 		await page.getByRole('link', { name: '時間割', exact: true }).click();
-		await expect(page).toHaveURL('/week');
+		await expect(page).toHaveURL('/app/week');
 
-		await page.goto('/week?date=2026-10-07');
+		await page.goto('/app/week?date=2026-10-07');
 		await expect(page.getByRole('heading', { level: 1 })).toHaveText('10/5 (月) からの週');
 		const table = page.getByRole('table');
 		await expect(table.getByRole('columnheader')).toHaveText([
@@ -450,13 +469,13 @@ test.describe('今日と週の時間割', () => {
 		await expect(holiday).toContainText('スポーツの日');
 
 		// 週は日曜から土曜なので、日曜の日付は次の月曜からの週になる
-		await page.goto('/week?date=2026-10-11');
+		await page.goto('/app/week?date=2026-10-11');
 		await expect(page.getByRole('heading', { level: 1 })).toHaveText('10/12 (月) からの週');
 
 		// カレンダーで日付を選ぶと、その日を含む週に移る
 		await page.getByRole('button', { name: 'カレンダーで日付を選んで、その週を出す' }).click();
 		await page.locator('.picker input[type="date"]').fill('2026-11-04');
-		await expect(page).toHaveURL('/week?date=2026-11-04');
+		await expect(page).toHaveURL('/app/week?date=2026-11-04');
 		await expect(page.getByRole('heading', { level: 1 })).toHaveText('11/2 (月) からの週');
 		for (let i = 0; i < 3; i++) await page.getByRole('link', { name: '前の週' }).click();
 		await expect(page.getByRole('heading', { level: 1 })).toHaveText('10/12 (月) からの週');
@@ -512,7 +531,7 @@ test.describe('今日と週の時間割', () => {
 		expect(await address.boundingBox()).toEqual(hiddenAddress);
 
 		// 今週と次の週で、次の週のボタンの位置は変わらない
-		await page.goto('/week');
+		await page.goto('/app/week');
 		const next = page.getByRole('link', { name: '次の週' });
 		const thisWeek = await next.boundingBox();
 		await next.click();
@@ -536,7 +555,7 @@ test.describe('今日と週の時間割', () => {
 	}) => {
 		await loginAs(page);
 		await page.setViewportSize({ width: 390, height: 844 });
-		await page.goto('/week?date=2026-10-07');
+		await page.goto('/app/week?date=2026-10-07');
 		const views = page.getByRole('group', { name: '時間割の見せ方' });
 		const auto = views.getByRole('button', { name: '自動' });
 		const day = views.getByRole('button', { name: '1日' });
@@ -579,7 +598,7 @@ test.describe('今日と週の時間割', () => {
 		test.skip(weekday === 0 || weekday === 6, '今日が週末だと、今日の列がない');
 		await loginAs(page);
 		await page.setViewportSize({ width: 390, height: 844 });
-		await page.goto('/week');
+		await page.goto('/app/week');
 		const today = page.locator('thead th.today');
 		await expect(today).toBeVisible();
 		await expect
@@ -594,7 +613,7 @@ test.describe('今日と週の時間割', () => {
 		page,
 	}) => {
 		await loginAs(page);
-		await page.goto('/courses/import');
+		await page.goto('/app/courses/import');
 		const methods = page.getByRole('group', { name: '取り込みの方法' });
 		const bookmark = methods.getByRole('button', { name: 'ブックマークに登録する' });
 		const console_ = methods.getByRole('button', { name: 'コンソールで実行する' });
@@ -615,8 +634,8 @@ test.describe('今日と週の時間割', () => {
 
 	test('暦にない日付の週は、今週に移る', async ({ page }) => {
 		await loginAs(page);
-		await page.goto('/week?date=2026-02-30');
-		await expect(page).toHaveURL('/week');
+		await page.goto('/app/week?date=2026-02-30');
+		await expect(page).toHaveURL('/app/week');
 	});
 });
 
@@ -635,14 +654,14 @@ test.describe('学年暦の管理', () => {
 		const email = 'e2e-admin@fun.ac.jp';
 		oidc.setIdentity({ sub: email, email, email_verified: true, hd: 'fun.ac.jp' });
 		await page.goto('/auth/google');
-		await expect(page).toHaveURL('/');
+		await expect(page).toHaveURL('/app');
 	};
 
 	test('管理者でなければ、学年暦の画面は見つからないことにする', async ({ page }) => {
 		const email = 'e2e-not-admin@fun.ac.jp';
 		oidc.setIdentity({ sub: email, email, email_verified: true, hd: 'fun.ac.jp' });
 		await page.goto('/auth/google');
-		const response = await page.goto('/admin/calendar');
+		const response = await page.goto('/app/admin/calendar');
 		expect(response?.status()).toBe(404);
 	});
 
@@ -650,9 +669,9 @@ test.describe('学年暦の管理', () => {
 		page,
 	}) => {
 		await loginAsAdmin(page);
-		await page.goto('/admin');
+		await page.goto('/app/admin');
 		await expect(page.getByText('推定のままです')).toBeVisible();
-		await page.goto('/admin/calendar?year=2026');
+		await page.goto('/app/admin/calendar?year=2026');
 		await expect(page.getByRole('heading', { level: 1 })).toHaveText('2026 年度の学年暦');
 
 		const terms = page.getByRole('region', { name: '学期の期間' });
@@ -690,14 +709,14 @@ test.describe('学年暦の管理', () => {
 		await expect(noClass.getByRole('listitem')).toContainText('10/16 (金) (架空の行事)');
 
 		// 週の時間割の日付の横に出る
-		await page.goto('/week?date=2026-10-12');
+		await page.goto('/app/week?date=2026-10-12');
 		const headers = page.getByRole('table').getByRole('columnheader');
 		await expect(headers.filter({ hasText: '10/14 (水)' })).toContainText('月曜の授業を行う日');
 		await expect(headers.filter({ hasText: '10/16 (金)' })).toContainText(
 			'全学の休講日 (架空の行事)',
 		);
 
-		await page.goto('/admin/calendar?year=2026');
+		await page.goto('/app/admin/calendar?year=2026');
 		await noClass.getByRole('button', { name: /^消す/ }).click();
 		await expect(page.getByRole('status')).toHaveText('全学の休講日を消しました。');
 		await expect(noClass.getByText('ありません。')).toBeVisible();
@@ -743,7 +762,7 @@ test.describe('取得元と実行履歴', () => {
 		const email = 'e2e-admin@fun.ac.jp';
 		oidc.setIdentity({ sub: email, email, email_verified: true, hd: 'fun.ac.jp' });
 		await page.goto('/auth/google');
-		await page.goto('/admin');
+		await page.goto('/app/admin');
 		await page.getByRole('link', { name: '取得元と実行履歴' }).click();
 
 		const portal = page
@@ -765,7 +784,7 @@ test.describe('取得元と実行履歴', () => {
 		const email = 'e2e-not-admin@fun.ac.jp';
 		oidc.setIdentity({ sub: email, email, email_verified: true, hd: 'fun.ac.jp' });
 		await page.goto('/auth/google');
-		const response = await page.goto('/admin/status');
+		const response = await page.goto('/app/admin/status');
 		expect(response?.status()).toBe(404);
 	});
 });

@@ -7,9 +7,13 @@
 	import IconToday from '~icons/material-symbols/today-outline';
 	import LessonRoom from '$lib/components/LessonRoom.svelte';
 	import StatusBadge from '$lib/components/StatusBadge.svelte';
+	import { resolve } from '$app/paths';
 
-	// ログインしていない人に見せる紹介の画面。できることだけを書き、準備中のものは準備中と書く
-	let { registration }: { registration: 'invite' | 'open' | 'closed' } = $props();
+	// 紹介の画面。ログインしているかどうかにかかわらず出す。できることだけを書き、準備中のものは準備中と書く
+	let {
+		registration,
+		signedIn,
+	}: { registration: 'invite' | 'open' | 'closed'; signedIn: boolean } = $props();
 
 	const FEATURES = [
 		{
@@ -50,36 +54,42 @@
 			</p>
 
 			<div class="start">
-				{#if registration === 'closed'}
-					<p class="muted">
-						いまは、新しい登録を受け付けていません。登録済みの方はログインできます。
+				{#if signedIn}
+					<Button href={resolve('/app')} variant="unelevated"><Label>アプリを開く</Label></Button>
+				{:else}
+					{#if registration === 'closed'}
+						<p class="muted">
+							いまは、新しい登録を受け付けていません。登録済みの方はログインできます。
+						</p>
+					{/if}
+					<!-- /auth は SvelteKit の画面ではなく、サーバーが処理するので、通常の移動にする -->
+					<Button href="/auth/google" variant="unelevated" data-sveltekit-reload>
+						<Label
+							>{registration === 'open'
+								? '大学のアカウントではじめる'
+								: '大学のアカウントでログイン'}</Label
+						>
+					</Button>
+					<p class="note">
+						@fun.ac.jp の Google アカウントを使います。スマホでも PC でも使えます。
 					</p>
-				{/if}
-				<!-- /auth は SvelteKit の画面ではなく、サーバーが処理するので、通常の移動にする -->
-				<Button href="/auth/google" variant="unelevated" data-sveltekit-reload>
-					<Label
-						>{registration === 'open'
-							? '大学のアカウントではじめる'
-							: '大学のアカウントでログイン'}</Label
-					>
-				</Button>
-				<p class="note">@fun.ac.jp の Google アカウントを使います。スマホでも PC でも使えます。</p>
 
-				{#if registration === 'invite'}
-					<form method="GET" action="/signup" class="invite" data-sveltekit-reload>
-						<label for="invite-code">はじめての方は、招待コードで登録します</label>
-						<div class="invite-row">
-							<input
-								id="invite-code"
-								name="code"
-								required
-								autocomplete="off"
-								spellcheck="false"
-								maxlength="100"
-							/>
-							<Button type="submit" variant="outlined"><Label>招待コードで登録</Label></Button>
-						</div>
-					</form>
+					{#if registration === 'invite'}
+						<form method="GET" action="/signup" class="invite" data-sveltekit-reload>
+							<label for="invite-code">はじめての方は、招待コードで登録します</label>
+							<div class="invite-row">
+								<input
+									id="invite-code"
+									name="code"
+									required
+									autocomplete="off"
+									spellcheck="false"
+									maxlength="100"
+								/>
+								<Button type="submit" variant="outlined"><Label>招待コードで登録</Label></Button>
+							</div>
+						</form>
+					{/if}
 				{/if}
 			</div>
 		</div>

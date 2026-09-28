@@ -37,7 +37,7 @@
 		};
 	} = $props();
 
-	const weekUrl = (date: string) => `${resolve('/week')}?date=${date}`;
+	const weekUrl = (date: string) => `${resolve('/app/week')}?date=${date}`;
 
 	/** 見せ方の選び方。自動は、狭い画面では 1 日ずつ、広い画面では週を並べる */
 	const VIEW_LABELS: Record<WeekView, { text: string; title: string }> = {
@@ -117,7 +117,7 @@
 			{#if data.isThisWeek}
 				<span class="text-button current" aria-current="date">今週</span>
 			{:else}
-				<a class="text-button" href={resolve('/week')}>今週</a>
+				<a class="text-button" href={resolve('/app/week')}>今週</a>
 			{/if}
 			<a class="icon-button" href={weekUrl(data.next)} aria-label="次の週" title="次の週">
 				<IconNext aria-hidden="true" />
@@ -196,7 +196,7 @@
 							<td class={{ today: cell.date === data.today, off: offDates.has(cell.date) }}>
 								{#each cell.lessons as lesson (lesson.key)}
 									<div class={['lesson', { cancelled: lesson.status === 'cancelled' }]}>
-										<a href={resolve('/subjects/[id]', { id: String(lesson.subjectId) })}
+										<a href={resolve('/app/subjects/[id]', { id: String(lesson.subjectId) })}
 											>{lesson.subjectName}</a
 										>
 										<StatusBadge status={lesson.status} />

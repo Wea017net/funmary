@@ -1,5 +1,5 @@
 // 今日の画面 (設計書 4.4、12.1)。次の授業の時刻と教室を大きく出し、今日の授業と休講などを並べる。
-import type { ServerLoad } from '@sveltejs/kit';
+import { redirect, type ServerLoad } from '@sveltejs/kit';
 import { DEFAULT_PERIODS, addDays, findNextLesson, isStale, jstDateTime } from '@funmary/core';
 import { PORTAL_SOURCE } from '@funmary/jobs';
 import { getServices } from '$lib/server/services.ts';
@@ -10,11 +10,7 @@ import { buildUserTimetable } from '$lib/server/user-timetable.ts';
 const LOOKAHEAD_DAYS = 14;
 
 export const load: ServerLoad = ({ locals }) => {
-	// 画面に渡すのは、表示に要るものだけにする (利用者の ID は渡さない。権限は、管理画面へのリンクを出すかどうかだけ)
-	const user = locals.user
-		? { email: locals.user.email, isAdmin: locals.user.role === 'admin' }
-		: null;
-	if (!locals.user) return { user, today: null, registration: getServices().registration };
+	if (!locals.user) redirect(303, '/login');
 
 	const now = new Date();
 	const current = jstDateTime(now);
@@ -27,7 +23,6 @@ export const load: ServerLoad = ({ locals }) => {
 	const portal = services.sourceHealth.load(PORTAL_SOURCE);
 
 	return {
-		user,
 		today: {
 			date: current.date,
 			note: timetable.notes.get(current.date) ?? null,

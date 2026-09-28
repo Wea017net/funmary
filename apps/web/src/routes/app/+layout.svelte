@@ -1,6 +1,4 @@
 <script lang="ts">
-	import '$lib/styles/generated/smui.css';
-	import '$lib/styles/base.scss';
 	import type { Snippet } from 'svelte';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
@@ -17,33 +15,39 @@
 		data,
 		children,
 	}: {
-		data: { user: { email: string; isAdmin: boolean } | null; theme: ThemePreference };
+		data: { user: { email: string; isAdmin: boolean }; theme: ThemePreference };
 		children: Snippet;
 	} = $props();
 
 	// PC では左のメニュー、スマホでは下のタブに同じ項目を出す (設計書 12.4)
 	const items = $derived([
-		{ href: resolve('/'), label: '今日', icon: IconToday, current: page.url.pathname === '/' },
 		{
-			href: resolve('/week'),
-			label: '時間割',
-			icon: IconWeek,
-			current: page.url.pathname.startsWith('/week'),
+			href: resolve('/app'),
+			label: '今日',
+			icon: IconToday,
+			current: page.url.pathname === '/app',
 		},
 		{
-			href: resolve('/courses'),
+			href: resolve('/app/week'),
+			label: '時間割',
+			icon: IconWeek,
+			current: page.url.pathname.startsWith('/app/week'),
+		},
+		{
+			href: resolve('/app/courses'),
 			label: '履修科目',
 			icon: IconCourses,
 			current:
-				page.url.pathname.startsWith('/courses') || page.url.pathname.startsWith('/subjects'),
+				page.url.pathname.startsWith('/app/courses') ||
+				page.url.pathname.startsWith('/app/subjects'),
 		},
-		...(data.user?.isAdmin
+		...(data.user.isAdmin
 			? [
 					{
-						href: resolve('/admin'),
+						href: resolve('/app/admin'),
 						label: '管理',
 						icon: IconAdmin,
-						current: page.url.pathname.startsWith('/admin'),
+						current: page.url.pathname.startsWith('/app/admin'),
 					},
 				]
 			: []),
@@ -84,46 +88,34 @@
 	<p class="unofficial">Funmary は公立はこだて未来大学の公式のアプリではありません。</p>
 {/snippet}
 
-{#if data.user}
-	<div class="shell">
-		<header class="top">
-			<a class="brand" href={resolve('/')}>Funmary</a>
-			<div class="top-actions">
-				<ThemeToggle initial={data.theme} compact />
-				{@render logout(true)}
-			</div>
-		</header>
-
-		<nav class="side" aria-label="メニュー">
-			<a class="brand" href={resolve('/')}>Funmary</a>
-			{@render navItems('side-items')}
-			<div class="account">
-				<div class="email"><MaskedEmail email={data.user.email} /></div>
-				<ThemeToggle initial={data.theme} />
-				{@render logout(false)}
-			</div>
-		</nav>
-
-		<main>
-			{@render children()}
-			<footer>{@render unofficial()}</footer>
-		</main>
-
-		<nav class="tabs" aria-label="メニュー">
-			{@render navItems('tab-items')}
-		</nav>
-	</div>
-{:else}
-	<!-- ログインしていないときは、名前と画面の色のボタンだけを上に置く -->
-	<header class="guest-top">
-		<a class="brand" href={resolve('/')}>Funmary</a>
-		<ThemeToggle initial={data.theme} compact />
+<div class="shell">
+	<header class="top">
+		<a class="brand" href={resolve('/app')}>Funmary</a>
+		<div class="top-actions">
+			<ThemeToggle initial={data.theme} compact />
+			{@render logout(true)}
+		</div>
 	</header>
-	<main class="solo">
+
+	<nav class="side" aria-label="メニュー">
+		<a class="brand" href={resolve('/app')}>Funmary</a>
+		{@render navItems('side-items')}
+		<div class="account">
+			<div class="email"><MaskedEmail email={data.user.email} /></div>
+			<ThemeToggle initial={data.theme} />
+			{@render logout(false)}
+		</div>
+	</nav>
+
+	<main>
 		{@render children()}
 		<footer>{@render unofficial()}</footer>
 	</main>
-{/if}
+
+	<nav class="tabs" aria-label="メニュー">
+		{@render navItems('tab-items')}
+	</nav>
+</div>
 
 <style lang="scss">
 	@use 'breakpoints';
@@ -136,21 +128,6 @@
 		box-sizing: border-box;
 		max-width: 72rem;
 		padding: 1rem 1rem 6rem;
-	}
-
-	.guest-top {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		max-width: 64rem;
-		margin: 0 auto;
-		padding: 0.25rem 0.5rem 0.25rem 1rem;
-	}
-
-	.solo {
-		max-width: 64rem;
-		margin: 0 auto;
-		padding-bottom: 2rem;
 	}
 
 	footer {
@@ -171,12 +148,6 @@
 		font-size: 1.125rem;
 		letter-spacing: 0.02em;
 		text-decoration: none;
-	}
-
-	:global(.icon) {
-		flex: none;
-		width: 1.5rem;
-		height: 1.5rem;
 	}
 
 	.logout {
@@ -308,10 +279,6 @@
 
 		main {
 			padding: 2rem 2.5rem 3rem;
-		}
-
-		.solo {
-			padding: 2rem 1rem;
 		}
 	}
 
