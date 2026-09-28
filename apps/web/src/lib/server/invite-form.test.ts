@@ -36,16 +36,33 @@ describe('parseInviteForm', () => {
 });
 
 describe('parseInviteSettingsForm', () => {
+	const current = { issuers: 'admin', monthlyLimit: 5 } as const;
+
 	it('モードと月の上限を読み、知らないモードは断る', () => {
-		expect(parseInviteSettingsForm(form({ issuers: 'permitted', monthlyLimit: '3' }))).toEqual({
+		expect(
+			parseInviteSettingsForm(form({ issuers: 'permitted', monthlyLimit: '3' }), current),
+		).toEqual({
 			ok: true,
 			value: { issuers: 'permitted', monthlyLimit: 3 },
 		});
-		expect(parseInviteSettingsForm(form({ issuers: 'everyone', monthlyLimit: '3' }))).toMatchObject(
-			{ ok: false },
-		);
-		expect(parseInviteSettingsForm(form({ issuers: 'anyone', monthlyLimit: '-1' }))).toMatchObject({
-			ok: false,
+		expect(
+			parseInviteSettingsForm(form({ issuers: 'everyone', monthlyLimit: '3' }), current),
+		).toMatchObject({ ok: false });
+		expect(
+			parseInviteSettingsForm(form({ issuers: 'anyone', monthlyLimit: '-1' }), current),
+		).toMatchObject({ ok: false });
+	});
+
+	it('月の上限の欄がない (管理者のみのときは無効にして送らない) なら、いまの上限を残す', () => {
+		expect(parseInviteSettingsForm(form({ issuers: 'admin' }), current)).toEqual({
+			ok: true,
+			value: { issuers: 'admin', monthlyLimit: 5 },
 		});
+	});
+
+	it('月の上限の欄があって空なら断る', () => {
+		expect(
+			parseInviteSettingsForm(form({ issuers: 'anyone', monthlyLimit: '' }), current),
+		).toMatchObject({ ok: false });
 	});
 });

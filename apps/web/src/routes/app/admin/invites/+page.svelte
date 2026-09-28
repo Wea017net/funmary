@@ -28,6 +28,16 @@
 		},
 		{ value: 'anyone', label: '誰でも', description: 'ログインしている全員が発行できます。' },
 	];
+
+	// 保存した値から始め、選び直したら上書きする。保存して data が変わると、保存した値に戻る
+	let issuers = $derived(data.settings.issuers);
+	let monthlyLimit = $derived(String(data.settings.monthlyLimit));
+	const limitUsed = $derived(issuers !== 'admin');
+	const dirty = $derived(
+		issuers !== data.settings.issuers ||
+			(limitUsed && monthlyLimit !== String(data.settings.monthlyLimit)),
+	);
+	const permittedCount = $derived(data.users.filter((user) => user.canInvite).length);
 </script>
 
 <svelte:head>
@@ -53,7 +63,15 @@
 
 	<section aria-labelledby="settings-heading">
 		<h2 id="settings-heading">発行できる人</h2>
-		<form method="POST" action="?/saveSettings" use:enhance class="entry">
+		<!-- 既定の enhance は保存のあとにフォームをリセットし、欄が最初に描いた値に戻るので、リセットしない -->
+		<form
+			method="POST"
+			action="?/saveSettings"
+			use:enhance={() =>
+				({ update }) =>
+					update({ reset: false })}
+			class="entry"
+		>
 			<fieldset>
 				<legend>モード</legend>
 				{#each ISSUERS as issuer (issuer.value)}
@@ -62,7 +80,8 @@
 							type="radio"
 							name="issuers"
 							value={issuer.value}
-							checked={data.settings.issuers === issuer.value}
+							checked={issuers === issuer.value}
+							onchange={() => (issuers = issuer.value)}
 						/>
 						<span>
 							<span class="choice-label">{issuer.label}</span>
@@ -71,22 +90,35 @@
 					</label>
 				{/each}
 			</fieldset>
-			<label class="limit">
-				管理者でない人が 1 か月に発行できる数
+			<div class="limit" class:unused={!limitUsed}>
+				<label for="monthly-limit">管理者でない人が 1 か月に発行できる数</label>
+				<!-- 無効の欄は送られない。サーバーはいまの上限を残す -->
 				<input
+					id="monthly-limit"
 					type="number"
 					name="monthlyLimit"
 					min="0"
 					max="100"
-					value={data.settings.monthlyLimit}
+					value={monthlyLimit}
+					oninput={(event) => (monthlyLimit = event.currentTarget.value)}
+					disabled={!limitUsed}
 					required
+					aria-describedby="monthly-limit-note"
 				/>
-			</label>
-			<p class="muted">
-				管理者でない人のコードは、1 回だけ使えて、30
-				日で期限が切れます。管理者は制限なく発行できます。
-			</p>
-			<Button type="submit" variant="unelevated"><Label>保存する</Label></Button>
+				<p id="monthly-limit-note" class="muted">
+					{#if limitUsed}
+						管理者でない人のコードは、1 回だけ使えて、30
+						日で期限が切れます。管理者は制限なく発行できます。
+					{:else}
+						「管理者のみ」のときは使いません。ほかのモードにすると、この数が使われます。
+					{/if}
+				</p>
+			</div>
+			<div class="actions">
+				<Button type="submit" variant="unelevated"><Label>保存する</Label></Button>
+				<!-- 出し入れで保存のボタンが動かないよう、文の場所は常に取っておく -->
+				<span class="muted" aria-live="polite">{dirty ? '保存していない変更があります' : ''}</span>
+			</div>
 		</form>
 	</section>
 
@@ -95,6 +127,14 @@
 		<p class="muted">
 			モードが「許可したユーザー」のときに使います。管理者は、許可しなくても発行できます。
 		</p>
+		{#if data.settings.issuers !== 'permitted'}
+			<p class="notice">
+				いまのモードは「{ISSUERS.find((issuer) => issuer.value === data.settings.issuers)
+					?.label}」なので、ここでの許可は効いていません。モードを「許可したユーザー」にして保存すると効きます。
+			</p>
+		{:else if permittedCount === 0 && data.users.length > 0}
+			<p class="notice">まだ誰も許可していないので、発行できるのは管理者だけです。</p>
+		{/if}
 		{#if data.users.length === 0}
 			<p class="muted">管理者のほかに、利用者はいません。</p>
 		{:else}
@@ -182,6 +222,42 @@
 		display: flex;
 		flex-direction: column;
 		gap: 0.25rem;
+		font-size: 0.875rem;
+
+		p {
+			margin: 0;
+		}
+
+		input {
+			width: 8rem;
+		}
+
+		input:disabled {
+			opacity: 0.45;
+			cursor: not-allowed;
+		}
+	}
+
+	.limit.unused label {
+		color: var(--fm-text-muted);
+		opacity: 0.7;
+	}
+
+	.actions {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.75rem;
+
+		span {
+			min-height: 1.25rem;
+		}
+	}
+
+	.notice {
+		padding: 0.5rem 0.75rem;
+		border-radius: 0.5rem;
+		background: var(--fm-surface-muted);
 		font-size: 0.875rem;
 	}
 

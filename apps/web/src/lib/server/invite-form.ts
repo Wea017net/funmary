@@ -62,7 +62,14 @@ export function parseInviteForm(form: FormData): FormResult<InviteRequest> {
 	);
 }
 
-export function parseInviteSettingsForm(form: FormData): FormResult<InviteSettings> {
+/**
+ * 設定のフォーム。「管理者のみ」のときは月の上限の欄を無効にして送らないので、
+ * 欄がなければ current の上限を残す (モードを戻したときに前の値が使える)
+ */
+export function parseInviteSettingsForm(
+	form: FormData,
+	current: InviteSettings,
+): FormResult<InviteSettings> {
 	const schema = v.object({
 		issuers: v.picklist(INVITE_ISSUERS, '発行できる人を選んでください'),
 		monthlyLimit: integerField('月の上限', 0, MAX_MONTHLY_LIMIT),
@@ -70,7 +77,7 @@ export function parseInviteSettingsForm(form: FormData): FormResult<InviteSettin
 	return firstIssue(
 		v.safeParse(schema, {
 			issuers: text(form, 'issuers'),
-			monthlyLimit: text(form, 'monthlyLimit') ?? '',
+			monthlyLimit: text(form, 'monthlyLimit') ?? String(current.monthlyLimit),
 		}),
 	);
 }
