@@ -304,6 +304,7 @@ export const init: ServerInit = () => {
 		registration: result.config.registration,
 		estimateHolidays,
 		origin: publicOrigin,
+		operator: result.config.operator ?? null,
 		alertAdmin: (alert: Parameters<typeof alerter.send>[0]) => alerter.send(alert),
 		feedTokens: createFeedTokenStore(database),
 		// リリースでは、tar.gz に同梱した build-info.json を、上の階層へたどって探す

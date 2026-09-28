@@ -1378,6 +1378,67 @@ test.describe('自分の予定', () => {
 	});
 });
 
+test.describe('スマホの上部バーと、フッターのリンク', () => {
+	const loginAs = async (page: import('@playwright/test').Page) => {
+		const email = `e2e-header-${Date.now()}@fun.ac.jp`;
+		oidc.setIdentity({ sub: email, email, email_verified: true, hd: 'fun.ac.jp' });
+		await page.goto('/auth/google');
+		await expect(page).toHaveURL('/app');
+	};
+
+	test('下へのスクロールで隠れ、上へのスクロールで出る。一番上では常に出る。週の時間割の見出しは、バーの下に貼り付く', async ({
+		page,
+	}) => {
+		await loginAs(page);
+		await page.setViewportSize({ width: 390, height: 700 });
+		await page.goto('/app/week?date=2026-10-07');
+		await page.getByRole('button', { name: '週', exact: true }).click();
+
+		const header = page.locator('header.top');
+		await expect(header).toBeVisible();
+		const shownBox = await header.boundingBox();
+		const barHeight = shownBox?.height ?? 0;
+
+		// 読み込み直後 (一番上) は、見出しの行が、バーの高さの分だけ下にずれて貼り付く
+		const headTh = page.locator('thead th').first();
+		await page.waitForFunction(
+			(height) =>
+				Math.abs(parseFloat(getComputedStyle(document.querySelector('thead th')!).top) - height) <
+				1,
+			barHeight,
+		);
+
+		await page.mouse.wheel(0, 600);
+		await expect(header).toHaveCSS('transform', /matrix\(1, 0, 0, 1, 0, -/);
+		// 隠れている間は、見出しの行は画面の上に貼り付く
+		await page.waitForFunction(
+			() => parseFloat(getComputedStyle(document.querySelector('thead th')!).top) === 0,
+		);
+
+		await page.mouse.wheel(0, -600);
+		await expect(header).toHaveCSS('transform', 'none');
+
+		// 一番上に戻ると、必ず出る
+		await page.mouse.wheel(0, 600);
+		await page.mouse.wheel(0, -100000);
+		await expect(header).toHaveCSS('transform', 'none');
+		await expect
+			.poll(async () => parseFloat(await headTh.evaluate((el) => getComputedStyle(el).top)))
+			.toBeCloseTo(barHeight, 0);
+	});
+
+	test('フッターに、リポジトリへのリンクが常に出る', async ({ page }) => {
+		await page.goto('/');
+		const link = page.getByRole('link', { name: 'ソースコード (GitHub)' });
+		await expect(link).toHaveAttribute('href', 'https://github.com/oto-lab/funmary');
+		await expect(link).toHaveAttribute('target', '_blank');
+		await expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+
+		await loginAs(page);
+		await expect(page.getByRole('link', { name: 'ソースコード (GitHub)' })).toBeVisible();
+	});
+});
+
 test.describe('カレンダーの購読', () => {
 	// E2E の DB は実行をまたいで残るので、実行ごとに別の人にする
 	const email = `e2e-calendar-${Date.now()}@fun.ac.jp`;
