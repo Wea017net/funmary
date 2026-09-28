@@ -6,7 +6,7 @@
 // collectTimetableCells は、ブラウザの中で動く関数。文字列にしてブックマークレットに埋め込むので、
 // この関数の外の変数や import を使ってはいけない (関数の中だけで完結させる)。
 
-export const IMPORT_PATH = '/courses/import';
+export const IMPORT_PATH = '/app/courses/import';
 
 /** ブックマークレットが読み取る、1 つのコマ。名前は短くして、URL を短くする */
 export interface RawCell {
