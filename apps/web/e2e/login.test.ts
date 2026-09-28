@@ -279,10 +279,11 @@ test.describe('履修科目の登録', () => {
 		const changes = page.getByRole('region', { name: '休講、補講、教室変更' });
 		await expect(changes).toContainText('休講 2026-10-06 3 限、補講あり');
 		await expect(page.getByText('架空の演習の概要です。')).toBeVisible();
-		await expect(page.getByRole('link', { name: 'シラバスの原文 (大学のサイト)' })).toHaveAttribute(
-			'href',
-			'https://syllabus.example.com/900001',
-		);
+		const syllabusLink = page.getByRole('link', { name: 'シラバスの原文 (大学のサイト)' });
+		await expect(syllabusLink).toHaveAttribute('href', 'https://syllabus.example.com/900001');
+		// Funmary の外へのリンクは、新しいタブで開く
+		await expect(syllabusLink).toHaveAttribute('target', '_blank');
+		await expect(syllabusLink).toHaveAttribute('rel', 'noopener noreferrer');
 		await page
 			.getByRole('navigation', { name: 'メニュー' })
 			.getByRole('link', { name: '履修科目', exact: true })
@@ -528,6 +529,88 @@ test.describe('今日と週の時間割', () => {
 			const box = await button.boundingBox();
 			expect([box?.width, box?.height]).toEqual([48, 48]);
 		}
+	});
+
+	test('週の時間割の見せ方は、狭い画面では自動で 1 日ずつ、選べば週を並べ、読み込み直しても保たれる', async ({
+		page,
+	}) => {
+		await loginAs(page);
+		await page.setViewportSize({ width: 390, height: 844 });
+		await page.goto('/week?date=2026-10-07');
+		const views = page.getByRole('group', { name: '時間割の見せ方' });
+		const auto = views.getByRole('button', { name: '自動' });
+		const day = views.getByRole('button', { name: '1日' });
+		const week = views.getByRole('button', { name: '週', exact: true });
+		const headers = page.getByRole('columnheader', { name: /^\d+\/\d+ \(.\)/ });
+		const inView = async (index: number) => {
+			const box = await headers.nth(index).boundingBox();
+			return box !== null && box.x >= 0 && box.x + box.width <= (page.viewportSize()?.width ?? 0);
+		};
+
+		// 自動は、狭い画面では 1 日ずつ。月曜だけが画面に入る
+		await expect(auto).toHaveAttribute('aria-pressed', 'true');
+		expect(await inView(0)).toBe(true);
+		expect(await inView(4)).toBe(false);
+
+		// 週にすると、月曜から金曜が画面に収まる。ボタンの大きさと位置は変わらない
+		const before = await day.boundingBox();
+		await week.click();
+		await expect(week).toHaveAttribute('aria-pressed', 'true');
+		expect(await day.boundingBox()).toEqual(before);
+		for (let i = 0; i < 5; i++) expect(await inView(i)).toBe(true);
+
+		// 読み込み直しても保たれる。1 日ずつを選べば、広い画面でも 1 日ずつになる
+		await page.reload();
+		await expect(week).toHaveAttribute('aria-pressed', 'true');
+		await page.setViewportSize({ width: 1280, height: 900 });
+		for (let i = 0; i < 5; i++) expect(await inView(i)).toBe(true);
+		await day.click();
+		await expect(day).toHaveAttribute('aria-pressed', 'true');
+		await page.setViewportSize({ width: 390, height: 844 });
+		expect(await inView(4)).toBe(false);
+		await auto.click();
+		await page.reload();
+		await expect(auto).toHaveAttribute('aria-pressed', 'true');
+	});
+
+	test('1 日ずつの見せ方では、今週を開いたとき今日の列が画面に入る', async ({ page }) => {
+		// 日曜と土曜は、授業がなければ列がないので、平日だけ確かめる
+		const weekday = new Date(Date.now() + 9 * 3600_000).getUTCDay();
+		test.skip(weekday === 0 || weekday === 6, '今日が週末だと、今日の列がない');
+		await loginAs(page);
+		await page.setViewportSize({ width: 390, height: 844 });
+		await page.goto('/week');
+		const today = page.locator('thead th.today');
+		await expect(today).toBeVisible();
+		await expect
+			.poll(async () => {
+				const box = await today.boundingBox();
+				return box !== null && box.x >= 0 && box.x + box.width <= 390;
+			})
+			.toBe(true);
+	});
+
+	test('時間割の取り込みは、ブックマークに登録する方法と、コンソールで実行する方法を選べる', async ({
+		page,
+	}) => {
+		await loginAs(page);
+		await page.goto('/courses/import');
+		const methods = page.getByRole('group', { name: '取り込みの方法' });
+		const bookmark = methods.getByRole('button', { name: 'ブックマークに登録する' });
+		const console_ = methods.getByRole('button', { name: 'コンソールで実行する' });
+
+		await expect(bookmark).toHaveAttribute('aria-pressed', 'true');
+		await expect(page.getByRole('link', { name: 'Funmary に時間割を取り込む' })).toBeVisible();
+
+		const before = await bookmark.boundingBox();
+		await console_.click();
+		await expect(console_).toHaveAttribute('aria-pressed', 'true');
+		expect(await bookmark.boundingBox()).toEqual(before);
+		await expect(page.getByRole('textbox', { name: '取り込みのコード' })).toHaveValue(
+			/^\(function\(\)\{[\s\S]*students\.fun\.ac\.jp/,
+		);
+		await expect(page.getByRole('button', { name: 'コードをコピーする' })).toBeVisible();
+		await expect(page.getByRole('link', { name: 'Funmary に時間割を取り込む' })).toBeHidden();
 	});
 
 	test('暦にない日付の週は、今週に移る', async ({ page }) => {

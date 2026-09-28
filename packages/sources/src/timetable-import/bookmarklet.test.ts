@@ -3,6 +3,7 @@ import { parseHTML } from 'linkedom';
 import { describe, expect, it } from 'vitest';
 import {
 	buildBookmarklet,
+	buildImportScript,
 	collectTimetableCells,
 	IMPORT_PATH,
 	type DomDocument,
@@ -62,6 +63,21 @@ describe('collectTimetableCells (ポータルのページで動く読み取り)'
 		expect(result.cells.find((c) => c.lessonId === '100003')?.room).toBe('R791');
 		// hope.fun.ac.jp 以外の URL は捨てる
 		expect(result.cells.find((c) => c.lessonId === '100004')?.hopeUrl).toBeNull();
+	});
+});
+
+describe('buildImportScript', () => {
+	it('コンソールに貼って動かせる、javascript: なしの JavaScript にする。ブックマークレットはそれを URL にしたもの', () => {
+		const script = buildImportScript('https://funmary.example.com');
+		expect(script.startsWith('(function(){')).toBe(true);
+		expect(script).toContain('students.fun.ac.jp');
+		expect(buildBookmarklet('https://funmary.example.com')).toBe(
+			`javascript:${encodeURIComponent(script)}`,
+		);
+	});
+
+	it('公開 URL が不正なら、作らない', () => {
+		expect(() => buildImportScript('http://evil.example')).toThrow();
 	});
 });
 

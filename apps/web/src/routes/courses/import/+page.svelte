@@ -16,9 +16,25 @@
 		data,
 		form,
 	}: {
-		data: { bookmarklet: string };
+		data: { bookmarklet: string; script: string };
 		form: { error?: string; result?: ImportSummary } | null;
 	} = $props();
+
+	/** 読み取りのコードを動かす方法。ブックマークに登録するか、ブラウザのコンソールに貼るか */
+	let method: 'bookmark' | 'console' = $state('bookmark');
+	let copied = $state(false);
+
+	async function copyScript() {
+		try {
+			await navigator.clipboard.writeText(data.script);
+			copied = true;
+		} catch {
+			// コピーできないときは、欄を選んで、手でコピーしてもらう
+			copied = false;
+			scriptField?.select();
+		}
+	}
+	let scriptField: HTMLTextAreaElement | undefined = $state();
 
 	/** ブックマークレットが URL の # 以降に入れた内容。サーバーには、ボタンを押したときだけ送る */
 	let payload = $state('');
@@ -84,16 +100,57 @@
 		</form>
 	{:else}
 		<h2>使い方</h2>
-		<ol>
-			<li>
-				下のリンクを、ブラウザのブックマークバーにドラッグして登録します。
-				<!-- ブックマークレットは、画面の経路ではない。サーバーが決まったコードから作った値だけを入れる -->
-				<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
-				<a class="bookmarklet" href={data.bookmarklet}>Funmary に時間割を取り込む</a>
-			</li>
-			<li>学生ポータルにログインし、時間割のページ (Pt/TimeTable) を開きます。</li>
-			<li>登録したブックマークを押すと、この画面に戻ります。「取り込む」を押してください。</li>
-		</ol>
+		<div class="methods" role="group" aria-label="取り込みの方法">
+			<button
+				type="button"
+				aria-pressed={method === 'bookmark'}
+				onclick={() => (method = 'bookmark')}
+			>
+				ブックマークに登録する
+			</button>
+			<button
+				type="button"
+				aria-pressed={method === 'console'}
+				onclick={() => (method = 'console')}
+			>
+				コンソールで実行する
+			</button>
+		</div>
+		{#if method === 'bookmark'}
+			<ol>
+				<li>
+					下のリンクを、ブラウザのブックマークバーにドラッグして登録します。
+					<!-- ブックマークレットは、画面の経路ではない。サーバーが決まったコードから作った値だけを入れる -->
+					<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
+					<a class="bookmarklet" href={data.bookmarklet}>Funmary に時間割を取り込む</a>
+				</li>
+				<li>学生ポータルにログインし、時間割のページ (Pt/TimeTable) を開きます。</li>
+				<li>登録したブックマークを押すと、この画面に戻ります。「取り込む」を押してください。</li>
+			</ol>
+		{:else}
+			<ol>
+				<li>
+					下のボタンで、取り込みのコードをコピーします。
+					<textarea
+						class="script"
+						readonly
+						rows="4"
+						aria-label="取り込みのコード"
+						bind:this={scriptField}>{data.script}</textarea
+					>
+					<div class="copy">
+						<button type="button" onclick={copyScript}>コードをコピーする</button>
+						<span role="status">{copied ? 'コピーしました' : ''}</span>
+					</div>
+				</li>
+				<li>学生ポータルにログインし、時間割のページ (Pt/TimeTable) を開きます。</li>
+				<li>
+					F12 キーで開発者ツールを開き、「コンソール」に、コピーしたコードを貼り付けて Enter
+					を押します。貼り付けを止められたときは、画面の案内に従って許可してください。
+				</li>
+				<li>この画面に戻るので、「取り込む」を押してください。</li>
+			</ol>
+		{/if}
 		<p>
 			ポータルのパスワードは、Funmary
 			には送られません。読み取りは、あなたのブラウザの中だけで行います。
@@ -115,6 +172,53 @@
 		border: 1px solid currentcolor;
 		border-radius: 0.25rem;
 		color: var(--fm-error);
+	}
+	.methods {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.25rem;
+		margin-bottom: 0.5rem;
+	}
+	.methods button,
+	.copy button {
+		min-height: 48px;
+		padding: 0 1rem;
+		border: 1px solid var(--fm-divider);
+		border-radius: 0.5rem;
+		background: var(--fm-surface);
+		color: var(--fm-text);
+		font: inherit;
+		cursor: pointer;
+	}
+	.methods button:hover,
+	.copy button:hover {
+		background: var(--fm-surface-muted);
+	}
+	.methods button[aria-pressed='true'] {
+		border-color: var(--fm-primary);
+		background: var(--fm-primary-soft);
+	}
+	.script {
+		display: block;
+		box-sizing: border-box;
+		width: 100%;
+		margin: 0.5rem 0;
+		padding: 0.5rem;
+		border: 1px solid var(--fm-outline);
+		border-radius: 0.25rem;
+		background: var(--fm-surface);
+		color: var(--fm-text);
+		font-family: ui-monospace, monospace;
+		font-size: 0.75rem;
+	}
+	.copy {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+	}
+	.copy [role='status'] {
+		color: var(--fm-text-muted);
+		font-size: 0.875rem;
 	}
 	.bookmarklet {
 		display: inline-block;
