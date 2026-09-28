@@ -688,6 +688,8 @@ test.describe('学年暦の管理', () => {
 		const terms = page.getByRole('region', { name: '学期の期間' });
 		await expect(terms.getByRole('row', { name: /^後期/ })).toContainText('推定');
 
+		// 日付の欄のフォームは畳んである
+		await terms.getByText('日付を入れて学期の期間を入力する').click();
 		// 始まりが終わりより後なら、理由を出して保存しない
 		await terms.getByLabel('学期').selectOption('後期');
 		await terms.getByLabel('始まりの日').fill('2027-01-22');
@@ -705,19 +707,42 @@ test.describe('学年暦の管理', () => {
 		await expect(fall).toContainText('手入力');
 		await expect(terms.getByRole('row', { name: /^3Q/ })).toContainText('後期と同じ期間');
 
-		const substitute = page.getByRole('region', { name: '振替授業日' });
-		await substitute.getByLabel('日付').fill('2026-10-14');
-		await substitute.getByLabel('行う授業の曜日').selectOption('月曜');
-		await substitute.getByRole('button', { name: '振替授業日を保存する' }).click();
+		// 振替授業日と全学の休講日は、1 年の暦で日を押して入れる
+		const year = page.getByRole('region', { name: '1 年の暦' });
+		const dialog = page.getByRole('dialog');
+		await year.getByRole('button', { name: /^10月14日 \(水\)/ }).click();
+		await expect(dialog.getByRole('heading', { level: 3 })).toHaveText('2026年10月14日 (水)');
+		await expect(dialog).toContainText('学期: 後期、3Q');
+		await dialog.getByLabel('行う授業の曜日').selectOption('月曜');
+		await dialog.getByRole('button', { name: '振替授業日にする' }).click();
 		await expect(page.getByRole('status')).toHaveText('振替授業日を保存しました。');
+		await expect(dialog).toBeHidden();
+		await expect(year.getByRole('button', { name: /^10月14日 \(水\)/ })).toHaveAccessibleName(
+			/振替授業日 \(月曜の授業\)/,
+		);
+		const substitute = page.getByRole('region', { name: '振替授業日' });
 		await expect(substitute.getByRole('listitem')).toHaveText(/10\/14 \(水\) は 月曜の授業/);
 
-		const noClass = page.getByRole('region', { name: '全学の休講日' });
-		await noClass.getByLabel('日付').fill('2026-10-16');
-		await noClass.getByLabel('行事名 (任意)').fill('架空の行事');
-		await noClass.getByRole('button', { name: '全学の休講日を保存する' }).click();
+		await year.getByRole('button', { name: /^10月16日 \(金\)/ }).click();
+		await dialog.getByLabel('行事名 (任意)').fill('架空の行事');
+		await dialog.getByRole('button', { name: '全学の休講日にする' }).click();
 		await expect(page.getByRole('status')).toHaveText('全学の休講日を保存しました。');
+		const noClass = page.getByRole('region', { name: '全学の休講日' });
 		await expect(noClass.getByRole('listitem')).toContainText('10/16 (金) (架空の行事)');
+
+		// 矢印キーで日を移れる
+		await year.getByRole('button', { name: /^10月16日 \(金\)/ }).focus();
+		await page.keyboard.press('ArrowRight');
+		await expect(year.getByRole('button', { name: /^10月17日 \(土\)/ })).toBeFocused();
+
+		// 学期の終わりも、暦から決められる
+		await year.getByRole('button', { name: /^1月20日 \(水\)/ }).click();
+		await dialog.getByLabel('学期').selectOption('後期');
+		await dialog.getByRole('button', { name: 'この日を終わりにする' }).click();
+		await expect(page.getByRole('status')).toHaveText('学期の期間を保存しました。');
+		await expect(terms.getByRole('row', { name: /^後期/ })).toContainText(
+			'2026-09-24 から 2027-01-20',
+		);
 
 		// 週の時間割の日付の横に出る
 		await page.goto('/app/week?date=2026-10-12');

@@ -71,6 +71,33 @@ export function parseTermForm(
 	);
 }
 
+/**
+ * 年の格子で選んだ日を、学期の始まりか終わりにする。current はその学期の今の期間 (推定を含む)。
+ * 期間がまだなければ、その 1 日だけの期間にし、続けてもう一方の端を選んでもらう
+ */
+export function parseTermEdgeForm(
+	form: FormData,
+	academicYear: number,
+	current: { readonly start: CalendarDate; readonly end: CalendarDate } | null,
+): FormResult<{ term: Term; start: CalendarDate; end: CalendarDate }> {
+	const schema = v.object({
+		term: TermSchema,
+		edge: v.picklist(['start', 'end'], '始まりか終わりかを選んでください'),
+		date: dateInYear(academicYear),
+	});
+	const parsed = firstIssue(
+		v.safeParse(schema, { term: form.get('term'), edge: form.get('edge'), date: form.get('date') }),
+	);
+	if (!parsed.ok) return parsed;
+	const { term, edge, date } = parsed.value;
+	const start = edge === 'start' ? date : (current?.start ?? date);
+	const end = edge === 'end' ? date : (current?.end ?? date);
+	if (start > end) {
+		return { ok: false, error: '始まりの日は、終わりの日より前にしてください' };
+	}
+	return { ok: true, value: { term: term as Term, start, end } };
+}
+
 /** 削除する学期 */
 export function parseTermKey(form: FormData): Term | null {
 	const value = form.get('term');

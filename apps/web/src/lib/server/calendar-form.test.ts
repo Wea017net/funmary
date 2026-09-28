@@ -3,6 +3,7 @@ import {
 	parseAcademicYear,
 	parseNoClassDayForm,
 	parseSubstituteDayForm,
+	parseTermEdgeForm,
 	parseTermForm,
 	parseTermKey,
 } from './calendar-form.ts';
@@ -96,5 +97,46 @@ describe('parseNoClassDayForm', () => {
 		expect(parseNoClassDayForm(form({ date: '2026-10-24', label: '大学\n祭' }), 2026).ok).toBe(
 			false,
 		);
+	});
+});
+
+describe('parseTermEdgeForm', () => {
+	const current = { start: '2026-09-21', end: '2027-01-31' };
+
+	it('選んだ日を、学期の始まりか終わりにした期間を返す', () => {
+		expect(
+			parseTermEdgeForm(form({ term: 'fall', edge: 'start', date: '2026-09-24' }), 2026, current),
+		).toEqual({ ok: true, value: { term: 'fall', start: '2026-09-24', end: '2027-01-31' } });
+		expect(
+			parseTermEdgeForm(form({ term: 'fall', edge: 'end', date: '2027-01-21' }), 2026, current),
+		).toEqual({ ok: true, value: { term: 'fall', start: '2026-09-21', end: '2027-01-21' } });
+	});
+
+	it('期間がまだない学期は、その 1 日だけの期間にする (続けてもう一方の端を選ぶ)', () => {
+		expect(
+			parseTermEdgeForm(
+				form({ term: 'summer-intensive', edge: 'end', date: '2026-08-28' }),
+				2026,
+				null,
+			),
+		).toEqual({
+			ok: true,
+			value: { term: 'summer-intensive', start: '2026-08-28', end: '2026-08-28' },
+		});
+	});
+
+	it('始まりが終わりより後になる、年度の外、知らない値は断る', () => {
+		expect(
+			parseTermEdgeForm(form({ term: 'fall', edge: 'start', date: '2027-02-01' }), 2026, current),
+		).toMatchObject({ ok: false });
+		expect(
+			parseTermEdgeForm(form({ term: 'fall', edge: 'end', date: '2027-04-01' }), 2026, current),
+		).toMatchObject({ ok: false });
+		expect(
+			parseTermEdgeForm(form({ term: 'fall', edge: 'middle', date: '2026-10-01' }), 2026, current),
+		).toMatchObject({ ok: false });
+		expect(
+			parseTermEdgeForm(form({ term: 'autumn', edge: 'start', date: '2026-10-01' }), 2026, current),
+		).toMatchObject({ ok: false });
 	});
 });
