@@ -11,9 +11,19 @@ export const STATUS_LABELS = {
 	roomChanged: '教室変更',
 } as const;
 
+/** 例: "10/5" */
+export function formatMonthDay(date: CalendarDate): string {
+	return `${Number(date.slice(5, 7))}/${Number(date.slice(8, 10))}`;
+}
+
+/** 例: "(月)" */
+export function formatWeekday(date: CalendarDate): string {
+	return `(${WEEKDAY_NAMES[isoWeekday(date)]})`;
+}
+
 /** 例: "10/5 (月)" */
 export function formatDate(date: CalendarDate): string {
-	return `${Number(date.slice(5, 7))}/${Number(date.slice(8, 10))} (${WEEKDAY_NAMES[isoWeekday(date)]})`;
+	return `${formatMonthDay(date)} ${formatWeekday(date)}`;
 }
 
 export function formatDayNote(note: DayNote): string {

@@ -88,6 +88,10 @@
 			ギルド (ID {data.view.guildId})
 			の、カテゴリ「Funmary」の下に、通知の種類ごとの非公開のチャンネルを作ります。エラーとデプロイの失敗は、対応するロールにメンションします。ロールを自分に付けると、通知が鳴ります。
 		</p>
+		<p class="meta">
+			Bot には「管理者」の権限を与えることを勧めます (今後の更新で Bot
+			にさせることが増えても、手直しが要りません)。最低限必要なのは、チャンネルの管理、ロールの管理、チャンネルを見る、メッセージを送信です。
+		</p>
 		<form method="POST" action="?/ensure" use:enhance>
 			<Button type="submit" variant="unelevated"><Label>チャンネルとロールを整える</Label></Button>
 		</form>

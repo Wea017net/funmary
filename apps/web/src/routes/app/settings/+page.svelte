@@ -41,7 +41,7 @@
 		...(data.canInvite
 			? [
 					{
-						href: resolve('/app/invites'),
+						href: resolve('/app/settings/invites'),
 						icon: IconInvite,
 						title: '招待',
 						description: '友だちを招待するコードを発行する',
