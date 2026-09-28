@@ -14,7 +14,7 @@
 		"check": "svelte-kit sync && node scripts/build-theme.js && svelte-check --tsconfig ./tsconfig.json --fail-on-warnings",
 		"test:e2e": "playwright test"
 	},
-	"devDependencies": {
+	"dependencies": {
 		"@funmary/api": "workspace:*",
 		"@funmary/auth": "workspace:*",
 		"@funmary/core": "workspace:*",
@@ -23,23 +23,23 @@
 		"@funmary/log": "workspace:*",
 		"@funmary/notify": "workspace:*",
 		"@funmary/sources": "workspace:*",
+		"@smui/button": "^9.0.2",
+		"better-sqlite3": "catalog:",
+		"citty": "^0.2.2",
+		"uqr": "^0.1.3",
+		"valibot": "catalog:"
+	},
+	"devDependencies": {
 		"@iconify-json/material-symbols": "^1.2.93",
 		"@playwright/test": "catalog:",
-		"@smui/button": "^9.0.2",
 		"@sveltejs/adapter-node": "catalog:",
 		"@sveltejs/kit": "catalog:",
 		"@sveltejs/vite-plugin-svelte": "catalog:",
-		"citty": "^0.2.2",
 		"sass": "^1.105.0",
 		"svelte": "catalog:",
 		"svelte-check": "catalog:",
 		"tsdown": "^0.23.0",
 		"unplugin-icons": "^24.0.0",
-		"valibot": "catalog:",
 		"vite": "catalog:"
-	},
-	"dependencies": {
-		"better-sqlite3": "catalog:",
-		"uqr": "^0.1.3"
 	}
 }

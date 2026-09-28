@@ -5,6 +5,8 @@ import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { cpSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
+import { UNBUNDLED_DEPS } from '../apps/web/bundled-deps.js';
+import { externalImports } from './release-imports.js';
 import { generateThirdPartyLicenses } from './third-party-licenses.js';
 
 const VERSION_PATTERN = /^(build-[0-9a-f]{7,40}|v\d+\.\d+\.\d+(-[0-9A-Za-z.]+)?)$/;
@@ -62,6 +64,30 @@ writeFileSync(
 		'\t',
 	) + '\n',
 );
+
+// ビルドの外から読み込むのは better-sqlite3 だけのはず。ほかがあれば、VPS には入らないので、本番で動かない
+const allowed = (/** @type {string} */ specifier) =>
+	UNBUNDLED_DEPS.some((name) => specifier === name || specifier.startsWith(`${name}/`));
+/** @type {string[]} */
+const unbundled = [];
+/** @param {string} dir */
+const scan = (dir) => {
+	for (const entry of readdirSync(dir, { withFileTypes: true })) {
+		const path = join(dir, entry.name);
+		if (entry.isDirectory()) scan(path);
+		else if (/\.m?js$/.test(entry.name)) {
+			for (const specifier of externalImports(readFileSync(path, 'utf8'))) {
+				if (!allowed(specifier)) unbundled.push(`${relative(stage, path)}: ${specifier}`);
+			}
+		}
+	}
+};
+scan(stage);
+if (unbundled.length > 0) {
+	throw new Error(
+		`ビルドに同梱されていないパッケージを読み込んでいます。本番には入らないので動きません:\n${unbundled.join('\n')}`,
+	);
+}
 
 const licenses = generateThirdPartyLicenses(root);
 writeFileSync(join(stage, 'THIRD_PARTY_LICENSES.txt'), licenses);

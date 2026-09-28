@@ -1,4 +1,6 @@
+import { builtinModules } from 'node:module';
 import { defineConfig } from 'tsdown';
+import { UNBUNDLED_DEPS } from './bundled-deps.js';
 
 // 管理用コマンド (cli.js) と、本番の入口 (server.js) を、本番で node だけで動かせる JavaScript にまとめる (設計書 20.6)。
 // better-sqlite3 は C++ の拡張なので同梱せず、リリースの package.json から入れる
@@ -11,9 +13,13 @@ export default defineConfig({
 	clean: true,
 	// 拡張子は .js にする。package.json の type が module なので ESM として動く
 	fixedExtension: false,
-	// 同梱するのは、本番の依存に入れない部品だけ。増えたときは、意図したものかを確かめてからここに足す
-	// pdfjs-dist は timetable import と calendar import (授業時間割と学年暦の PDF の読み取り) で使う
-	deps: { onlyBundle: ['citty', 'drizzle-orm', 'valibot', 'pdfjs-dist'] },
+	// better-sqlite3 のほかは、dependencies にあるものも含めてすべて同梱する
+	deps: {
+		alwaysBundle: (id) =>
+			!id.startsWith('node:') &&
+			!builtinModules.includes(id) &&
+			!UNBUNDLED_DEPS.some((name) => id === name || id.startsWith(`${name}/`)),
+	},
 	// 依存の版はリリースで固定するので、宣言ファイルは要らない
 	dts: false,
 });
