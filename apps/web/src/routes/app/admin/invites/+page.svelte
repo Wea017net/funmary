@@ -46,7 +46,7 @@
 </svelte:head>
 
 <div class="page">
-	<p><a href={resolve('/app/admin')}>管理</a></p>
+	<p><a href={resolve('/app/settings')}>設定</a></p>
 	<h1>招待コードの管理</h1>
 	<p>招待コードの発行は、<a href={resolve('/app/invites')}>招待</a> の画面で行います。</p>
 	{#if data.registration !== 'invite'}

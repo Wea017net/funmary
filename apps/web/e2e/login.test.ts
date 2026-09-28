@@ -351,15 +351,26 @@ test.describe('管理画面', () => {
 
 	test('管理者でなければ、管理画面は見つからないことにする', async ({ page }) => {
 		await loginAs(page, 'e2e-not-admin@fun.ac.jp');
-		await expect(page.getByRole('link', { name: '管理', exact: true })).toHaveCount(0);
+		// 設定は全員が使える。管理の節は出ない
+		await page
+			.getByRole('navigation', { name: 'メニュー' })
+			.getByRole('link', { name: '設定', exact: true })
+			.click();
+		await expect(page.getByRole('link', { name: /カレンダーの購読/ })).toBeVisible();
+		await expect(page.getByRole('region', { name: '管理' })).toHaveCount(0);
 		const response = await page.goto('/app/admin/lessons');
 		expect(response?.status()).toBe(404);
 	});
 
 	test('照合できなかった授業名を、候補の科目に紐付けられる', async ({ page }) => {
 		await loginAs(page, 'e2e-admin@fun.ac.jp');
-		await page.getByRole('link', { name: '管理', exact: true }).click();
-		await page.getByRole('link', { name: '照合できなかった授業名' }).click();
+		// 管理者には、設定の中に管理の節が出る。前の管理の入口は、そこへ転送する
+		await page.goto('/app/admin');
+		await expect(page).toHaveURL('/app/settings#admin');
+		await page
+			.getByRole('region', { name: '管理' })
+			.getByRole('link', { name: /照合できなかった授業名/ })
+			.click();
 
 		const lesson = page.getByRole('listitem').filter({ hasText: '架空の演習Ⅱ (再)' });
 		await lesson.getByRole('radio', { name: /架空の演習Ⅱ1-AB \(900001、後期\)/ }).check();
@@ -669,7 +680,7 @@ test.describe('学年暦の管理', () => {
 		page,
 	}) => {
 		await loginAsAdmin(page);
-		await page.goto('/app/admin');
+		await page.goto('/app/settings');
 		await expect(page.getByText('推定のままです')).toBeVisible();
 		await page.goto('/app/admin/calendar?year=2026');
 		await expect(page.getByRole('heading', { level: 1 })).toHaveText('2026 年度の学年暦');
@@ -753,7 +764,7 @@ test.describe('学年暦の管理', () => {
 
 	test('授業時間割の取り込みの画面でも、読めない PDF は取り込まない', async ({ page }) => {
 		await loginAsAdmin(page);
-		await page.goto('/app/admin');
+		await page.goto('/app/settings');
 		await page.getByRole('link', { name: '授業時間割の取り込み' }).click();
 		await page.getByLabel('授業時間割の PDF').setInputFiles({
 			name: 'timetable.pdf',
@@ -799,7 +810,7 @@ test.describe('取得元と実行履歴', () => {
 		const email = 'e2e-admin@fun.ac.jp';
 		oidc.setIdentity({ sub: email, email, email_verified: true, hd: 'fun.ac.jp' });
 		await page.goto('/auth/google');
-		await page.goto('/app/admin');
+		await page.goto('/app/settings');
 		await page.getByRole('link', { name: '取得元と実行履歴' }).click();
 
 		const portal = page

@@ -72,7 +72,7 @@
 {/snippet}
 
 <div class="page">
-	<p><a href={resolve('/app/admin')}>管理</a></p>
+	<p><a href={resolve('/app/settings')}>設定</a></p>
 	<h1>授業時間割の取り込み</h1>
 	<p>
 		大学が配る授業時間割の PDF (前期か後期)
