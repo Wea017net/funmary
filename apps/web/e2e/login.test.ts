@@ -726,6 +726,43 @@ test.describe('学年暦の管理', () => {
 		await expect(page.getByRole('status')).toContainText('学期の期間を消しました。');
 		await expect(terms.getByRole('row', { name: /^後期/ })).toContainText('推定');
 	});
+
+	test('PDF でないファイルや、読めない PDF を上げると、理由を出して取り込まない', async ({
+		page,
+	}) => {
+		await loginAsAdmin(page);
+		await page.goto('/app/admin/calendar?year=2026');
+		const upload = page.getByRole('region', { name: 'PDF から取り込む' });
+		await upload.getByLabel('学年暦の PDF').setInputFiles({
+			name: 'calendar.pdf',
+			mimeType: 'application/pdf',
+			buffer: Buffer.from('<html></html>'),
+		});
+		await upload.getByRole('button', { name: '読み取る' }).click();
+		await expect(page.getByRole('alert')).toHaveText('PDF のファイルではありません。');
+
+		await upload.getByLabel('学年暦の PDF').setInputFiles({
+			name: 'calendar.pdf',
+			mimeType: 'application/pdf',
+			buffer: Buffer.from('%PDF-1.4\n%%EOF'),
+		});
+		await upload.getByRole('button', { name: '読み取る' }).click();
+		await expect(page.getByRole('alert')).toContainText('学年暦の PDF として読めませんでした');
+		await expect(page.getByRole('button', { name: 'この内容で取り込む' })).toHaveCount(0);
+	});
+
+	test('授業時間割の取り込みの画面でも、読めない PDF は取り込まない', async ({ page }) => {
+		await loginAsAdmin(page);
+		await page.goto('/app/admin');
+		await page.getByRole('link', { name: '授業時間割の取り込み' }).click();
+		await page.getByLabel('授業時間割の PDF').setInputFiles({
+			name: 'timetable.pdf',
+			mimeType: 'application/pdf',
+			buffer: Buffer.from('%PDF-1.4\n%%EOF'),
+		});
+		await page.getByRole('button', { name: '読み取る' }).click();
+		await expect(page.getByRole('alert')).toContainText('授業時間割の PDF として読めませんでした');
+	});
 });
 
 test.describe('取得元と実行履歴', () => {

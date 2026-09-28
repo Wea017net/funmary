@@ -25,8 +25,21 @@
 			substituteDays: { date: string; weekday: number }[];
 			noClassDays: { date: string; label: string | null }[];
 		};
-		form: { error?: string; message?: string } | null;
+		form: {
+			error?: string;
+			message?: string;
+			pdfPreview?: {
+				id: string;
+				academicYear: number;
+				terms: { term: string; start: string; end: string }[];
+				substituteDays: { date: string; weekday: number }[];
+				noClassDays: { date: string; label: string | null }[];
+				warnings: string[];
+			};
+		} | null;
 	} = $props();
+
+	let reading = $state(false);
 
 	const SOURCE_LABELS: Record<Source, string> = {
 		manual: '手入力',
@@ -77,6 +90,106 @@
 	{:else if form?.message}
 		<p class="message" role="status">{form.message}</p>
 	{/if}
+
+	<section aria-labelledby="pdf-heading">
+		<h2 id="pdf-heading">PDF から取り込む</h2>
+		<p class="muted">
+			大学の公式サイトの「教育に関する情報」にある学年暦の PDF
+			を選ぶと、読み取った内容を確かめてから取り込めます。手で入れた値は上書きしません。
+		</p>
+		<form
+			method="POST"
+			action="?/previewPdf"
+			enctype="multipart/form-data"
+			use:enhance={() => {
+				reading = true;
+				return async ({ update }) => {
+					await update();
+					reading = false;
+				};
+			}}
+			class="entry"
+		>
+			<label>
+				学年暦の PDF
+				<input type="file" name="pdf" accept="application/pdf,.pdf" required />
+			</label>
+			<Button type="submit" variant="unelevated" disabled={reading}>
+				<Label>{reading ? '読み取っています' : '読み取る'}</Label>
+			</Button>
+		</form>
+
+		{#if form?.pdfPreview}
+			{@const pdf = form.pdfPreview}
+			<div class="preview" aria-labelledby="preview-heading" role="region">
+				<h3 id="preview-heading">{pdf.academicYear} 年度の学年暦 (PDF から読んだ内容)</h3>
+				{#if pdf.academicYear !== data.academicYear}
+					<p class="muted">
+						いま開いている {data.academicYear} 年度とは違う年度です。取り込むと、{pdf.academicYear}
+						年度の画面に移ります。
+					</p>
+				{/if}
+				{#if pdf.warnings.length > 0}
+					<div class="warnings">
+						<p>読み取りに警告があります。PDF と見比べて、内容を確かめてください。</p>
+						<ul>
+							{#each pdf.warnings as warning (warning)}<li>{warning}</li>{/each}
+						</ul>
+					</div>
+				{/if}
+				<h4>学期の期間</h4>
+				<ul class="plain">
+					{#each pdf.terms as term (term.term)}
+						<li>
+							{formatTerm(term.term)}: <span class="numeric">{term.start} から {term.end}</span>
+						</li>
+					{:else}
+						<li>(なし)</li>
+					{/each}
+				</ul>
+				<h4>振替授業日</h4>
+				<ul class="plain">
+					{#each pdf.substituteDays as day (day.date)}
+						<li>
+							<time datetime={day.date}>{formatDate(day.date)}</time> は {weekdayName(
+								day.weekday,
+							)}曜の授業
+						</li>
+					{:else}
+						<li>(なし)</li>
+					{/each}
+				</ul>
+				<h4>全学の休講日 (祝日を除く)</h4>
+				<ul class="plain">
+					{#each pdf.noClassDays as day (day.date)}
+						<li>
+							<time datetime={day.date}>{formatDate(day.date)}</time>{day.label
+								? ` (${day.label})`
+								: ''}
+						</li>
+					{:else}
+						<li>(なし)</li>
+					{/each}
+				</ul>
+				<!-- 取り込んだ年度の画面を開き直すので、enhance を使わずに送る -->
+				<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- resolve した /admin/calendar に、年度と処理を足している -->
+				<form
+					method="POST"
+					action="{resolve('/app/admin/calendar')}?year={pdf.academicYear}&/applyPdf"
+					class="apply"
+				>
+					<input type="hidden" name="id" value={pdf.id} />
+					{#if pdf.warnings.length > 0}
+						<label class="confirm">
+							<input type="checkbox" name="confirmWarnings" required />
+							警告の内容を確かめました
+						</label>
+					{/if}
+					<Button type="submit" variant="unelevated"><Label>この内容で取り込む</Label></Button>
+				</form>
+			</div>
+		{/if}
+	</section>
 
 	<section aria-labelledby="terms-heading">
 		<h2 id="terms-heading">学期の期間</h2>
@@ -218,6 +331,53 @@
 <style lang="scss">
 	.page {
 		max-width: 48rem;
+	}
+
+	.preview {
+		margin-top: 1rem;
+		padding: 1rem 1.25rem;
+		border-radius: 0.75rem;
+		background: var(--fm-primary-soft);
+
+		h3 {
+			margin-top: 0;
+		}
+
+		h4 {
+			margin: 1rem 0 0.25rem;
+			font-size: 0.9375rem;
+		}
+	}
+
+	.plain {
+		margin: 0;
+		padding-left: 1.25rem;
+	}
+
+	.warnings {
+		padding: 0.5rem 0.75rem;
+		border-radius: 0.5rem;
+		background: var(--fm-surface-muted);
+		color: var(--fm-error);
+
+		p {
+			margin: 0;
+		}
+	}
+
+	.apply {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.75rem 1rem;
+		margin-top: 1rem;
+	}
+
+	.confirm {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		min-height: 44px;
 	}
 
 	.years {
