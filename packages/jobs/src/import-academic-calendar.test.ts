@@ -25,6 +25,7 @@ function setup(
 		outcome?: AcademicCalendarImportOutcome;
 		health?: SourceHealth;
 		disabled?: string[];
+		recordOfficialPdf?: ImportAcademicCalendarDeps['recordOfficialPdf'];
 	} = {},
 ) {
 	let health = options.health ?? INITIAL_SOURCE_HEALTH;
@@ -36,6 +37,7 @@ function setup(
 	const deps: ImportAcademicCalendarDeps = {
 		fetchPdf: () => Promise.resolve(options.fetched ?? OK),
 		importPdf,
+		...(options.recordOfficialPdf ? { recordOfficialPdf: options.recordOfficialPdf } : {}),
 		disabledSources: options.disabled ?? [],
 		health: {
 			load: () => health,
@@ -67,6 +69,28 @@ function setup(
 }
 
 describe('学年暦の定期処理', () => {
+	it('取れた PDF の年度と URL を、画面のリンク用に記録する。内容が変わっていなくても記録する', async () => {
+		const recorded: { year: number; url: string }[] = [];
+		const t = setup({ recordOfficialPdf: (info) => recorded.push(info) });
+		await t.job.run(t.context);
+		t.nextMonth();
+		await t.job.run(t.context);
+		expect(recorded).toEqual([
+			{ year: 2026, url: OK.kind === 'ok' ? OK.url : '' },
+			{ year: 2026, url: OK.kind === 'ok' ? OK.url : '' },
+		]);
+	});
+
+	it('PDF を取れなかったときは、記録しない', async () => {
+		const recorded: unknown[] = [];
+		const t = setup({
+			fetched: { kind: 'failed', message: '取れません' },
+			recordOfficialPdf: (info) => recorded.push(info),
+		});
+		await expect(t.job.run(t.context)).rejects.toThrow('取れません');
+		expect(recorded).toEqual([]);
+	});
+
 	it('毎月 1 日の日本時間 5 時に動く', () => {
 		const { job } = setup();
 		expect(job.name).toBe('import-academic-calendar');

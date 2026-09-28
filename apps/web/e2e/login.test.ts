@@ -418,6 +418,26 @@ test.describe('管理画面', () => {
 		expect(response?.status()).toBe(404);
 	});
 
+	test('大学の公式の学年暦の PDF へのリンクを、設定に出す', async ({ page }) => {
+		const pdf = 'https://www.fun.ac.jp/wp/wp-content/uploads/2026AcademicCalendar.pdf';
+		seedSubjects((database) => {
+			database.sqlite
+				.prepare(
+					`INSERT INTO settings (key, value, updated_at) VALUES ('official-academic-calendar-pdf', ?, 0)
+						ON CONFLICT DO UPDATE SET value = excluded.value`,
+				)
+				.run(JSON.stringify({ year: 2026, url: pdf }));
+		});
+		await loginAs(page, 'e2e-not-admin@fun.ac.jp');
+		await page.goto('/app/settings');
+		const link = page
+			.getByRole('region', { name: '大学の公式の資料' })
+			.getByRole('link', { name: '2026 年度の学年暦 (PDF)' });
+		await expect(link).toHaveAttribute('href', pdf);
+		await expect(link).toHaveAttribute('target', '_blank');
+		await expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+	});
+
 	test('照合できなかった授業名を、候補の科目に紐付けられる', async ({ page }) => {
 		await loginAs(page, 'e2e-admin@fun.ac.jp');
 		// 管理者には、設定の中に管理の節が出る。前の管理の入口は、そこへ転送する

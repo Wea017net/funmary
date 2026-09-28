@@ -47,6 +47,7 @@ import { parseConfig } from '$lib/server/config.ts';
 import { importAcademicCalendarPdf } from '$lib/server/academic-calendar-import.ts';
 import { findBuildInfo } from '$lib/server/build-info.ts';
 import { loadCalendarFeed } from '$lib/server/calendar-feed.ts';
+import { OFFICIAL_CALENDAR_KEY } from '$lib/server/official-documents.ts';
 import { legacyAppPath } from '$lib/server/legacy-path.ts';
 import { findMigrationsFolder } from '$lib/server/migrations-path.ts';
 import { setServices } from '$lib/server/services.ts';
@@ -163,6 +164,8 @@ export const init: ServerInit = () => {
 					async (pdf) =>
 						(await import('@funmary/sources/academic-calendar-pdf')).parseAcademicCalendarPdf(pdf),
 				),
+			recordOfficialPdf: (info) =>
+				createSettingsStore(database).set(OFFICIAL_CALENDAR_KEY, info, new Date()),
 			disabledSources: result.config.sourcesDisabled,
 			health: createSourceHealthStore(database),
 			alert: (alert) => alerter.send(alert),
