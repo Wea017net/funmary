@@ -2,6 +2,8 @@
 	import Button, { Label } from '@smui/button';
 	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
+	import { TERMS } from '@funmary/core';
+	import { formatTerm } from '$lib/term-label.ts';
 
 	interface UnresolvedLesson {
 		lessonName: string;
@@ -14,7 +16,7 @@
 		data,
 		form,
 	}: {
-		data: { academicYear: number | null; lessons: UnresolvedLesson[] };
+		data: { academicYear: number | null; lessons: UnresolvedLesson[]; defaultTerm: string };
 		form: { error?: string; message?: string } | null;
 	} = $props();
 
@@ -74,6 +76,29 @@
 						</fieldset>
 						<Button type="submit" variant="unelevated"><Label>紐付ける</Label></Button>
 					</form>
+					<details>
+						<summary>シラバスにない授業として、科目を作って紐付ける</summary>
+						<form method="POST" action="?/createSubject" use:enhance class="create">
+							<input type="hidden" name="lessonName" value={lesson.lessonName} />
+							<label>
+								授業の名前
+								<input name="name" maxlength="100" required value={lesson.lessonName} />
+							</label>
+							<label>
+								学期
+								<select name="term" required value={data.defaultTerm}>
+									{#each TERMS as term (term)}
+										<option value={term}>{formatTerm(term)}</option>
+									{/each}
+								</select>
+							</label>
+							<label>
+								教員 (任意)
+								<input name="teacher" maxlength="100" />
+							</label>
+							<Button type="submit" variant="outlined"><Label>作って紐付ける</Label></Button>
+						</form>
+					</details>
 				</li>
 			{/each}
 		</ul>
@@ -87,6 +112,24 @@
 	.lessons {
 		padding: 0;
 		list-style: none;
+	}
+	summary {
+		min-height: 44px;
+		align-content: center;
+		cursor: pointer;
+	}
+	.create {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: end;
+		gap: 0.5rem 1rem;
+
+		label {
+			display: flex;
+			flex-direction: column;
+			gap: 0.25rem;
+			font-size: 0.875rem;
+		}
 	}
 	.lessons > li {
 		margin: 0.75rem 0;
