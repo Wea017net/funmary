@@ -1,7 +1,13 @@
 // 学年暦の確認と入力 (設計書 10 章、12.1)。大学の学年暦の PDF を上げて取り込むか、管理者が学期の期間、振替授業日、
 // 全学の休講日を入れる。入れていない学期は、既定の規則で推定した期間を使う。
 import { fail, type Actions, type ServerLoad } from '@sveltejs/kit';
-import { academicYearOf, jstDateTime, resolveAcademicTerms, TERMS } from '@funmary/core';
+import {
+	academicYearOf,
+	jstDateTime,
+	resolveAcademicTerms,
+	resolveHolidays,
+	TERMS,
+} from '@funmary/core';
 import { parseAcademicCalendarPdf } from '@funmary/sources/academic-calendar-pdf';
 import {
 	importAcademicCalendar,
@@ -16,6 +22,7 @@ import {
 	parseDateKey,
 	parseNoClassDayForm,
 	parseSubstituteDayForm,
+	parseTermEdgeForm,
 	parseTermForm,
 	parseTermKey,
 } from '$lib/server/calendar-form.ts';
@@ -54,7 +61,7 @@ function yearOf(url: URL): number {
 
 export const load: ServerLoad = ({ locals, url }) => {
 	requireAdmin(locals);
-	const { academicCalendar } = getServices();
+	const { academicCalendar, holidays, estimateHolidays } = getServices();
 	const academicYear = yearOf(url);
 	const range = academicYearRange(academicYear);
 	const resolved = new Map(
@@ -75,6 +82,13 @@ export const load: ServerLoad = ({ locals, url }) => {
 		}),
 		substituteDays: academicCalendar.listSubstituteDays(range.start, range.end),
 		noClassDays: academicCalendar.listNoClassDays(range.start, range.end),
+		// 年の格子に出す祝日 (保存されたものと、まだ載っていない年の推定)
+		holidays: resolveHolidays({
+			stored: holidays.list(),
+			estimate: estimateHolidays,
+			throughYear: academicYear + 1,
+		}).filter((holiday) => range.start <= holiday.date && holiday.date <= range.end),
+		today: jstDateTime(new Date()).date,
 	};
 };
 
@@ -127,6 +141,22 @@ export const actions: Actions = {
 		const parsed = parseTermForm(await request.formData(), academicYear);
 		if (!parsed.ok) return fail(400, { error: parsed.error });
 		getServices().academicCalendar.saveTerm(academicYear, parsed.value, 'manual', new Date());
+		return { message: '学期の期間を保存しました。' };
+	},
+	/** 年の格子で選んだ日を、学期の始まりか終わりにする */
+	setTermEdge: async ({ request, locals, url }) => {
+		requireAdmin(locals);
+		const academicYear = yearOf(url);
+		const form = await request.formData();
+		const { academicCalendar } = getServices();
+		const term = form.get('term');
+		const current = resolveAcademicTerms(
+			academicYear,
+			academicCalendar.listTerms(academicYear),
+		).find((period) => period.term === term);
+		const parsed = parseTermEdgeForm(form, academicYear, current ?? null);
+		if (!parsed.ok) return fail(400, { error: parsed.error });
+		academicCalendar.saveTerm(academicYear, parsed.value, 'manual', new Date());
 		return { message: '学期の期間を保存しました。' };
 	},
 	deleteTerm: async ({ request, locals, url }) => {

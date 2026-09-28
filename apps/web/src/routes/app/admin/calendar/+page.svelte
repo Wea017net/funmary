@@ -2,6 +2,7 @@
 	import Button, { Label } from '@smui/button';
 	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
+	import YearCalendar from '$lib/components/YearCalendar.svelte';
 	import { formatTerm, WEEKDAY_LABELS } from '$lib/term-label.ts';
 	import { formatDate } from '$lib/timetable-label.ts';
 
@@ -24,6 +25,8 @@
 			terms: TermRow[];
 			substituteDays: { date: string; weekday: number }[];
 			noClassDays: { date: string; label: string | null }[];
+			holidays: { date: string; name: string }[];
+			today: string;
 		};
 		form: {
 			error?: string;
@@ -191,6 +194,23 @@
 		{/if}
 	</section>
 
+	<section aria-labelledby="year-heading">
+		<h2 id="year-heading">1 年の暦</h2>
+		<p class="muted">
+			日を押すと、振替授業日や全学の休講日にしたり、学期の始まりや終わりにしたりできます。矢印キーで日を移れます。
+		</p>
+		<YearCalendar
+			academicYear={data.academicYear}
+			today={data.today}
+			input={{
+				terms: data.terms,
+				holidays: data.holidays,
+				substituteDays: data.substituteDays,
+				noClassDays: data.noClassDays,
+			}}
+		/>
+	</section>
+
 	<section aria-labelledby="terms-heading">
 		<h2 id="terms-heading">学期の期間</h2>
 		<table>
@@ -226,25 +246,28 @@
 			</tbody>
 		</table>
 
-		<form method="POST" action="?/saveTerm" use:enhance class="entry">
-			<label>
-				学期
-				<select name="term" required>
-					{#each data.terms as row (row.term)}
-						<option value={row.term}>{formatTerm(row.term)}</option>
-					{/each}
-				</select>
-			</label>
-			<label>
-				始まりの日
-				<input type="date" name="start" min={data.range.start} max={data.range.end} required />
-			</label>
-			<label>
-				終わりの日 (最後の授業日)
-				<input type="date" name="end" min={data.range.start} max={data.range.end} required />
-			</label>
-			<Button type="submit" variant="unelevated"><Label>学期の期間を保存する</Label></Button>
-		</form>
+		<details>
+			<summary>日付を入れて学期の期間を入力する</summary>
+			<form method="POST" action="?/saveTerm" use:enhance class="entry">
+				<label>
+					学期
+					<select name="term" required>
+						{#each data.terms as row (row.term)}
+							<option value={row.term}>{formatTerm(row.term)}</option>
+						{/each}
+					</select>
+				</label>
+				<label>
+					始まりの日
+					<input type="date" name="start" min={data.range.start} max={data.range.end} required />
+				</label>
+				<label>
+					終わりの日 (最後の授業日)
+					<input type="date" name="end" min={data.range.start} max={data.range.end} required />
+				</label>
+				<Button type="submit" variant="unelevated"><Label>学期の期間を保存する</Label></Button>
+			</form>
+		</details>
 	</section>
 
 	<section aria-labelledby="substitute-heading">
@@ -273,21 +296,24 @@
 				{/each}
 			</ul>
 		{/if}
-		<form method="POST" action="?/saveSubstituteDay" use:enhance class="entry">
-			<label>
-				日付
-				<input type="date" name="date" min={data.range.start} max={data.range.end} required />
-			</label>
-			<label>
-				行う授業の曜日
-				<select name="weekday" required>
-					{#each WEEKDAY_LABELS as day (day.weekday)}
-						<option value={day.weekday}>{day.label}曜</option>
-					{/each}
-				</select>
-			</label>
-			<Button type="submit" variant="unelevated"><Label>振替授業日を保存する</Label></Button>
-		</form>
+		<details>
+			<summary>日付を入れて振替授業日を入力する</summary>
+			<form method="POST" action="?/saveSubstituteDay" use:enhance class="entry">
+				<label>
+					日付
+					<input type="date" name="date" min={data.range.start} max={data.range.end} required />
+				</label>
+				<label>
+					行う授業の曜日
+					<select name="weekday" required>
+						{#each WEEKDAY_LABELS as day (day.weekday)}
+							<option value={day.weekday}>{day.label}曜</option>
+						{/each}
+					</select>
+				</label>
+				<Button type="submit" variant="unelevated"><Label>振替授業日を保存する</Label></Button>
+			</form>
+		</details>
 	</section>
 
 	<section aria-labelledby="no-class-heading">
@@ -314,23 +340,37 @@
 				{/each}
 			</ul>
 		{/if}
-		<form method="POST" action="?/saveNoClassDay" use:enhance class="entry">
-			<label>
-				日付
-				<input type="date" name="date" min={data.range.start} max={data.range.end} required />
-			</label>
-			<label>
-				行事名 (任意)
-				<input type="text" name="label" maxlength="100" />
-			</label>
-			<Button type="submit" variant="unelevated"><Label>全学の休講日を保存する</Label></Button>
-		</form>
+		<details>
+			<summary>日付を入れて全学の休講日を入力する</summary>
+			<form method="POST" action="?/saveNoClassDay" use:enhance class="entry">
+				<label>
+					日付
+					<input type="date" name="date" min={data.range.start} max={data.range.end} required />
+				</label>
+				<label>
+					行事名 (任意)
+					<input type="text" name="label" maxlength="100" />
+				</label>
+				<Button type="submit" variant="unelevated"><Label>全学の休講日を保存する</Label></Button>
+			</form>
+		</details>
 	</section>
 </div>
 
 <style lang="scss">
 	.page {
-		max-width: 48rem;
+		max-width: 64rem;
+	}
+
+	details {
+		margin-top: 1rem;
+	}
+
+	summary {
+		min-height: 44px;
+		align-content: center;
+		font-size: 0.875rem;
+		cursor: pointer;
 	}
 
 	.preview {
