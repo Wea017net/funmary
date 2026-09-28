@@ -83,10 +83,10 @@ export function collectTimetableCells(doc: DomDocument): RawCell[] {
 }
 
 /**
- * ブックマークレット (javascript: の URL) を作る。origin は Funmary の公開 URL。
- * ポータルのページ以外で押されたときは、何もせずに知らせる
+ * 取り込みの JavaScript を作る。ブックマークレットにも、ブラウザのコンソールに貼って実行する使い方にも使う。
+ * origin は Funmary の公開 URL。ポータルのページ以外で動かしたときは、何もせずに知らせる
  */
-export function buildBookmarklet(origin: string): string {
+export function buildImportScript(origin: string): string {
 	const url = new URL(origin);
 	const local = url.hostname === 'localhost' || url.hostname === '127.0.0.1';
 	if (
@@ -97,7 +97,7 @@ export function buildBookmarklet(origin: string): string {
 	}
 	const target = JSON.stringify(`${origin}${IMPORT_PATH}#`);
 	// ブラウザでそのまま動く JavaScript。TypeScript の型の注釈は、文字列にした時点で消えている
-	const source = `(function(){
+	return `(function(){
 if(location.hostname!=='students.fun.ac.jp'){alert('学生ポータルの時間割のページ (students.fun.ac.jp/Pt/TimeTable) で押してください');return;}
 var collect=${collectTimetableCells.toString()};
 var cells=collect(document);
@@ -107,6 +107,11 @@ var bin='';for(var i=0;i<bytes.length;i++)bin+=String.fromCharCode(bytes[i]);
 var data=btoa(bin).replace(/\\+/g,'-').replace(/\\//g,'_').replace(/=+$/,'');
 location.assign(${target}+data);
 })();`;
+}
+
+/** ブックマークレット (javascript: の URL) を作る。origin と動きは buildImportScript と同じ */
+export function buildBookmarklet(origin: string): string {
+	const source = buildImportScript(origin);
 	// 改行は消さない (関数の中の // のコメントが、後ろの行まで飲み込んでしまうため)。改行は %0A になる
 	return `javascript:${encodeURIComponent(source)}`;
 }

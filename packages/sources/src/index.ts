@@ -73,6 +73,7 @@ export {
 export {
 	IMPORT_PATH,
 	buildBookmarklet,
+	buildImportScript,
 	collectTimetableCells,
 	type RawCell,
 } from './timetable-import/bookmarklet.ts';

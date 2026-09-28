@@ -12,29 +12,23 @@ describe('addDays', () => {
 });
 
 describe('estimateAcademicTerms', () => {
-	it('2026 年度は、実際の学年暦に近い値になる (前期は 4/6 から 7/24。後期の終わりは 2027/1/21)', () => {
-		// 実際の学年暦 (前期 4/6 から 7/24、後期 9/24 から 1/21) を見て作った規則の確認。
-		// 後期の始まりだけは "9 月の最終月曜" の規則で 9/28 になり、実際 (9/24) より遅い
+	it('前期は 4/1 から 7/31、後期は 9 月の第 3 月曜日から翌年の 1/31 までにする', () => {
 		expect(estimateAcademicTerms(2026)).toEqual([
-			{ term: 'spring', start: '2026-04-06', end: '2026-07-24' },
-			{ term: 'fall', start: '2026-09-28', end: '2027-01-21' },
+			{ term: 'spring', start: '2026-04-01', end: '2026-07-31' },
+			{ term: 'fall', start: '2026-09-21', end: '2027-01-31' },
 		]);
 	});
 
-	it('どの年度でも、前期は 4 月の第 1 月曜から金曜まで、後期は 9 月の最終月曜から木曜までになる', () => {
+	it('どの年度でも、後期は 9 月の 15 日から 21 日の月曜に始まり、翌年の 1/31 に終わる', () => {
 		for (let year = 2020; year <= 2060; year++) {
 			const [spring, fall] = estimateAcademicTerms(year);
-			expect(isoWeekday(spring!.start)).toBe(1);
-			expect(Number(spring!.start.slice(5, 7))).toBe(4);
-			expect(Number(spring!.start.slice(8))).toBeLessThanOrEqual(7);
-			expect(isoWeekday(spring!.end)).toBe(5);
+			expect(spring).toEqual({ term: 'spring', start: `${year}-04-01`, end: `${year}-07-31` });
 
 			expect(isoWeekday(fall!.start)).toBe(1);
 			expect(fall!.start.startsWith(`${year}-09-`)).toBe(true);
-			expect(Number(fall!.start.slice(8))).toBeGreaterThanOrEqual(24);
-			expect(isoWeekday(fall!.end)).toBe(4);
-			// 後期は翌年の 1 月に終わる
-			expect(fall!.end.startsWith(`${year + 1}-01-`)).toBe(true);
+			expect(Number(fall!.start.slice(8))).toBeGreaterThanOrEqual(15);
+			expect(Number(fall!.start.slice(8))).toBeLessThanOrEqual(21);
+			expect(fall!.end).toBe(`${year + 1}-01-31`);
 			expect(spring!.end < fall!.start).toBe(true);
 		}
 	});
@@ -57,8 +51,8 @@ describe('resolveAcademicTerms', () => {
 			['fall', 'estimated'],
 		]);
 		expect(result.find((t) => t.term === 'spring')).toMatchObject({
-			start: '2026-04-06',
-			end: '2026-07-24',
+			start: '2026-04-01',
+			end: '2026-07-31',
 		});
 	});
 
@@ -91,9 +85,9 @@ describe('resolveAcademicTerms', () => {
 			stored('fall', '2026-09-24', '2027-01-21', 'manual'),
 		]);
 		expect(result.map((t) => [t.term, t.start, t.end, t.source])).toEqual([
-			['spring', '2026-04-06', '2026-07-24', 'estimated'],
-			['q1', '2026-04-06', '2026-07-24', 'estimated'],
-			['q2', '2026-04-06', '2026-07-24', 'estimated'],
+			['spring', '2026-04-01', '2026-07-31', 'estimated'],
+			['q1', '2026-04-01', '2026-07-31', 'estimated'],
+			['q2', '2026-04-01', '2026-07-31', 'estimated'],
 			// 後期が手入力なら、3Q と 4Q は、その手入力の期間を使う
 			['fall', '2026-09-24', '2027-01-21', 'manual'],
 			['q3', '2026-09-24', '2027-01-21', 'estimated'],
@@ -108,7 +102,7 @@ describe('resolveAcademicTerms', () => {
 			source: 'manual',
 		});
 		expect(result.find((t) => t.term === 'q2')).toMatchObject({
-			end: '2026-07-24',
+			end: '2026-07-31',
 			source: 'estimated',
 		});
 	});

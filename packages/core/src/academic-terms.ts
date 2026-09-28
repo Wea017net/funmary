@@ -1,5 +1,5 @@
 // 学期の期間の決め方 (設計書 10 章)。値は、管理者が入れた値、学年暦から取った値、既定の規則による推定の順に探す。
-// 規則で推定するのは前期と後期だけ。1Q から 4Q は、値がなければ、それを含む前期か後期の期間をそのまま使う。
+// 規則で推定するのは前期と後期だけ。1Q と 2Q は前期、3Q と 4Q は後期の推定の期間をそのまま使う。
 // 集中講義は、保存された値があるときだけ使う。
 // I/O は持たない。保存された値は引数で受け取る。
 import { addDays, isoWeekday, type CalendarDate } from './calendar-date.ts';
@@ -16,30 +16,23 @@ export interface ResolvedTerm extends TermPeriod {
 	readonly source: TermSource;
 }
 
-/** 4 月の第 1 月曜日 */
-function firstMondayOfApril(year: number): CalendarDate {
-	const first = `${String(year).padStart(4, '0')}-04-01`;
-	return addDays(first, (8 - isoWeekday(first)) % 7);
-}
-
-/** 9 月の最終月曜日 */
-function lastMondayOfSeptember(year: number): CalendarDate {
-	const last = `${String(year).padStart(4, '0')}-09-30`;
-	return addDays(last, -(isoWeekday(last) - 1));
+/** 9 月の第 3 月曜日 (第 3 週の月曜日) */
+function thirdMondayOfSeptember(year: number): CalendarDate {
+	const first = `${String(year).padStart(4, '0')}-09-01`;
+	return addDays(first, ((8 - isoWeekday(first)) % 7) + 14);
 }
 
 /**
- * 既定の規則による、前期と後期の授業期間 (最後の授業日まで。定期試験は含まない)。
- * 前期は 4 月の第 1 月曜から 15 週と 4 日後の金曜まで、後期は 9 月の最終月曜から 16 週と 3 日後の木曜までとする。
- * 2026 年度の学年暦 (前期は 4/6 から 7/24、後期は 9/24 から 2027/1/21) に合わせた仮の規則で、
- * 後期の始まりは実際より数日遅くなりうる。推定の間は、管理画面と管理用の通知で入力を促す。
+ * 既定の規則による、前期と後期の期間 (作者が決めた仮の規則)。
+ * 前期は 4/1 から 7/31、後期は 9 月の第 3 月曜日から翌年の 1/31 までとする。
+ * 大学の学年暦の授業期間より広めなので、推定の間は、管理画面と管理用の通知で入力を促す。
  */
 export function estimateAcademicTerms(academicYear: number): TermPeriod[] {
-	const springStart = firstMondayOfApril(academicYear);
-	const fallStart = lastMondayOfSeptember(academicYear);
+	const year = String(academicYear).padStart(4, '0');
+	const nextYear = String(academicYear + 1).padStart(4, '0');
 	return [
-		{ term: 'spring', start: springStart, end: addDays(springStart, 15 * 7 + 4) },
-		{ term: 'fall', start: fallStart, end: addDays(fallStart, 16 * 7 + 3) },
+		{ term: 'spring', start: `${year}-04-01`, end: `${year}-07-31` },
+		{ term: 'fall', start: thirdMondayOfSeptember(academicYear), end: `${nextYear}-01-31` },
 	];
 }
 

@@ -11,6 +11,7 @@
 	import type { LessonView } from '$lib/server/lesson-view.ts';
 	import type { DayNote } from '$lib/server/user-timetable.ts';
 	import { formatDate, formatDayNote } from '$lib/timetable-label.ts';
+	import { WEEK_VIEW_COOKIE, WEEK_VIEWS, type WeekView } from '$lib/week-view.ts';
 
 	interface Row {
 		period: number;
@@ -28,6 +29,7 @@
 			next: string;
 			isThisWeek: boolean;
 			today: string;
+			view: WeekView;
 			days: { date: string; note: DayNote | null }[];
 			rows: Row[];
 			hasLessons: boolean;
@@ -36,6 +38,34 @@
 	} = $props();
 
 	const weekUrl = (date: string) => `${resolve('/week')}?date=${date}`;
+
+	/** 見せ方の選び方。自動は、狭い画面では 1 日ずつ、広い画面では週を並べる */
+	const VIEW_LABELS: Record<WeekView, { text: string; title: string }> = {
+		auto: { text: '自動', title: '狭い画面では 1 日ずつ、広い画面では 1 週間を並べる' },
+		day: { text: '1日', title: '1 日ずつ、横に送って見る' },
+		week: { text: '週', title: '1 週間を並べて見る' },
+	};
+
+	let view = $derived(data.view);
+	let scroller: HTMLDivElement | undefined = $state();
+
+	function selectView(next: WeekView) {
+		view = next;
+		const secure = location.protocol === 'https:' ? '; secure' : '';
+		document.cookie =
+			next === 'auto'
+				? `${WEEK_VIEW_COOKIE}=; path=/; max-age=0; samesite=lax${secure}`
+				: `${WEEK_VIEW_COOKIE}=${next}; path=/; max-age=31536000; samesite=lax${secure}`;
+	}
+
+	// 1 日ずつ見ているとき (表が横にはみ出すとき) は、開いたときと週や見せ方を変えたときに、今日の列に合わせる。
+	// 今日がこの週になければ左端 (月曜) のまま。表が収まっているときは、動かしても何も起きない
+	$effect(() => {
+		void [data.monday, view];
+		if (!scroller) return;
+		const head = scroller.querySelector<HTMLElement>('thead th.today');
+		scroller.scrollLeft = head ? head.offsetLeft + head.offsetWidth - scroller.clientWidth : 0;
+	});
 
 	let picker: HTMLInputElement | undefined = $state();
 
@@ -114,13 +144,26 @@
 				aria-hidden="true"
 			/>
 		</div>
+		<div class="views" role="group" aria-label="時間割の見せ方">
+			{#each WEEK_VIEWS as option (option)}
+				<button
+					type="button"
+					class="text-button"
+					aria-pressed={view === option}
+					title={VIEW_LABELS[option].title}
+					onclick={() => selectView(option)}
+				>
+					{VIEW_LABELS[option].text}
+				</button>
+			{/each}
+		</div>
 	</div>
 
 	{#if !data.hasLessons}
 		<p>この週に授業はありません。</p>
 	{/if}
 
-	<div class="scroll">
+	<div class="scroll" data-view={view} bind:this={scroller}>
 		<table>
 			<caption class="visually-hidden">{formatDate(data.monday)} からの週の時間割</caption>
 			<thead>
@@ -177,7 +220,9 @@
 	{/if}
 </div>
 
-<style>
+<style lang="scss">
+	@use 'breakpoints';
+
 	.page {
 		max-width: 72rem;
 	}
@@ -231,6 +276,15 @@
 	.picker {
 		position: relative;
 	}
+	.views {
+		display: flex;
+		gap: 0.25rem;
+		margin-left: auto;
+	}
+	.views .text-button[aria-pressed='true'] {
+		border-color: var(--fm-primary);
+		background: var(--fm-primary-soft);
+	}
 	/* 日付の選択が、カレンダーのボタンの下に開くよう、入力欄をボタンの下に重ねて隠す */
 	.picker input {
 		position: absolute;
@@ -244,12 +298,55 @@
 		opacity: 0;
 		pointer-events: none;
 	}
-	/* スマホでは、表を横に送って 1 日ずつ見る (設計書 12.4) */
+	/* 1 日ずつ見るときは、表を横に送る (設計書 12.4) */
+	@mixin one-day {
+		scroll-snap-type: x mandatory;
+		table {
+			width: auto;
+			table-layout: auto;
+		}
+		thead th:not(:first-child),
+		td {
+			min-width: min(calc(100vw - 9rem), 32rem);
+			scroll-snap-align: end;
+		}
+	}
+	/* 1 週間を並べるときは、幅を等分する。狭い画面では、余白と文字を詰めて時刻を隠す */
+	@mixin narrow-week {
+		th,
+		td {
+			padding: 0.25rem;
+			font-size: 0.8125rem;
+			overflow-wrap: anywhere;
+		}
+		thead th:first-child,
+		tbody th {
+			width: 2.5rem;
+			white-space: normal;
+		}
+		.time {
+			display: none;
+		}
+	}
 	.scroll {
 		overflow-x: auto;
-		scroll-snap-type: x mandatory;
+	}
+	.scroll[data-view='day'] {
+		@include one-day;
+	}
+	.scroll[data-view='auto'] {
+		@include breakpoints.narrow {
+			@include one-day;
+		}
+	}
+	.scroll[data-view='week'] {
+		@include breakpoints.narrow {
+			@include narrow-week;
+		}
 	}
 	table {
+		width: 100%;
+		table-layout: fixed;
 		border-collapse: collapse;
 	}
 	th,
@@ -258,11 +355,6 @@
 		border: 1px solid var(--fm-divider);
 		vertical-align: top;
 		text-align: left;
-	}
-	thead th:not(:first-child),
-	td {
-		min-width: calc(100vw - 9rem);
-		scroll-snap-align: end;
 	}
 	tbody th {
 		width: 4.5rem;
@@ -323,19 +415,6 @@
 	.room {
 		display: block;
 		font-size: 0.875rem;
-	}
-	@media (min-width: 840px) {
-		.scroll {
-			scroll-snap-type: none;
-		}
-		table {
-			width: 100%;
-			table-layout: fixed;
-		}
-		thead th:not(:first-child),
-		td {
-			min-width: 0;
-		}
 	}
 	.visually-hidden {
 		position: absolute;

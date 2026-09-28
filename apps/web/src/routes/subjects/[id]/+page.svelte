@@ -76,12 +76,18 @@
 	<ul class="links">
 		{#if data.subject.syllabusUrl}
 			<!-- 大学のサイトへのリンク。サーバーが https のものだけを渡す -->
-			<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
-			<li><a href={data.subject.syllabusUrl} rel="noreferrer">シラバスの原文 (大学のサイト)</a></li>
+			<li>
+				<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
+				<a href={data.subject.syllabusUrl} target="_blank" rel="noopener noreferrer"
+					>シラバスの原文 (大学のサイト)</a
+				>
+			</li>
 		{/if}
 		{#if data.hopeCourseUrl}
-			<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
-			<li><a href={data.hopeCourseUrl} rel="noreferrer">HOPE のコース</a></li>
+			<li>
+				<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
+				<a href={data.hopeCourseUrl} target="_blank" rel="noopener noreferrer">HOPE のコース</a>
+			</li>
 		{/if}
 	</ul>
 
