@@ -57,9 +57,9 @@ release_dir="$BASE/releases/$version"
 if [ ! -d "$release_dir" ]; then
   url="$DOWNLOAD_BASE/$version"
   echo "$version を取得します"
-  curl -fsSL --retry 3 -o "$tmp/funmary.tar.gz" "$url/funmary-$version.tar.gz"
-  curl -fsSL --retry 3 -o "$tmp/funmary.tar.gz.sha256" "$url/funmary-$version.tar.gz.sha256"
-  curl -fsSL --retry 3 -o "$tmp/build-hash.txt" "$url/build-hash.txt"
+  curl -fsSL --retry 5 --retry-delay 10 -o "$tmp/funmary.tar.gz" "$url/funmary-$version.tar.gz"
+  curl -fsSL --retry 5 --retry-delay 10 -o "$tmp/funmary.tar.gz.sha256" "$url/funmary-$version.tar.gz.sha256"
+  curl -fsSL --retry 5 --retry-delay 10 -o "$tmp/build-hash.txt" "$url/build-hash.txt"
 
   # チェックサムのファイル名を、保存した名前に合わせて確かめる
   expected="$(cut -d' ' -f1 "$tmp/funmary.tar.gz.sha256")"
