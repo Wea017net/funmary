@@ -73,3 +73,8 @@ export {
 	type UnmatchedLessonStore,
 } from './unmatched-lesson-store.ts';
 export { createSettingsStore, type SettingsStore } from './settings-store.ts';
+export {
+	createFeedTokenStore,
+	type FeedTokenKind,
+	type FeedTokenStore,
+} from './feed-token-store.ts';
