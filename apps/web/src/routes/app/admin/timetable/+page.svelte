@@ -35,7 +35,7 @@
 		<div class="warnings">
 			<p>読み取りに警告があります。PDF と見比べて、内容を確かめてください。</p>
 			<ul>
-				{#each view.warnings as warning (warning)}<li>{warning}</li>{/each}
+				{#each view.warnings as warning, i (i)}<li>{warning}</li>{/each}
 			</ul>
 		</div>
 	{/if}
@@ -44,14 +44,16 @@
 			.map((method) => `${method.label} ${method.count}`)
 			.join('、')})
 	</p>
-	<!-- 件数が多いことがあるので、一覧は畳んでおき、件数だけを見せる -->
+	<!-- 件数が多いことがあるので、一覧は畳んでおき、件数だけを見せる。
+	     まとめて書かれたコマは同じ授業名と曜日時限で複数の科目になり、PDF の文も重なりうるので、行は並びの番号で見分ける -->
+
 	{#if view.toCheck.length > 0}
 		<details>
 			<summary
 				>言い換えや分け方で決めた照合 {view.toCheck.length} 件 (取り違えがないか確かめる)</summary
 			>
 			<ul class="plain">
-				{#each view.toCheck as item (item.lessonName + item.slot)}
+				{#each view.toCheck as item, i (i)}
 					<li>{item.lessonName} → {item.subject} ({item.slot})</li>
 				{/each}
 			</ul>
@@ -61,7 +63,7 @@
 		<details>
 			<summary>照合できなかった名前 {view.unmatched.length} 件</summary>
 			<ul class="plain">
-				{#each view.unmatched as item (item.lessonName)}
+				{#each view.unmatched as item, i (i)}
 					<li>{item.lessonName}: {item.reason}</li>
 				{/each}
 			</ul>
@@ -97,7 +99,7 @@
 			{#if result.applied && result.applied.conflicts.length > 0}
 				<h3>既にある枠と教室が違うもの (上書きしていません)</h3>
 				<ul class="plain">
-					{#each result.applied.conflicts as conflict (conflict)}<li>{conflict}</li>{/each}
+					{#each result.applied.conflicts as conflict, i (i)}<li>{conflict}</li>{/each}
 				</ul>
 			{/if}
 		</section>
