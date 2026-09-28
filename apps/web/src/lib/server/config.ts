@@ -37,6 +37,8 @@ export interface Config {
 	/** メールの送信。SMTP_URL が空ならない */
 	readonly smtp: { readonly url: string; readonly from: string } | undefined;
 	readonly adminDiscordWebhookUrl: string | undefined;
+	/** 管理用の Discord の Bot (設計書 14.9)。トークンとギルドの ID の両方があるときだけある */
+	readonly discordBot: { readonly token: string; readonly guildId: string } | undefined;
 	readonly notifyDryRun: boolean;
 	readonly heartbeatUrl: string | undefined;
 	readonly logLevel: 'debug' | 'info' | 'warn' | 'error';
@@ -208,6 +210,15 @@ function envSchema(mode: Mode) {
 				),
 			),
 		),
+		DISCORD_BOT_TOKEN: v.optional(
+			v.pipe(v.string(), v.minLength(30, 'Discord の Bot のトークンを、そのまま書いてください')),
+		),
+		DISCORD_GUILD_ID: v.optional(
+			v.pipe(
+				v.string(),
+				v.regex(/^\d{5,25}$/, 'ギルド (サーバー) の ID を、数字だけで書いてください'),
+			),
+		),
 		NOTIFY_DRY_RUN: v.optional(
 			v.pipe(
 				v.picklist(['true', 'false'], 'true か false を書いてください'),
@@ -253,6 +264,21 @@ export function parseConfig(env: Readonly<Record<string, string | undefined>>): 
 			message: 'SMTP_URL を書いたときは、送信元のメールアドレスも書いてください',
 		});
 	}
+	if (result.success) {
+		const { DISCORD_BOT_TOKEN: token, DISCORD_GUILD_ID: guildId } = result.output;
+		if (token !== undefined && guildId === undefined) {
+			issues.push({
+				name: 'DISCORD_GUILD_ID',
+				message: 'DISCORD_BOT_TOKEN を書いたときは、ギルド (サーバー) の ID も書いてください',
+			});
+		}
+		if (guildId !== undefined && token === undefined) {
+			issues.push({
+				name: 'DISCORD_BOT_TOKEN',
+				message: 'DISCORD_GUILD_ID を書いたときは、Bot のトークンも書いてください',
+			});
+		}
+	}
 	if (!result.success || issues.length > 0) return { ok: false, issues };
 
 	const e = result.output;
@@ -291,6 +317,10 @@ export function parseConfig(env: Readonly<Record<string, string | undefined>>): 
 					? { url: e.SMTP_URL, from: e.MAIL_FROM }
 					: undefined,
 			adminDiscordWebhookUrl: e.ADMIN_DISCORD_WEBHOOK_URL,
+			discordBot:
+				e.DISCORD_BOT_TOKEN !== undefined && e.DISCORD_GUILD_ID !== undefined
+					? { token: e.DISCORD_BOT_TOKEN, guildId: e.DISCORD_GUILD_ID }
+					: undefined,
 			notifyDryRun: e.NOTIFY_DRY_RUN ?? mode === 'development',
 			heartbeatUrl: e.HEARTBEAT_URL,
 			logLevel: e.LOG_LEVEL,

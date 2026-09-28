@@ -7,6 +7,8 @@
 // - 送信が失敗しても再送は 1 回だけにして、あとはログに残して終える (通知の失敗を知らせようとして、失敗が続くのを防ぐ)
 // - Webhook が空か、Discord の Webhook の URL でなければ、ログにだけ残す。dry-run のときも送らない
 import { redact, type Logger } from '@funmary/log';
+import { defaultChannel, type AdminDiscordSink } from './admin-discord.ts';
+import type { AdminChannel } from './discord-layout.ts';
 
 export type AdminAlertSeverity = 'info' | 'warn' | 'error';
 
@@ -16,6 +18,8 @@ export interface AdminAlert {
 	readonly message?: string;
 	/** 同じ内容かどうかの判定に使う。省くと題を使う */
 	readonly key?: string;
+	/** Bot で送るときのチャンネル。省くと、error は errors、それ以外は sources */
+	readonly category?: AdminChannel;
 }
 
 export type AdminAlertResult = 'sent' | 'logged' | 'suppressed' | 'failed';
@@ -25,8 +29,10 @@ export interface AdminAlerter {
 }
 
 export interface AdminAlerterOptions {
-	/** ADMIN_DISCORD_WEBHOOK_URL。空ならログにだけ残す */
+	/** ADMIN_DISCORD_WEBHOOK_URL。Bot がないときの送り先。空ならログにだけ残す */
 	readonly webhookUrl: string | undefined;
+	/** Bot での送り先 (設計書 14.9)。あれば Webhook より先に使う */
+	readonly discord?: AdminDiscordSink;
 	/** NOTIFY_DRY_RUN。true なら送らず、ログに出す */
 	readonly dryRun: boolean;
 	readonly fetch?: (url: string, init?: RequestInit) => Promise<Response>;
@@ -82,13 +88,18 @@ export function createAdminAlerter(options: AdminAlerterOptions): AdminAlerter {
 
 			const text = alert.message ? `${alert.title}\n${alert.message}` : alert.title;
 			log[alert.severity](text);
-			if (!webhookUrl || options.dryRun) return 'logged';
+			if ((!webhookUrl && !options.discord) || options.dryRun) return 'logged';
 
 			const content = redact(
 				`**${alert.title}**${alert.message ? `\n${alert.message}` : ''}`,
 			).slice(0, MAX_CONTENT);
+			const { discord } = options;
+			const send = discord
+				? () =>
+						discord.post(alert.category ?? defaultChannel(alert.severity), alert.severity, content)
+				: () => post(content);
 			// 1 回目が失敗したら、1 回だけ再送する
-			if ((await post(content)) || (await post(content))) return 'sent';
+			if ((await send()) || (await send())) return 'sent';
 			log.error(`管理用の通知を Discord に送れませんでした: ${alert.title}`);
 			return 'failed';
 		},

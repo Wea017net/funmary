@@ -156,3 +156,53 @@ describe('createAdminAlerter: 送れないとき', () => {
 		expect(fetchImpl).toHaveBeenCalledTimes(2);
 	});
 });
+
+describe('createAdminAlerter: Bot で送る', () => {
+	function withSink(sinkResult: boolean[] = [true]) {
+		const posts: { channel: string; severity: string; content: string }[] = [];
+		const results = [...sinkResult];
+		const lines: string[] = [];
+		const alerter = createAdminAlerter({
+			webhookUrl: WEBHOOK,
+			dryRun: false,
+			discord: {
+				post: (channel, severity, content) => {
+					posts.push({ channel, severity, content });
+					return Promise.resolve(
+						results.length > 1 ? (results.shift() ?? true) : (results[0] ?? true),
+					);
+				},
+			},
+			fetch: () => Promise.reject(new Error('Webhook には送らないはず')),
+			log: createLogger({
+				level: 'debug',
+				format: 'text',
+				mode: 'production',
+				write: (line) => lines.push(line),
+			}),
+		});
+		return { alerter, posts };
+	}
+
+	it('種類を付けなければ、error は errors、それ以外は sources に送る', async () => {
+		const { alerter, posts } = withSink();
+		await alerter.send({ severity: 'error', title: 'A' });
+		await alerter.send({ severity: 'info', title: 'B' });
+		expect(posts.map((p) => p.channel)).toEqual(['errors', 'sources']);
+	});
+
+	it('種類を付けたら、そのチャンネルに送る。Webhook は使わない', async () => {
+		const { alerter, posts } = withSink();
+		expect(await alerter.send({ severity: 'info', title: 'C', category: 'users' })).toBe('sent');
+		expect(posts).toMatchObject([{ channel: 'users', content: '**C**' }]);
+	});
+
+	it('1 回目が失敗したら 1 回だけ再送し、それも失敗なら failed にする', async () => {
+		const { alerter, posts } = withSink([false, true]);
+		expect(await alerter.send({ severity: 'warn', title: 'D' })).toBe('sent');
+		expect(posts).toHaveLength(2);
+		const failing = withSink([false]);
+		expect(await failing.alerter.send({ severity: 'warn', title: 'E' })).toBe('failed');
+		expect(failing.posts).toHaveLength(2);
+	});
+});
