@@ -112,7 +112,7 @@
 					</li>
 				</ul>
 			</div>
-			<figcaption>画面の例 (授業は架空のものです)</figcaption>
+			<figcaption>画面の例</figcaption>
 		</figure>
 	</section>
 
