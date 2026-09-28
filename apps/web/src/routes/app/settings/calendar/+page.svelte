@@ -2,6 +2,7 @@
 	import Button, { Label } from '@smui/button';
 	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
+	import SettingsBreadcrumb from '$lib/components/SettingsBreadcrumb.svelte';
 
 	let {
 		data,
@@ -42,7 +43,7 @@
 </svelte:head>
 
 <div class="page">
-	<p><a href={resolve('/app/settings')}>設定</a></p>
+	<SettingsBreadcrumb current="カレンダーの購読" />
 	<h1>カレンダーの購読</h1>
 	<p>
 		履修科目の授業を、Google カレンダーや iPhone

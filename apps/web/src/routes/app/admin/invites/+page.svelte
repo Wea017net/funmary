@@ -5,6 +5,7 @@
 	import { resolve } from '$app/paths';
 	import InviteCodeList from '$lib/components/InviteCodeList.svelte';
 	import type { InviteCodeView } from '$lib/server/invites.ts';
+	import SettingsBreadcrumb from '$lib/components/SettingsBreadcrumb.svelte';
 
 	let {
 		data,
@@ -46,7 +47,7 @@
 </svelte:head>
 
 <div class="page">
-	<p><a href={resolve('/app/settings')}>設定</a></p>
+	<SettingsBreadcrumb current="招待コードの管理" />
 	<h1>招待コードの管理</h1>
 	<p>招待コードの発行は、<a href={resolve('/app/invites')}>招待</a> の画面で行います。</p>
 	{#if data.registration !== 'invite'}

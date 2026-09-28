@@ -4,6 +4,7 @@
 	import { resolve } from '$app/paths';
 	import { TERMS } from '@funmary/core';
 	import { formatTerm } from '$lib/term-label.ts';
+	import SettingsBreadcrumb from '$lib/components/SettingsBreadcrumb.svelte';
 
 	interface Candidate {
 		id: number;
@@ -88,7 +89,7 @@
 </svelte:head>
 
 <div class="page">
-	<p><a href={resolve('/app/settings')}>設定</a></p>
+	<SettingsBreadcrumb current="照合できなかった授業名" />
 	<h1>照合できなかった授業名</h1>
 
 	{#if form?.error}

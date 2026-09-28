@@ -47,12 +47,12 @@
 </script>
 
 <svelte:head>
-	<title>履修科目 - Funmary</title>
+	<title>科目 - Funmary</title>
 	<meta name="robots" content="noindex" />
 </svelte:head>
 
 <div class="page">
-	<h1>履修科目</h1>
+	<h1>科目</h1>
 
 	{#if form?.error}
 		<p class="error" role="alert">{form.error}</p>

@@ -263,7 +263,7 @@ test.describe('履修科目の登録', () => {
 		await loginAs(page);
 		await page
 			.getByRole('navigation', { name: 'メニュー' })
-			.getByRole('link', { name: '履修科目', exact: true })
+			.getByRole('link', { name: '科目', exact: true })
 			.click();
 		await expect(page.getByText('まだ登録していません')).toBeVisible();
 
@@ -307,7 +307,7 @@ test.describe('履修科目の登録', () => {
 		await expect(syllabusLink).toHaveAttribute('rel', 'noopener noreferrer');
 		await page
 			.getByRole('navigation', { name: 'メニュー' })
-			.getByRole('link', { name: '履修科目', exact: true })
+			.getByRole('link', { name: '科目', exact: true })
 			.click();
 
 		await registered.getByRole('button', { name: '登録を取り消す' }).click();
@@ -1058,6 +1058,15 @@ test.describe('カレンダーの購読', () => {
 			.getByRole('link', { name: '設定', exact: true })
 			.click();
 		await page.getByRole('link', { name: /カレンダーの購読/ }).click();
+
+		// パンくずで、いまの場所と設定への戻り方が分かる
+		const breadcrumb = page.getByRole('navigation', { name: 'パンくず' });
+		await expect(breadcrumb.getByRole('listitem')).toHaveText(['設定', 'カレンダーの購読']);
+		await expect(breadcrumb.getByText('カレンダーの購読')).toHaveAttribute('aria-current', 'page');
+		await breadcrumb.getByRole('link', { name: '設定' }).click();
+		await expect(page).toHaveURL('/app/settings');
+		await page.getByRole('link', { name: /カレンダーの購読/ }).click();
+
 		await page.getByRole('button', { name: '購読の URL を発行する' }).click();
 
 		const url = page.getByLabel('購読の URL', { exact: true });
