@@ -4,6 +4,7 @@ import {
 	ADMIN_ROLES,
 	checkChannel,
 	checkRole,
+	DiscordApiError,
 	type AdminChannel,
 	type AdminRole,
 	type DiscordBot,
@@ -116,5 +117,65 @@ export function useBot(
 	return {
 		...layout,
 		roles: Object.fromEntries(Object.entries(layout.roles).filter(([key]) => key !== name)),
+	};
+}
+
+export type RoleChangeResult =
+	{ readonly ok: true; readonly message: string } | { readonly ok: false; readonly error: string };
+
+/** Discord のユーザーに、Funmary のロールを付ける、または外す。ユーザーの ID は Discord の「ユーザー ID をコピー」で得る */
+export async function changeMemberRole(
+	bot: DiscordBot,
+	layout: DiscordLayout,
+	action: 'add' | 'remove',
+	roleName: string,
+	userId: string,
+): Promise<RoleChangeResult> {
+	const id = userId.trim();
+	if (!/^\d{5,25}$/.test(id)) {
+		return { ok: false, error: 'ユーザーの ID は、数字だけで入れてください。' };
+	}
+	if (!isRoleName(roleName)) return { ok: false, error: '知らないロールです。' };
+	const role = layout.roles[roleName];
+	if (!role) {
+		return {
+			ok: false,
+			error:
+				'そのロールは、まだ決まっていません。先に「チャンネルとロールを整える」を押してください。',
+		};
+	}
+	try {
+		if (action === 'add') await bot.addMemberRole(id, role.id);
+		else await bot.removeMemberRole(id, role.id);
+	} catch (error) {
+		if (error instanceof DiscordApiError) {
+			if (error.status === 404) {
+				return {
+					ok: false,
+					error:
+						'そのユーザーは、サーバーにいません (ID が違うか、まだ参加していません)。サーバーに参加してもらってから、もう一度お試しください。',
+				};
+			}
+			if (error.status === 403) {
+				return {
+					ok: false,
+					error:
+						'ロールを付ける権限がありません。サーバーの設定の「ロール」で、Bot のロールを funmary- で始まるロールより上に置いてください。',
+				};
+			}
+			return { ok: false, error: error.message };
+		}
+		return {
+			ok: false,
+			error: 'Discord に接続できませんでした。時間をおいて、もう一度お試しください。',
+		};
+	}
+	const label = `funmary-${roleName}`;
+	return {
+		ok: true,
+		message:
+			action === 'add'
+				? `ユーザー ${id} に、ロール ${label} を付けました。`
+				: `ユーザー ${id} から、ロール ${label} を外しました。`,
 	};
 }

@@ -61,13 +61,13 @@
 {/snippet}
 
 <svelte:head>
-	<title>管理用の Discord - Funmary</title>
+	<title>Discord設定 - Funmary</title>
 	<meta name="robots" content="noindex" />
 </svelte:head>
 
 <div class="page">
-	<SettingsBreadcrumb current="管理用の Discord" />
-	<h1>管理用の Discord</h1>
+	<SettingsBreadcrumb current="Discord設定" />
+	<h1>Discord設定</h1>
 
 	{#if form?.error}
 		<p class="error" role="alert">{form.error}</p>
@@ -106,6 +106,42 @@
 		<h2 id="roles-heading">ロール</h2>
 		{@render rows('role', data.view.roles)}
 	</section>
+
+	{#if data.view.botConfigured}
+		<section aria-labelledby="grant-heading">
+			<h2 id="grant-heading">ロールを付ける</h2>
+			<p>
+				Discord
+				のユーザーに、ロールを付けたり外したりします。ユーザーは、すでにサーバーに入っている必要があります。ユーザーの
+				ID は、Discord の設定で「開発者モード」を入れて、ユーザーを右クリックし、「ユーザー ID
+				をコピー」で得られます。
+			</p>
+			<form method="POST" action="?/role" use:enhance class="grant">
+				<label>
+					Discord のユーザーの ID
+					<input name="userId" inputmode="numeric" autocomplete="off" required />
+				</label>
+				<label>
+					ロール
+					<select name="name" required>
+						{#each data.view.roles.filter((role) => role.id) as role (role.name)}
+							<option value={role.name}>funmary-{role.name} ({role.label})</option>
+						{:else}
+							<option value="" disabled>先にロールを整えてください</option>
+						{/each}
+					</select>
+				</label>
+				<div class="actions">
+					<Button type="submit" name="action" value="add" variant="unelevated">
+						<Label>付ける</Label>
+					</Button>
+					<Button type="submit" name="action" value="remove" variant="outlined">
+						<Label>外す</Label>
+					</Button>
+				</div>
+			</form>
+		</section>
+	{/if}
 </div>
 
 <style>
@@ -147,6 +183,19 @@
 		cursor: pointer;
 	}
 	.replace {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: end;
+		gap: 0.5rem 1rem;
+
+		label {
+			display: flex;
+			flex-direction: column;
+			gap: 0.25rem;
+			font-size: 0.875rem;
+		}
+	}
+	.grant {
 		display: flex;
 		flex-wrap: wrap;
 		align-items: end;

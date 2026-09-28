@@ -57,6 +57,10 @@ export interface DiscordBot {
 		parentId?: string;
 		overwrites?: readonly PermissionOverwrite[];
 	}): Promise<DiscordChannel>;
+	/** メンバーにロールを付ける。メンバーがギルドにいなければ、404 の DiscordApiError */
+	addMemberRole(userId: string, roleId: string): Promise<void>;
+	/** メンバーからロールを外す */
+	removeMemberRole(userId: string, roleId: string): Promise<void>;
 	/** メンションが効くのは、mentionRoles に挙げたロールだけにする */
 	postMessage(channelId: string, content: string, mentionRoles?: readonly string[]): Promise<void>;
 }
@@ -161,6 +165,12 @@ export function createDiscordBot(options: DiscordBotOptions): DiscordBot {
 						: {}),
 				}),
 			);
+		},
+		async addMemberRole(userId, roleId) {
+			await call('PUT', `/guilds/${guildId}/members/${userId}/roles/${roleId}`);
+		},
+		async removeMemberRole(userId, roleId) {
+			await call('DELETE', `/guilds/${guildId}/members/${userId}/roles/${roleId}`);
 		},
 		async postMessage(channelId, content, mentionRoles = []) {
 			await call('POST', `/channels/${channelId}/messages`, {

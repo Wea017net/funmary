@@ -3,7 +3,12 @@
 import { fail, type Actions, type ServerLoad } from '@sveltejs/kit';
 import { ADMIN_CHANNELS, DiscordApiError, ensureLayout, type AdminChannel } from '@funmary/notify';
 import { requireAdmin } from '$lib/server/admin.ts';
-import { replaceEntry, toDiscordView, useBot } from '$lib/server/discord-admin.ts';
+import {
+	changeMemberRole,
+	replaceEntry,
+	toDiscordView,
+	useBot,
+} from '$lib/server/discord-admin.ts';
 import { getServices } from '$lib/server/services.ts';
 
 const NO_BOT =
@@ -73,6 +78,26 @@ export const actions: Actions = {
 		return {
 			message: `${name} を Bot に任せます。「チャンネルとロールを整える」を押してください。`,
 		};
+	},
+	/** Discord のユーザーに、ロールを付ける、または外す */
+	role: async ({ request, locals }) => {
+		requireAdmin(locals);
+		const { discord } = getServices();
+		if (!discord.bot) return fail(400, { error: NO_BOT });
+		const form = await request.formData();
+		const userId = form.get('userId');
+		const name = form.get('name');
+		if (typeof userId !== 'string' || typeof name !== 'string') {
+			return fail(400, { error: '入力が足りません。' });
+		}
+		const result = await changeMemberRole(
+			discord.bot,
+			discord.layout(),
+			form.get('action') === 'remove' ? 'remove' : 'add',
+			name,
+			userId,
+		);
+		return result.ok ? { message: result.message } : fail(400, { error: result.error });
 	},
 	/** チャンネルに、テストのメッセージを送る */
 	test: async ({ request, locals }) => {

@@ -464,7 +464,7 @@ test.describe('管理画面', () => {
 		expect(response?.status()).toBe(404);
 	});
 
-	test('管理用の Discord の画面は、管理者にだけ開け、Bot が未設定なら設定のしかたを出す', async ({
+	test('Discord設定の画面は、管理者にだけ開け、Bot が未設定なら設定のしかたを出す', async ({
 		page,
 	}) => {
 		await loginAs(page, 'e2e-not-admin@fun.ac.jp');
@@ -472,8 +472,8 @@ test.describe('管理画面', () => {
 
 		await loginAs(page, 'e2e-admin@fun.ac.jp');
 		await page.goto('/app/settings');
-		await page.getByRole('link', { name: /^管理用の Discord/ }).click();
-		await expect(page.getByRole('heading', { name: '管理用の Discord', level: 1 })).toBeVisible();
+		await page.getByRole('link', { name: /^Discord設定/ }).click();
+		await expect(page.getByRole('heading', { name: 'Discord設定', level: 1 })).toBeVisible();
 		await expect(page.getByText('Bot が設定されていません')).toBeVisible();
 		await expect(page.getByRole('navigation', { name: 'パンくず' })).toContainText('設定');
 		// チャンネル 6 本とロール 2 つが、まだ決まっていない状態で並ぶ

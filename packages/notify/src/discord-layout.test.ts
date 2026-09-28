@@ -38,6 +38,8 @@ function fakeBot(initial: { channels?: DiscordChannel[]; roles?: DiscordRole[] }
 			created.push(`${kind}:${name}`);
 			return Promise.resolve(channel);
 		},
+		addMemberRole: () => Promise.resolve(),
+		removeMemberRole: () => Promise.resolve(),
 		postMessage: () => Promise.resolve(),
 	};
 	return { bot, created };
