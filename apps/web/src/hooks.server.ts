@@ -333,6 +333,15 @@ export const init: ServerInit = () => {
 			deleteSession: (token) => store.deleteSession(token),
 			flowKey: Buffer.from(result.config.encryptionKey, 'base64'),
 			origin: publicOrigin,
+			// メールアドレスなど、個人情報は含めない (設計書 14.9)
+			onNewUser: () => {
+				void alerter.send({
+					severity: 'info',
+					title: '新しい利用者が登録しました',
+					category: 'users',
+					key: `new-user:${Date.now()}`,
+				});
+			},
 		},
 		calendar: {
 			loadFeed: (token) => loadCalendarFeed(services, token, new Date()),

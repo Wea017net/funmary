@@ -38,6 +38,13 @@ export const actions: Actions = {
 					error: `今月は、招待コードを発行できる数 (${result.limit} つ) に達しました。`,
 				});
 			case 'issued':
+				// 渡した相手のメモなど、個人情報は含めない (設計書 14.9)
+				await services.alertAdmin({
+					severity: 'info',
+					title: '招待コードが発行されました',
+					category: 'users',
+					key: `invite-issued:${Date.now()}`,
+				});
 				return {
 					issued: {
 						code: result.code,
