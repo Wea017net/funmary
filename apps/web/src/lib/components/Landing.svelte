@@ -91,28 +91,28 @@
 					<p class="next-time">13:10-14:40 <span>3 限</span></p>
 					<p class="next-room">講堂</p>
 					<p class="next-subject">
-						架空の情報演習 <StatusBadge status="roomChanged" />
+						情報演習 <StatusBadge status="roomChanged" />
 					</p>
 				</div>
 				<ul class="lessons">
 					<li>
 						<span class="when">1 限</span>
-						<span class="what">架空の線形代数</span>
+						<span class="what">線形代数</span>
 						<span class="room"><LessonRoom room="363" tentative={false} /></span>
 					</li>
 					<li class="cancelled">
 						<span class="when">2 限</span>
-						<span class="what">架空の英語 <StatusBadge status="cancelled" /></span>
+						<span class="what">英語<StatusBadge status="cancelled" /></span>
 						<span class="room"><LessonRoom room="484" tentative={false} /></span>
 					</li>
 					<li>
 						<span class="when">5 限</span>
-						<span class="what">架空の物理 <StatusBadge status="makeup" /></span>
+						<span class="what">物理 <StatusBadge status="makeup" /></span>
 						<span class="room"><LessonRoom room="495" tentative={true} /></span>
 					</li>
 				</ul>
 			</div>
-			<figcaption>画面の例 (授業は架空のものです)</figcaption>
+			<figcaption>画面の例</figcaption>
 		</figure>
 	</section>
 
