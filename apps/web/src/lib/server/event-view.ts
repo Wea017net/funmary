@@ -13,13 +13,19 @@ export interface EventView {
 	readonly time: string;
 	/** 数日にわたる予定の、2 日目以降 */
 	readonly continued: boolean;
+	/** ほかの人の予定を、自分の時間割に加えたもの (直せない) */
+	readonly added: boolean;
 }
 
-/** from から to まで (両端を含む) の各日に、その日にある予定を返す。予定のない日は含めない */
+/**
+ * from から to まで (両端を含む) の各日に、その日にある予定を返す。予定のない日は含めない。
+ * addedIds は、events のうち、ほかの人の予定を加えたものの ID
+ */
 export function eventViewsByDate(
 	events: readonly UserEvent[],
 	from: CalendarDate,
 	to: CalendarDate,
+	addedIds: ReadonlySet<number> = new Set(),
 ): Map<CalendarDate, EventView[]> {
 	const byDate = new Map<CalendarDate, EventView[]>();
 	// 展開の結果は、始まりの日、時刻の順。日ごとに並べ直すので、終日を先にする
@@ -36,6 +42,7 @@ export function eventViewsByDate(
 					location: occurrence.location,
 					time: formatOccurrenceTime(occurrence),
 					continued: date > occurrence.startDate,
+					added: addedIds.has(occurrence.eventId),
 				},
 			]);
 		}
@@ -50,6 +57,10 @@ export function eventViewsByDate(
 }
 
 /** その日だけの予定 */
-export function eventsOnDate(events: readonly UserEvent[], date: CalendarDate): EventView[] {
-	return eventViewsByDate(events, date, date).get(date) ?? [];
+export function eventsOnDate(
+	events: readonly UserEvent[],
+	date: CalendarDate,
+	addedIds: ReadonlySet<number> = new Set(),
+): EventView[] {
+	return eventViewsByDate(events, date, date, addedIds).get(date) ?? [];
 }

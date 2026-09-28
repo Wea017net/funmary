@@ -202,10 +202,20 @@
 							<td class={{ today: cell.date === data.today, off: offDates.has(cell.date) }}>
 								{#each cell.events as event (event.key)}
 									<div class="event">
-										<a href={resolve('/app/events/[id]', { id: String(event.eventId) })}
-											>{event.title}</a
+										{#if event.added}
+											<a href={resolve('/app/events/shared/[ref]', { ref: String(event.eventId) })}
+												>{event.title}</a
+											>
+										{:else}
+											<a href={resolve('/app/events/[id]', { id: String(event.eventId) })}
+												>{event.title}</a
+											>
+										{/if}
+										<span class="time"
+											>{event.time}{event.continued ? ' (続き)' : ''}{event.added
+												? ' (加えた予定)'
+												: ''}</span
 										>
-										<span class="time">{event.time}{event.continued ? ' (続き)' : ''}</span>
 										{#if event.location}<span class="room">{event.location}</span>{/if}
 									</div>
 								{/each}

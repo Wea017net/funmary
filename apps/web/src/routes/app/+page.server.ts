@@ -24,12 +24,20 @@ export const load: ServerLoad = ({ locals }) => {
 	const portal = services.sourceHealth.load(PORTAL_SOURCE);
 	const hasRegistrations = services.courses.listRegistrations(locals.user.id).length > 0;
 
+	// 自分の予定と、ほかの人の予定のうち自分の時間割に加えたもの
+	const userEvents = services.userEvents.listByOwner(locals.user.id);
+	const addedEvents = services.userEvents.listSubscribed(locals.user.id);
+
 	return {
 		today: {
 			date: current.date,
 			note: timetable.notes.get(current.date) ?? null,
 			lessons: timetable.lessons.filter((lesson) => lesson.date === current.date).map(toLessonView),
-			events: eventsOnDate(services.userEvents.listByOwner(locals.user.id), current.date),
+			events: eventsOnDate(
+				[...userEvents, ...addedEvents],
+				current.date,
+				new Set(addedEvents.map((event) => event.id)),
+			),
 			next: next && { ...toLessonView(next.lesson), inProgress: next.inProgress },
 			hasRegistrations,
 			// 履修科目を登録したら、カレンダーに入れられることを知らせる

@@ -196,6 +196,30 @@ describe('loadCalendarFeed', () => {
 			expect(byId.get(allDay)).toMatchObject({ allDay: true, start: null, endDate: '2026-11-07' });
 		});
 
+		it('ほかの人の予定を加えていれば、それも含める。持ち主が非公開にしたものは、含めない', () => {
+			const { userId, token } = setup();
+			const other = createAuthStore(database).createUser(
+				{ googleSub: 'c', email: 'c@fun.ac.jp', name: null, role: 'user' },
+				NOW,
+			);
+			const events = createUserEventStore(database);
+			const shared = events.create(
+				other,
+				input({ title: '加える予定', visibility: 'public' }),
+				NOW,
+			);
+			events.subscribe(userId, shared, NOW);
+			const loaded = loadCalendarFeed(sources(), token, NOW);
+			expect(loaded?.feed.events).toHaveLength(1);
+			expect(loaded?.feed.events?.[0]).toMatchObject({
+				id: shared,
+				title: '加える予定',
+				detailUrl: `https://funmary.example.com/app/events/shared/${shared}`,
+			});
+			events.update(shared, other, input({ title: '加える予定', visibility: 'private' }), NOW);
+			expect(loadCalendarFeed(sources(), token, NOW)?.feed.events).toEqual([]);
+		});
+
 		it('期間の外の単発の予定は含めず、期間より前に始まった繰り返しは含める', () => {
 			const { userId, token } = setup();
 			const events = createUserEventStore(database);
