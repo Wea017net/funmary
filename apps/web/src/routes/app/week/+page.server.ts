@@ -19,7 +19,7 @@ export const load: ServerLoad = ({ cookies, locals, url }) => {
 	const today = jstDateTime(new Date()).date;
 	const param = url.searchParams.get('date');
 	const date = parseDateParam(param);
-	if (param !== null && date === null) redirect(303, '/week');
+	if (param !== null && date === null) redirect(303, '/app/week');
 
 	// 週は日曜から土曜。見出しと列は月曜から出す (日曜と土曜は、授業のあるときだけ列を出す)
 	const sunday = startOfWeek(date ?? today);

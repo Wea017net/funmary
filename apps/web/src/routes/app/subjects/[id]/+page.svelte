@@ -45,7 +45,7 @@
 </svelte:head>
 
 <div class="page">
-	<p><a href={resolve('/courses')}>履修科目</a></p>
+	<p><a href={resolve('/app/courses')}>履修科目</a></p>
 	<h1>{data.subject.name}</h1>
 
 	<dl class="summary">

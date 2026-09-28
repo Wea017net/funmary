@@ -91,7 +91,8 @@ export function createAuthRoutes(deps: AuthRoutesDeps): Hono {
 		if (result.kind !== 'signed-in') return c.redirect(loginErrorUrl(result.reason), 302);
 
 		setCookie(c, sessionName, result.sessionToken, sessionCookieOptions(deps.origin));
-		return c.redirect('/', 302);
+		// アプリの画面は /app の下にある (/ は紹介の画面)
+		return c.redirect('/app', 302);
 	});
 
 	app.post('/auth/logout', (c) => {

@@ -66,7 +66,9 @@
 					{#each data.registered as subject (subject.id)}
 						<li>
 							<h3>
-								<a href={resolve('/subjects/[id]', { id: String(subject.id) })}>{subject.name}</a>
+								<a href={resolve('/app/subjects/[id]', { id: String(subject.id) })}
+									>{subject.name}</a
+								>
 							</h3>
 							<p class="meta">
 								{formatTerm(subject.term)}{#if subject.teacher}、{subject.teacher}{/if}
@@ -142,7 +144,9 @@
 						{#each data.results as subject (subject.id)}
 							<li>
 								<h3>
-									<a href={resolve('/subjects/[id]', { id: String(subject.id) })}>{subject.name}</a>
+									<a href={resolve('/app/subjects/[id]', { id: String(subject.id) })}
+										>{subject.name}</a
+									>
 								</h3>
 								<p class="meta">
 									{formatTerm(subject.term)}{#if subject.teacher}、{subject.teacher}{/if}
@@ -160,7 +164,7 @@
 
 		<p>
 			学生ポータルの時間割から、まとめて登録することもできます:
-			<a href={resolve('/courses/import')}>ポータルの時間割から取り込む</a>
+			<a href={resolve('/app/courses/import')}>ポータルの時間割から取り込む</a>
 		</p>
 	{/if}
 </div>

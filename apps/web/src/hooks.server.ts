@@ -40,6 +40,7 @@ import {
 import { createAdminAlerter } from '@funmary/notify';
 import { createLogger, type Logger } from '@funmary/log';
 import { parseConfig } from '$lib/server/config.ts';
+import { legacyAppPath } from '$lib/server/legacy-path.ts';
 import { findMigrationsFolder } from '$lib/server/migrations-path.ts';
 import { setServices } from '$lib/server/services.ts';
 import { parseThemePreference, THEME_COOKIE } from '$lib/theme.ts';
@@ -246,6 +247,11 @@ export const init: ServerInit = () => {
 
 export const handle: Handle = async ({ event, resolve }) => {
 	const path = event.url.pathname;
+	// /app に移す前の画面の URL は、移した先へ転送する (308 は、POST も POST のまま送り直させる)
+	const moved = legacyAppPath(path);
+	if (moved) {
+		return new Response(null, { status: 308, headers: { Location: moved + event.url.search } });
+	}
 	const started = performance.now();
 	event.locals.user = null;
 	event.locals.theme = parseThemePreference(event.cookies.get(THEME_COOKIE));

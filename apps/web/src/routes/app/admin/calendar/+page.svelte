@@ -47,7 +47,7 @@
 	const weekdayName = (weekday: number) =>
 		WEEKDAY_LABELS.find((day) => day.weekday === weekday)?.label ?? '?';
 
-	const yearUrl = (year: number) => `${resolve('/admin/calendar')}?year=${year}`;
+	const yearUrl = (year: number) => `${resolve('/app/admin/calendar')}?year=${year}`;
 </script>
 
 <svelte:head>
@@ -56,7 +56,7 @@
 </svelte:head>
 
 <div class="page">
-	<p><a href={resolve('/admin')}>管理</a></p>
+	<p><a href={resolve('/app/admin')}>管理</a></p>
 	<h1>{data.academicYear} 年度の学年暦</h1>
 
 	<nav aria-label="年度の切り替え" class="years">
