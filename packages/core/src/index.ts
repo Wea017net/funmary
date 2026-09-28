@@ -80,7 +80,6 @@ export {
 	type UnmatchedName,
 } from './slot-import.ts';
 export {
-	expandUserEvents,
 	recurrenceToRrule,
 	rruleToRecurrence,
 	type EventOccurrence,

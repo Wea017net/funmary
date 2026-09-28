@@ -1,9 +1,8 @@
-// 利用者が自分の時間割に足す予定 (設計書 11 章、Issue #144)。単発、数日にわたるもの、繰り返しがある。
-// 繰り返しは RFC 5545 の RRULE として持ち、日付への展開は ical.js に任せる (自前の繰り返しの処理は書かない)。
+// 利用者が自分の時間割に足す予定の型と、画面で選ぶ繰り返しの指定 (設計書 11 章、Issue #144)。
+// 繰り返しは RFC 5545 の RRULE として持つ。日付への展開は、ical.js に任せる (event-expansion.ts)。
+// ここは ical.js を読み込まない。画面側 (ブラウザの JavaScript) からも読まれるので、大きな依存を持ち込まないため。
 // I/O を持たない。日付は "YYYY-MM-DD"、時刻は日本時間の "HH:MM"。
-import ICAL from 'ical.js';
-import { addDays, eachDate, type CalendarDate, type Weekday } from './calendar-date.ts';
-import { DEFAULT_PERIODS, findPeriod, type Period } from './periods.ts';
+import type { CalendarDate, Weekday } from './calendar-date.ts';
 
 /** 予定の時間。終日、時刻 (同じ日の中)、時限 (from から to まで。1 限から 6 限) のどれか */
 export type EventTime =
@@ -44,92 +43,6 @@ export interface EventOccurrence {
 	readonly end: string | null;
 	/** 時限で決めた予定の、時限の範囲 */
 	readonly periods: { readonly from: number; readonly to: number } | null;
-}
-
-/** 終わりのない繰り返しを、展開しきれない (壊れた指定) ときの、1 つの予定あたりの回数の上限 */
-const MAX_ITERATIONS = 20_000;
-
-function daysBetween(start: CalendarDate, end: CalendarDate): number {
-	return Math.max([...eachDate(start, end)].length - 1, 0);
-}
-
-/** 予定の各回の始まりの日を、日付順に返す。壊れた繰り返しの指定は、単発として扱う */
-function* occurrenceStarts(event: UserEvent): Generator<CalendarDate> {
-	if (!event.rrule) {
-		yield event.startDate;
-		return;
-	}
-	let iterator: ReturnType<ICAL.Recur['iterator']>;
-	try {
-		iterator = ICAL.Recur.fromString(event.rrule).iterator(
-			ICAL.Time.fromDateString(event.startDate),
-		);
-	} catch {
-		yield event.startDate;
-		return;
-	}
-	for (let count = 0; count < MAX_ITERATIONS; count++) {
-		const next = iterator.next();
-		if (!next) return;
-		yield next.toString().slice(0, 10);
-	}
-}
-
-function resolveTime(
-	time: EventTime,
-	periods: readonly Period[],
-): Pick<EventOccurrence, 'allDay' | 'start' | 'end' | 'periods'> {
-	const allDay = { allDay: true, start: null, end: null, periods: null } as const;
-	if (time.kind === 'allDay') return allDay;
-	if (time.kind === 'time')
-		return { allDay: false, start: time.start, end: time.end, periods: null };
-	const first = findPeriod(time.from, periods);
-	const last = findPeriod(time.to, periods);
-	if (!first || !last) return allDay;
-	return {
-		allDay: false,
-		start: first.start,
-		end: last.end,
-		periods: { from: time.from, to: time.to },
-	};
-}
-
-/**
- * from から to まで (両端を含む) に重なる、予定の各回を返す。終日、時刻の順に並べる。
- * 数日にわたる予定は、始まりの日で 1 件にして、その回の終わりの日を持たせる
- */
-export function expandUserEvents(
-	events: readonly UserEvent[],
-	from: CalendarDate,
-	to: CalendarDate,
-	periods: readonly Period[] = DEFAULT_PERIODS,
-): EventOccurrence[] {
-	const result: EventOccurrence[] = [];
-	for (const event of events) {
-		const span = daysBetween(event.startDate, event.endDate);
-		const excluded = new Set(event.excludedDates);
-		for (const start of occurrenceStarts(event)) {
-			if (start > to) break;
-			const end = addDays(start, span);
-			if (end < from || excluded.has(start)) continue;
-			result.push({
-				key: `${event.id}:${start}`,
-				eventId: event.id,
-				title: event.title,
-				location: event.location,
-				notes: event.notes,
-				startDate: start,
-				endDate: end,
-				...resolveTime(event.time, periods),
-			});
-		}
-	}
-	return result.sort(
-		(a, b) =>
-			a.startDate.localeCompare(b.startDate) ||
-			(a.start ?? '').localeCompare(b.start ?? '') ||
-			a.eventId - b.eventId,
-	);
 }
 
 // ---------------------------------------------------------------------------

@@ -8,6 +8,7 @@
 		"ical.js": "catalog:"
 	},
 	"exports": {
-		".": "./src/index.ts"
+		".": "./src/index.ts",
+		"./event-expansion": "./src/event-expansion.ts"
 	}
 }
