@@ -69,7 +69,7 @@
 </svelte:head>
 
 <div class="page">
-	<p><a href={resolve('/app/admin')}>管理</a></p>
+	<p><a href={resolve('/app/settings')}>設定</a></p>
 	<h1>{data.academicYear} 年度の学年暦</h1>
 
 	<nav aria-label="年度の切り替え" class="years">

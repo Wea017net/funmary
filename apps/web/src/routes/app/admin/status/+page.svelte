@@ -28,7 +28,7 @@
 </svelte:head>
 
 <div class="page">
-	<p><a href={resolve('/app/admin')}>管理</a></p>
+	<p><a href={resolve('/app/settings')}>設定</a></p>
 	<h1>取得元と実行履歴</h1>
 
 	<section aria-labelledby="sources-heading">
