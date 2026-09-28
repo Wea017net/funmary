@@ -47,7 +47,9 @@
 	<!-- 件数が多いことがあるので、一覧は畳んでおき、件数だけを見せる -->
 	{#if view.toCheck.length > 0}
 		<details>
-			<summary>完全一致でない照合 {view.toCheck.length} 件 (取り違えがないか確かめる)</summary>
+			<summary
+				>言い換えや分け方で決めた照合 {view.toCheck.length} 件 (取り違えがないか確かめる)</summary
+			>
 			<ul class="plain">
 				{#each view.toCheck as item (item.lessonName + item.slot)}
 					<li>{item.lessonName} → {item.subject} ({item.slot})</li>

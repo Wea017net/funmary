@@ -167,3 +167,61 @@ describe('planSlotImport: 管理者の紐付け', () => {
 		expect(plan.slots.map((s) => [s.subjectId, s.method])).toEqual([[1, 'exact']]);
 	});
 });
+
+describe('planSlotImport: まとめて書かれたコマ', () => {
+	const combined: SubjectName[] = [
+		{ id: 10, name: '画像工学3-JKL' },
+		{ id: 11, name: '画像工学4-GHI' },
+		{ id: 12, name: 'アルゴリズムとデータ構造2-EF' },
+		{ id: 13, name: 'アルゴリズムとデータ構造2-JKL' },
+		{ id: 14, name: 'アルゴリズムとデータ構造2-ABCD' },
+		{ id: 15, name: 'アルゴリズムとデータ構造2-GHI' },
+	];
+
+	it('カンマで区切ったクラスは、それぞれの科目に同じコマを付ける', () => {
+		const plan = planSlotImport(
+			[cell({ subject: '画像工学', classes: '3-JKL,4-GHI', rooms: ['593'] })],
+			combined,
+		);
+		expect(plan.slots.map((slot) => [slot.subjectId, slot.method, slot.lessonName])).toEqual([
+			[10, 'split', '画像工学3-JKL,4-GHI'],
+			[11, 'split', '画像工学3-JKL,4-GHI'],
+		]);
+		expect(plan.unmatched).toEqual([]);
+	});
+
+	it('クラスの文字をまとめたものは、ちょうど重ならずに覆う科目があれば、それぞれに付ける', () => {
+		const plan = planSlotImport(
+			[cell({ subject: 'アルゴリズムとデータ構造', classes: '2-EFJKL' })],
+			combined,
+		);
+		expect(plan.slots.map((slot) => slot.subjectId)).toEqual([12, 13]);
+		expect(plan.unmatched).toEqual([]);
+	});
+
+	it('そのままの名前の科目があれば、分けない', () => {
+		const plan = planSlotImport(
+			[cell({ subject: 'アルゴリズムとデータ構造', classes: '2-ABCD' })],
+			combined,
+		);
+		expect(plan.slots.map((slot) => [slot.subjectId, slot.method])).toEqual([[14, 'exact']]);
+	});
+
+	it('分けたものが 1 つでも決まらなければ、枠にせず人の確認へ回す', () => {
+		const plan = planSlotImport(
+			[
+				// G だけの科目はない
+				cell({ subject: 'アルゴリズムとデータ構造', classes: '2-EFG' }),
+				cell({ subject: '画像工学', classes: '3-JKL,5-AB' }),
+				cell({ subject: '架空特論', classes: 'M1,2' }),
+			],
+			combined,
+		);
+		expect(plan.slots).toEqual([]);
+		expect(plan.unmatched.map((item) => item.lessonName)).toEqual([
+			'アルゴリズムとデータ構造2-EFG',
+			'画像工学3-JKL,5-AB',
+			'架空特論M1,2',
+		]);
+	});
+});

@@ -157,3 +157,37 @@ describe('rankCandidates', () => {
 		expect(rankCandidates('まったく関係のない名前', subjects, 5)).toEqual([]);
 	});
 });
+
+describe('matchLessonName: 略称の言い換え', () => {
+	const named: SubjectName[] = [
+		{ id: 1, name: 'バーチャル・イングリッシュ・プログラムⅠ1' },
+		{ id: 2, name: 'バーチャル・イングリッシュ・プログラムⅢ2' },
+		{ id: 3, name: 'コミュニケーションI1-A' },
+		{ id: 4, name: 'コミュニケーションIII2-AB' },
+	];
+
+	it('VEP は「バーチャル・イングリッシュ・プログラム」、Communication は「コミュニケーション」とみなす', () => {
+		expect(matchLessonName('VEPⅠ1', named)).toEqual({
+			kind: 'matched',
+			subjectId: 1,
+			method: 'alias',
+		});
+		expect(matchLessonName('VEPⅢ2', named)).toMatchObject({ subjectId: 2 });
+		expect(matchLessonName('CommunicationI1-A', named)).toMatchObject({
+			subjectId: 3,
+			method: 'alias',
+		});
+		expect(matchLessonName('CommunicationIII2-AB', named)).toMatchObject({ subjectId: 4 });
+	});
+
+	it('英語の正式名と、中黒のない書き方も同じとみなす', () => {
+		expect(matchLessonName('Virtual English Program Ⅰ1', named)).toMatchObject({ subjectId: 1 });
+		expect(matchLessonName('バーチャルイングリッシュプログラムⅠ1', named)).toMatchObject({
+			subjectId: 1,
+		});
+	});
+
+	it('言い換えても番号が違えば選ばない', () => {
+		expect(matchLessonName('VEPⅡ1', named).kind).not.toBe('matched');
+	});
+});

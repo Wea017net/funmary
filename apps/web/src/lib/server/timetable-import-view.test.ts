@@ -45,9 +45,12 @@ describe('toTimetableImportView', () => {
 				{ label: '完全一致', count: 1 },
 				{ label: '表記の揺れを除いて一致', count: 1 },
 				{ label: '旧名を除いて一致', count: 0 },
+				{ label: '略称を言い換えて一致', count: 0 },
+				{ label: 'まとめて書かれたコマを分けて一致', count: 0 },
 				{ label: '管理画面で紐付け済み', count: 1 },
 			],
-			toCheck: [{ lessonName: '英語Ⅰ A', subject: '英語Ⅰ', slot: '火曜 3 限' }],
+			// 表記の揺れ (normalized) だけのものは出さない
+			toCheck: [],
 			unmatched: [
 				{ lessonName: '謎の科目', reason: '候補なし' },
 				{ lessonName: '情報表現', reason: '似た科目だけあり (代数学)' },
