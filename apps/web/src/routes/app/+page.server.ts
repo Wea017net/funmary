@@ -21,6 +21,7 @@ export const load: ServerLoad = ({ locals }) => {
 	});
 	const next = findNextLesson(timetable.lessons, current, DEFAULT_PERIODS);
 	const portal = services.sourceHealth.load(PORTAL_SOURCE);
+	const hasRegistrations = services.courses.listRegistrations(locals.user.id).length > 0;
 
 	return {
 		today: {
@@ -28,7 +29,10 @@ export const load: ServerLoad = ({ locals }) => {
 			note: timetable.notes.get(current.date) ?? null,
 			lessons: timetable.lessons.filter((lesson) => lesson.date === current.date).map(toLessonView),
 			next: next && { ...toLessonView(next.lesson), inProgress: next.inProgress },
-			hasRegistrations: services.courses.listRegistrations(locals.user.id).length > 0,
+			hasRegistrations,
+			// 履修科目を登録したら、カレンダーに入れられることを知らせる
+			suggestCalendar:
+				hasRegistrations && services.feedTokens.current(locals.user.id, 'calendar') === null,
 			usesEstimatedTerms: timetable.usesEstimatedTerms,
 			fetchedAt: portal.lastSuccessAt && jstDateTime(portal.lastSuccessAt),
 			stale: isStale(portal.lastSuccessAt, now),

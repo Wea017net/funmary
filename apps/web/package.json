@@ -39,6 +39,7 @@
 		"vite": "catalog:"
 	},
 	"dependencies": {
-		"better-sqlite3": "catalog:"
+		"better-sqlite3": "catalog:",
+		"uqr": "^0.1.3"
 	}
 }

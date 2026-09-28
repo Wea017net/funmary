@@ -885,3 +885,52 @@ test.describe('招待コード', () => {
 		await expect(limit).toHaveValue('5');
 	});
 });
+
+test.describe('カレンダーの購読', () => {
+	// E2E の DB は実行をまたいで残るので、実行ごとに別の人にする
+	const email = `e2e-calendar-${Date.now()}@fun.ac.jp`;
+
+	test('購読の URL を発行して ICS を取れ、再発行と無効化で前の URL が使えなくなる', async ({
+		page,
+	}) => {
+		oidc.setIdentity({ sub: email, email, email_verified: true, hd: 'fun.ac.jp' });
+		await page.goto('/auth/google');
+		await page
+			.getByRole('navigation', { name: 'メニュー' })
+			.getByRole('link', { name: '設定', exact: true })
+			.click();
+		await page.getByRole('link', { name: /カレンダーの購読/ }).click();
+		await page.getByRole('button', { name: '購読の URL を発行する' }).click();
+
+		const url = page.getByLabel('購読の URL', { exact: true });
+		await expect(url).toHaveValue(/\/cal\/[\w-]{43}\.ics$/);
+		const first = await url.inputValue();
+		await expect(page.getByRole('img', { name: '購読の URL の QR コード' })).toBeVisible();
+		const google = page.getByRole('link', { name: 'Google カレンダーに追加' });
+		await expect(google).toHaveAttribute('href', /^https:\/\/calendar\.google\.com\//);
+		await expect(google).toHaveAttribute('target', '_blank');
+		await expect(google).toHaveAttribute('rel', 'noopener noreferrer');
+
+		const ics = await page.request.get(first);
+		expect(ics.status()).toBe(200);
+		expect(ics.headers()['content-type']).toBe('text/calendar; charset=utf-8');
+		expect(ics.headers()['x-robots-tag']).toBe('noindex');
+		expect(await ics.text()).toContain('BEGIN:VCALENDAR');
+
+		// 開き直すと URL はもう出ず、取りに来た日時が出る
+		await page.reload();
+		await expect(page.getByLabel('購読の URL', { exact: true })).toHaveCount(0);
+		await expect(page.getByText('まだ取りに来ていません')).toHaveCount(0);
+
+		await page.getByRole('button', { name: '再発行する' }).click();
+		await expect(page.getByLabel('購読の URL', { exact: true })).not.toHaveValue(first);
+		const second = await page.getByLabel('購読の URL', { exact: true }).inputValue();
+		expect((await page.request.get(first)).status()).toBe(404);
+		expect((await page.request.get(second)).status()).toBe(200);
+
+		await page.getByRole('button', { name: '無効にする' }).click();
+		await expect(page.getByRole('status').first()).toHaveText(/購読の URL を無効にしました/);
+		expect((await page.request.get(second)).status()).toBe(404);
+		await expect(page.getByRole('button', { name: '購読の URL を発行する' })).toBeVisible();
+	});
+});

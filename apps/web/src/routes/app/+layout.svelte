@@ -9,6 +9,7 @@
 	import IconCourses from '~icons/material-symbols/menu-book-outline';
 	import IconInvite from '~icons/material-symbols/person-add-outline';
 	import IconLogout from '~icons/material-symbols/logout';
+	import IconSettings from '~icons/material-symbols/settings-outline';
 	import IconToday from '~icons/material-symbols/today-outline';
 	import IconWeek from '~icons/material-symbols/calendar-view-week-outline';
 
@@ -24,7 +25,10 @@
 		children: Snippet;
 	} = $props();
 
-	// PC では左のメニュー、スマホでは下のタブに同じ項目を出す (設計書 12.4)
+	const settingsCurrent = $derived(page.url.pathname.startsWith('/app/settings'));
+
+	// PC では左のメニュー、スマホでは下のタブに同じ項目を出す (設計書 12.4)。
+	// 設定は、タブを増やさないよう、スマホでは上のバーに出す
 	const items = $derived([
 		{
 			href: resolve('/app'),
@@ -67,11 +71,20 @@
 				]
 			: []),
 	]);
+	const sideItems = $derived([
+		...items,
+		{
+			href: resolve('/app/settings'),
+			label: '設定',
+			icon: IconSettings,
+			current: settingsCurrent,
+		},
+	]);
 </script>
 
-{#snippet navItems(className: string)}
+{#snippet navItems(className: string, list: typeof sideItems)}
 	<ul class={className}>
-		{#each items as item (item.href)}
+		{#each list as item (item.href)}
 			<li>
 				<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- href は resolve 済み -->
 				<a href={item.href} aria-current={item.current ? 'page' : undefined}>
@@ -107,6 +120,15 @@
 	<header class="top">
 		<a class="brand" href={resolve('/app')}>Funmary</a>
 		<div class="top-actions">
+			<a
+				class="top-link"
+				href={resolve('/app/settings')}
+				aria-label="設定"
+				title="設定"
+				aria-current={settingsCurrent ? 'page' : undefined}
+			>
+				<IconSettings aria-hidden="true" class="icon" />
+			</a>
 			<ThemeToggle initial={data.theme} compact />
 			{@render logout(true)}
 		</div>
@@ -114,7 +136,7 @@
 
 	<nav class="side" aria-label="メニュー">
 		<a class="brand" href={resolve('/app')}>Funmary</a>
-		{@render navItems('side-items')}
+		{@render navItems('side-items', sideItems)}
 		<div class="account">
 			<div class="email"><MaskedEmail email={data.user.email} /></div>
 			<ThemeToggle initial={data.theme} />
@@ -128,7 +150,7 @@
 	</main>
 
 	<nav class="tabs" aria-label="メニュー">
-		{@render navItems('tab-items')}
+		{@render navItems('tab-items', items)}
 	</nav>
 </div>
 
@@ -355,5 +377,22 @@
 	.top-actions {
 		display: flex;
 		align-items: center;
+	}
+
+	/* 画面の色とログアウトのボタンと同じ 48px 四方にそろえる */
+	.top-link {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 48px;
+		height: 48px;
+		border-radius: 0.5rem;
+		color: var(--fm-text-muted);
+
+		&:hover,
+		&[aria-current='page'] {
+			background: var(--fm-surface-muted);
+			color: var(--fm-text);
+		}
 	}
 </style>

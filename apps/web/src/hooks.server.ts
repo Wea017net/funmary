@@ -15,6 +15,7 @@ import {
 	createSettingsStore,
 	createClassChangeStore,
 	createCourseStore,
+	createFeedTokenStore,
 	createHolidayStore,
 	createSourceHealthStore,
 	createSubjectStore,
@@ -41,6 +42,7 @@ import {
 import { createAdminAlerter } from '@funmary/notify';
 import { createLogger, type Logger } from '@funmary/log';
 import { parseConfig } from '$lib/server/config.ts';
+import { loadCalendarFeed } from '$lib/server/calendar-feed.ts';
 import { legacyAppPath } from '$lib/server/legacy-path.ts';
 import { findMigrationsFolder } from '$lib/server/migrations-path.ts';
 import { setServices } from '$lib/server/services.ts';
@@ -205,7 +207,7 @@ export const init: ServerInit = () => {
 	publicOrigin = result.config.origin ?? DEV_ORIGIN;
 	const store = createAuthStore(database);
 	authStore = store;
-	setServices({
+	const services = {
 		auth: store,
 		settings: createSettingsStore(database),
 		courses: createCourseStore(database),
@@ -219,8 +221,10 @@ export const init: ServerInit = () => {
 		registration: result.config.registration,
 		estimateHolidays,
 		origin: publicOrigin,
-		alertAdmin: (alert) => alerter.send(alert),
-	});
+		alertAdmin: (alert: Parameters<typeof alerter.send>[0]) => alerter.send(alert),
+		feedTokens: createFeedTokenStore(database),
+	};
+	setServices(services);
 	const authService: AuthService = createAuthService({
 		oidc: createGoogleOidcClient({
 			clientId: result.config.google.clientId,
@@ -243,6 +247,10 @@ export const init: ServerInit = () => {
 			deleteSession: (token) => store.deleteSession(token),
 			flowKey: Buffer.from(result.config.encryptionKey, 'base64'),
 			origin: publicOrigin,
+		},
+		calendar: {
+			loadFeed: (token) => loadCalendarFeed(services, token, new Date()),
+			uidDomain: new URL(publicOrigin).hostname,
 		},
 	});
 	logger.withTag('app').info(`起動しました (${result.config.mode}、DB は ${dataDir})`);
