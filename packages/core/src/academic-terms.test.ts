@@ -85,6 +85,7 @@ describe('resolveAcademicTerms', () => {
 			stored('fall', '2026-09-24', '2027-01-21', 'manual'),
 		]);
 		expect(result.map((t) => [t.term, t.start, t.end, t.source])).toEqual([
+			['full-year', '2026-04-01', '2027-01-21', 'estimated'],
 			['spring', '2026-04-01', '2026-07-31', 'estimated'],
 			['q1', '2026-04-01', '2026-07-31', 'estimated'],
 			['q2', '2026-04-01', '2026-07-31', 'estimated'],
@@ -107,12 +108,36 @@ describe('resolveAcademicTerms', () => {
 		});
 	});
 
+	it('通年は、前期の始まりから後期の終わりまでを推定として使う。保存されていればそちらを使う', () => {
+		expect(resolveAcademicTerms(2026, []).find((t) => t.term === 'full-year')).toMatchObject({
+			start: '2026-04-01',
+			end: '2027-01-31',
+			source: 'estimated',
+		});
+		const result = resolveAcademicTerms(2026, [
+			stored('spring', '2026-04-06', '2026-07-24', 'auto'),
+			stored('fall', '2026-09-24', '2027-01-21', 'auto'),
+		]);
+		expect(result.find((t) => t.term === 'full-year')).toMatchObject({
+			start: '2026-04-06',
+			end: '2027-01-21',
+		});
+		const manual = resolveAcademicTerms(2026, [
+			stored('full-year', '2026-04-10', '2027-01-15', 'manual'),
+		]);
+		expect(manual.find((t) => t.term === 'full-year')).toMatchObject({
+			start: '2026-04-10',
+			source: 'manual',
+		});
+	});
+
 	it('集中講義は、保存されていれば返し、なければ推定しない。開始日の順に並べる', () => {
 		expect(resolveAcademicTerms(2026, []).map((t) => t.term)).not.toContain('summer-intensive');
 		const result = resolveAcademicTerms(2026, [
 			stored('summer-intensive', '2026-08-17', '2026-08-28', 'manual'),
 		]);
 		expect(result.map((t) => t.term)).toEqual([
+			'full-year',
 			'spring',
 			'q1',
 			'q2',

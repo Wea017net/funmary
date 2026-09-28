@@ -768,7 +768,7 @@ test.describe('学年暦の管理', () => {
 		const dialog = page.getByRole('dialog');
 		await year.getByRole('button', { name: /^10月14日 \(水\)/ }).click();
 		await expect(dialog.getByRole('heading', { level: 3 })).toHaveText('2026年10月14日 (水)');
-		await expect(dialog).toContainText('学期: 後期、3Q');
+		await expect(dialog).toContainText('学期: 通年、後期、3Q');
 		await dialog.getByLabel('行う授業の曜日').selectOption('月曜');
 		await dialog.getByRole('button', { name: '振替授業日にする' }).click();
 		await expect(page.getByRole('status')).toHaveText('振替授業日を保存しました。');
