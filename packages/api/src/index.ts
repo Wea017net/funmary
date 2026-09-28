@@ -13,5 +13,6 @@ export {
 	type CalendarDayEvent,
 	type CalendarFeed,
 	type CalendarLesson,
+	type CalendarUserEvent,
 	type IcsOptions,
 } from './ics.ts';
