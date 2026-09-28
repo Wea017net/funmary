@@ -61,6 +61,32 @@ describe('parseConfig', () => {
 		});
 	});
 
+	it('Discord の Bot は、トークンとギルドの ID がそろったときだけ使い、片方だけなら誤りにする', () => {
+		const token = 'dummy-bot-token-' + 'x'.repeat(30);
+		expect(parseConfig(developmentEnv())).toMatchObject({
+			ok: true,
+			config: { discordBot: undefined },
+		});
+		expect(
+			parseConfig({
+				...developmentEnv(),
+				DISCORD_BOT_TOKEN: token,
+				DISCORD_GUILD_ID: '1234567890',
+			}),
+		).toMatchObject({
+			ok: true,
+			config: { discordBot: { token, guildId: '1234567890' } },
+		});
+		expect(parseConfig({ ...developmentEnv(), DISCORD_BOT_TOKEN: token })).toMatchObject({
+			ok: false,
+			issues: [{ name: 'DISCORD_GUILD_ID' }],
+		});
+		expect(parseConfig({ ...developmentEnv(), DISCORD_GUILD_ID: '1234567890' })).toMatchObject({
+			ok: false,
+			issues: [{ name: 'DISCORD_BOT_TOKEN' }],
+		});
+	});
+
 	it('DB の置き場所は DATA_DIR、systemd の STATE_DIRECTORY、./data の順に、値のあるものを使う', () => {
 		const stateDirectory = '/var/lib/funmary';
 		const dataDirOf = (extra: Record<string, string>) => {

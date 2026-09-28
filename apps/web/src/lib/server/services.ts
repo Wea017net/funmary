@@ -12,6 +12,7 @@ import type {
 	SubjectStore,
 	UnmatchedLessonStore,
 } from '@funmary/db';
+import type { DiscordBot, DiscordLayout } from '@funmary/notify';
 import type { BuildInfo } from './build-info.ts';
 import type { TimetableSources } from './user-timetable.ts';
 
@@ -20,6 +21,12 @@ export interface Services {
 	readonly auth: AuthStore;
 	/** 管理画面で変える設定 (招待コードを発行できる人など) */
 	readonly settings: SettingsStore;
+	/** 管理用の Discord の Bot と、チャンネルとロールの配置 (設計書 14.9)。Bot は設定されていなければ null */
+	readonly discord: {
+		readonly bot: DiscordBot | null;
+		layout(): DiscordLayout;
+		saveLayout(layout: DiscordLayout): void;
+	};
 	readonly courses: CourseStore;
 	readonly subjects: SubjectStore;
 	readonly classChanges: ClassChangeStore;

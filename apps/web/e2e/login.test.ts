@@ -464,6 +464,27 @@ test.describe('管理画面', () => {
 		expect(response?.status()).toBe(404);
 	});
 
+	test('管理用の Discord の画面は、管理者にだけ開け、Bot が未設定なら設定のしかたを出す', async ({
+		page,
+	}) => {
+		await loginAs(page, 'e2e-not-admin@fun.ac.jp');
+		expect((await page.goto('/app/admin/discord'))?.status()).toBe(404);
+
+		await loginAs(page, 'e2e-admin@fun.ac.jp');
+		await page.goto('/app/settings');
+		await page.getByRole('link', { name: /^管理用の Discord/ }).click();
+		await expect(page.getByRole('heading', { name: '管理用の Discord', level: 1 })).toBeVisible();
+		await expect(page.getByText('Bot が設定されていません')).toBeVisible();
+		await expect(page.getByRole('navigation', { name: 'パンくず' })).toContainText('設定');
+		// チャンネル 6 本とロール 2 つが、まだ決まっていない状態で並ぶ
+		await expect(
+			page.getByRole('region', { name: 'チャンネル' }).getByRole('listitem'),
+		).toHaveCount(6);
+		await expect(page.getByRole('region', { name: 'ロール' }).getByRole('listitem')).toHaveCount(2);
+		// Bot がないときは、整えるボタンを出さない
+		await expect(page.getByRole('button', { name: 'チャンネルとロールを整える' })).toHaveCount(0);
+	});
+
 	test('大学の公式の学年暦の PDF へのリンクを、設定に出す', async ({ page }) => {
 		const pdf = 'https://www.fun.ac.jp/wp/wp-content/uploads/2026AcademicCalendar.pdf';
 		seedSubjects((database) => {

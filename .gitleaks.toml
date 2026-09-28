@@ -5,3 +5,8 @@ useDefault = true
 [[allowlists]]
 description = "外部から取り込んだ AI エージェント向けのスキル。説明のための偽のトークンを含む"
 paths = ['''^\.agents/skills/''']
+
+[[allowlists]]
+description = "設定の検査のテストが使う、Discord の Bot のトークンの形をした架空の値"
+paths = ['''^apps/web/src/lib/server/config\.test\.ts$''']
+regexes = ['''MTIzNDU2Nzg5MDEyMzQ1Njc4\.Gabcde\.''']

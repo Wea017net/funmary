@@ -41,12 +41,19 @@ import {
 	fetchPortalPage,
 	fetchSyllabusCatalog,
 } from '@funmary/sources';
-import { createAdminAlerter } from '@funmary/notify';
+import {
+	createAdminAlerter,
+	createAdminDiscordSink,
+	createDiscordBot,
+	parseLayout,
+	type DiscordLayout,
+} from '@funmary/notify';
 import { createLogger, type Logger } from '@funmary/log';
 import { parseConfig } from '$lib/server/config.ts';
 import { importAcademicCalendarPdf } from '$lib/server/academic-calendar-import.ts';
 import { findBuildInfo } from '$lib/server/build-info.ts';
 import { loadCalendarFeed } from '$lib/server/calendar-feed.ts';
+import { DISCORD_LAYOUT_KEY } from '$lib/server/discord-admin.ts';
 import { OFFICIAL_CALENDAR_KEY } from '$lib/server/official-documents.ts';
 import { legacyAppPath } from '$lib/server/legacy-path.ts';
 import { findMigrationsFolder } from '$lib/server/migrations-path.ts';
@@ -106,8 +113,20 @@ export const init: ServerInit = () => {
 	jobRunStore.prune(new Date(Date.now() - JOB_RUN_RETENTION_MS));
 
 	// 定期処理。個々の処理は、取得の実装ができたところで足す
+	// 管理用の Discord の Bot (設計書 14.9)。トークンとギルドの ID があれば、Webhook より先に使う
+	const settingsStore = createSettingsStore(database);
+	const discordBot = result.config.discordBot
+		? createDiscordBot({
+				token: result.config.discordBot.token,
+				guildId: result.config.discordBot.guildId,
+			})
+		: null;
+	const readDiscordLayout = () => parseLayout(settingsStore.get(DISCORD_LAYOUT_KEY));
 	const alerter = createAdminAlerter({
 		webhookUrl: result.config.adminDiscordWebhookUrl,
+		...(discordBot
+			? { discord: createAdminDiscordSink({ bot: discordBot, layout: readDiscordLayout }) }
+			: {}),
 		dryRun: result.config.notifyDryRun,
 		log: logger,
 	});
@@ -238,7 +257,13 @@ export const init: ServerInit = () => {
 	authStore = store;
 	const services = {
 		auth: store,
-		settings: createSettingsStore(database),
+		settings: settingsStore,
+		discord: {
+			bot: discordBot,
+			layout: readDiscordLayout,
+			saveLayout: (layout: DiscordLayout) =>
+				settingsStore.set(DISCORD_LAYOUT_KEY, layout, new Date()),
+		},
 		courses: createCourseStore(database),
 		subjects: subjectStore,
 		classChanges: changeStore,

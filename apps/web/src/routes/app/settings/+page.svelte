@@ -5,6 +5,7 @@
 	import type { AdminSummary } from '$lib/server/admin-summary.ts';
 	import IconCalendar from '~icons/material-symbols/calendar-add-on-outline';
 	import IconChevron from '~icons/material-symbols/chevron-right';
+	import IconDiscord from '~icons/material-symbols/forum-outline';
 	import IconHistory from '~icons/material-symbols/monitor-heart-outline';
 	import IconInvite from '~icons/material-symbols/person-add-outline';
 	import IconLink from '~icons/material-symbols/link';
@@ -90,6 +91,12 @@
 				icon: IconHistory,
 				title: '取得元と実行履歴',
 				description: '学生ポータルなどの取得の状態と、定期処理の記録',
+			},
+			{
+				href: resolve('/app/admin/discord'),
+				icon: IconDiscord,
+				title: '管理用の Discord',
+				description: 'Bot が作るチャンネルとロールを、確かめて置き換える',
 			},
 		];
 	});
