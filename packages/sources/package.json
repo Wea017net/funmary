@@ -6,7 +6,8 @@
 	"license": "(BSD-3-Clause OR Apache-2.0)",
 	"exports": {
 		".": "./src/index.ts",
-		"./timetable-pdf": "./src/timetable-pdf/extract.ts"
+		"./timetable-pdf": "./src/timetable-pdf/extract.ts",
+		"./academic-calendar-pdf": "./src/academic-calendar-pdf/extract.ts"
 	},
 	"dependencies": {
 		"@funmary/core": "workspace:*",

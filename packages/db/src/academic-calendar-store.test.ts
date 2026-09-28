@@ -92,3 +92,55 @@ describe('全学の休講日', () => {
 		]);
 	});
 });
+
+describe('自動で取った日の入れ替え', () => {
+	const range = { start: '2026-04-01', end: '2027-03-31' } as const;
+
+	it('範囲の中の自動の振替授業日と休講日を、新しい一覧で入れ替える', () => {
+		const store = createAcademicCalendarStore(database);
+		store.replaceAutoDays(range, {
+			substituteDays: [{ date: '2026-04-30', weekday: 3 }],
+			noClassDays: [{ date: '2027-01-15', label: '休講' }],
+		});
+		store.replaceAutoDays(range, {
+			substituteDays: [{ date: '2026-07-24', weekday: 1 }],
+			noClassDays: [{ date: '2026-12-28', label: null }],
+		});
+		expect(store.listSubstituteDays(range.start, range.end)).toEqual([
+			{ date: '2026-07-24', weekday: 1 },
+		]);
+		expect(store.listNoClassDays(range.start, range.end)).toEqual([
+			{ date: '2026-12-28', label: null },
+		]);
+	});
+
+	it('管理者が入れた日は、消さず、自動の値で上書きもしない', () => {
+		const store = createAcademicCalendarStore(database);
+		store.saveSubstituteDay({ date: '2026-04-30', weekday: 4 }, 'manual');
+		store.saveNoClassDay('2027-01-15', '全学休講', 'manual');
+		const skipped = store.replaceAutoDays(range, {
+			substituteDays: [{ date: '2026-04-30', weekday: 3 }],
+			noClassDays: [
+				{ date: '2027-01-15', label: '休講' },
+				{ date: '2027-01-11', label: null },
+			],
+		});
+		expect(skipped).toEqual({ substituteDays: ['2026-04-30'], noClassDays: ['2027-01-15'] });
+		expect(store.listSubstituteDays(range.start, range.end)).toEqual([
+			{ date: '2026-04-30', weekday: 4 },
+		]);
+		expect(store.listNoClassDays(range.start, range.end)).toEqual([
+			{ date: '2027-01-11', label: null },
+			{ date: '2027-01-15', label: '全学休講' },
+		]);
+	});
+
+	it('範囲の外の自動の日は消さない', () => {
+		const store = createAcademicCalendarStore(database);
+		store.saveSubstituteDay({ date: '2027-04-30', weekday: 3 }, 'auto');
+		store.replaceAutoDays(range, { substituteDays: [], noClassDays: [] });
+		expect(store.listSubstituteDays('2027-04-01', '2028-03-31')).toEqual([
+			{ date: '2027-04-30', weekday: 3 },
+		]);
+	});
+});

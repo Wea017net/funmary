@@ -1,8 +1,6 @@
 // PDF から、文字とその座標を取り出す。pdfjs-dist (Mozilla) を使う。文字のデータが入った PDF が対象で、画像の PDF は読めない。
 // 取り出した文字の配列は grid.ts に渡す。管理者が手元で 1 回動かす取り込みで使う (定期処理では使わない)。
-// 型だけの宣言ファイルなので import では読めない。apps/web の svelte-check は src の宣言ファイルを拾わないため、ここで参照する
-// eslint-disable-next-line @typescript-eslint/triple-slash-reference
-/// <reference path="./pdf-worker.d.ts" />
+import { readTextItems, withPdfDocument } from '../pdf/document.ts';
 import {
 	parseTimetableItems,
 	type PdfTextItem,
@@ -23,46 +21,12 @@ export async function extractPdfTextItems(data: Uint8Array): Promise<ExtractResu
 	if (data.byteLength === 0) return { kind: 'invalid', reason: 'PDF が空です' };
 	if (data.byteLength > MAX_PDF_BYTES) return { kind: 'invalid', reason: 'PDF が大きすぎます' };
 	try {
-		// 読み込みが重いので、使うときまで読まない
-		const [pdfjs, worker] = await Promise.all([
-			import('pdfjs-dist/legacy/build/pdf.mjs'),
-			import('pdfjs-dist/legacy/build/pdf.worker.mjs'),
-		]);
-		// pdfjs は worker のファイルを自分の隣から読もうとするので、1 ファイルにまとめた cli.js では見つからない。
-		// 読み込んだ worker を渡しておくと、ファイルを探さずに同じスレッドで動かす
-		const global = globalThis as { pdfjsWorker?: unknown };
-		global.pdfjsWorker ??= worker;
-		// pdfjs は渡したバッファを使い回すので、コピーを渡す
-		const task = pdfjs.getDocument({
-			data: new Uint8Array(data),
-			useSystemFonts: true,
-			// フォントは、画面に出すためのものなので、組み込まない (文字の取り出しだけに使う)
-			disableFontFace: true,
-			verbosity: 0,
-		});
-		try {
-			const doc = await task.promise;
+		return await withPdfDocument(data, async (doc): Promise<ExtractResult> => {
 			if (doc.numPages < 1 || doc.numPages > MAX_PAGES) {
 				return { kind: 'invalid', reason: `ページ数が想定と違います (${doc.numPages} ページ)` };
 			}
-			const page = await doc.getPage(1);
-			const content = await page.getTextContent();
-			const items: PdfTextItem[] = [];
-			for (const raw of content.items) {
-				if (!('str' in raw) || raw.str.trim() === '') continue;
-				const transform = raw.transform as number[];
-				items.push({
-					text: raw.str,
-					x: transform[4] ?? 0,
-					y: transform[5] ?? 0,
-					height: raw.height,
-					width: raw.width,
-				});
-			}
-			return { kind: 'ok', items };
-		} finally {
-			await task.destroy();
-		}
+			return { kind: 'ok', items: await readTextItems(await doc.getPage(1)) };
+		});
 	} catch (error) {
 		const reason = error instanceof Error ? error.message : String(error);
 		return { kind: 'invalid', reason: `PDF を読めませんでした: ${reason}` };

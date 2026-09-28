@@ -7,6 +7,7 @@ import { defineCommand, runMain } from 'citty';
 import {
 	backupDatabase,
 	createAcademicCalendarStore,
+	createHolidayStore,
 	createSourceHealthStore,
 	createCourseStore,
 	createSubjectStore,
@@ -16,8 +17,10 @@ import {
 } from '@funmary/db';
 // 入口 (@funmary/sources) からだと、取得の部品と依存まで cli.js にまとまるので、PDF の読み取りだけを読み込む
 import { parseTimetablePdf } from '@funmary/sources/timetable-pdf';
+import { parseAcademicCalendarPdf } from '@funmary/sources/academic-calendar-pdf';
 import { academicYearOf, jstDateTime, resolveAcademicTerms } from '@funmary/core';
-import { formatCalendarReport } from './lib/server/calendar-report.ts';
+import { importAcademicCalendar } from './lib/server/academic-calendar-import.ts';
+import { formatCalendarImportReport, formatCalendarReport } from './lib/server/calendar-report.ts';
 import { formatSourcesReport, sourceStatuses } from './lib/server/source-status.ts';
 import { parseConfig, type Config } from './lib/server/config.ts';
 import { fillSecrets, generateSecrets } from './lib/server/env-file.ts';
@@ -317,9 +320,64 @@ const calendarShow = defineCommand({
 	},
 });
 
+const calendarImport = defineCommand({
+	meta: {
+		name: 'import',
+		description:
+			'大学の学年暦の PDF を読み、学期の期間、振替授業日、全学の休講日を取り込む。--apply がなければ確かめるだけ',
+	},
+	args: {
+		file: { type: 'positional', description: '学年暦の PDF', required: true },
+		apply: { type: 'boolean', description: 'DB に書き込む', default: false },
+		'ignore-warnings': {
+			type: 'boolean',
+			description: '読み取りに警告があっても書き込む (内容を確かめてから使う)',
+			default: false,
+		},
+	},
+	async run({ args }) {
+		const parsed = await parseAcademicCalendarPdf(new Uint8Array(readFileSync(args.file)));
+		if (parsed.kind === 'invalid') {
+			console.error(`学年暦の PDF として読めませんでした: ${parsed.reason}`);
+			process.exit(1);
+		}
+		const config = loadConfigOrExit();
+		const database = openDatabase(join(config.dataDir, 'funmary.db'), {
+			backupDir: join(config.dataDir, 'backups'),
+			...(bundledMigrations && { migrationsFolder: bundledMigrations }),
+		});
+		try {
+			// 祝日は保存されたものだけを使う (内閣府の CSV には翌年の分まで載っている)。
+			// 漏れた祝日が休講日に入っても、授業がない日として同じに扱われる
+			const holidays = createHolidayStore(database).list();
+			if (holidays.length === 0) {
+				console.log('祝日がまだ保存されていないので、休講日から祝日を除いていません。');
+			}
+			const report = importAcademicCalendar(
+				parsed,
+				{
+					calendar: createAcademicCalendarStore(database),
+					holidays: holidays.map((holiday) => holiday.date),
+				},
+				{ apply: args.apply, now: new Date(), ignoreWarnings: args['ignore-warnings'] },
+			);
+			if (report.kind === 'has-warnings') {
+				console.error('読み取りに警告があるので、書き込みませんでした。');
+				for (const warning of report.warnings) console.error(`  ${warning}`);
+				console.error('内容を確かめたうえで書き込むなら、--ignore-warnings を付けてください。');
+				process.exitCode = 1;
+				return;
+			}
+			for (const line of formatCalendarImportReport(report)) console.log(line);
+		} finally {
+			database.close();
+		}
+	},
+});
+
 const calendar = defineCommand({
 	meta: { name: 'calendar', description: '学年暦 (学期の期間、振替授業日、全学の休講日) を扱う' },
-	subCommands: { show: calendarShow },
+	subCommands: { show: calendarShow, import: calendarImport },
 });
 
 const sourcesStatus = defineCommand({

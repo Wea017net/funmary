@@ -85,3 +85,15 @@ export {
 	type ImportPayloadResult,
 	type ImportedCell,
 } from './timetable-import/payload.ts';
+export {
+	extractPdfPages,
+	parseAcademicCalendarPdf,
+	type ExtractPagesResult,
+} from './academic-calendar-pdf/extract.ts';
+export {
+	parseAcademicCalendarPages,
+	type AcademicCalendarPdfResult,
+	type NoClassDayCandidate,
+	type PdfFillRect,
+	type PdfPageContent,
+} from './academic-calendar-pdf/calendar.ts';
