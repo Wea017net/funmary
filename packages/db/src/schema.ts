@@ -215,6 +215,8 @@ export const unmatchedLessons = sqliteTable(
 		lessonName: text('lesson_name').notNull(),
 		firstSeenAt: integer('first_seen_at', { mode: 'timestamp_ms' }).notNull(),
 		lastSeenAt: integer('last_seen_at', { mode: 'timestamp_ms' }).notNull(),
+		/** 管理者が「科目にしない」とした時刻。集会など、科目でない名前を一覧から外す */
+		ignoredAt: integer('ignored_at', { mode: 'timestamp_ms' }),
 		/** 管理者が手で紐付けた科目 */
 		resolvedSubjectId: integer('resolved_subject_id').references(() => subjects.id, {
 			onDelete: 'set null',

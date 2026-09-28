@@ -195,6 +195,39 @@ describe('unassignedLessonNames と assignSubject', () => {
 	});
 });
 
+describe('unassignSubject', () => {
+	it('その授業名の行から科目を外し、外した行の数を返す。ほかの授業名は変えない', () => {
+		const subjectId = createSubjectStore(database).upsert(
+			{
+				academicYear: 2026,
+				syllabusId: '100001',
+				name: '線形代数 I',
+				teacher: null,
+				credits: 2,
+				term: 'fall',
+				attributes: {},
+				syllabus: {},
+				syllabusUrl: null,
+			},
+			t1,
+		);
+		const store = createClassChangeStore(database);
+		const result = detectChanges({
+			previous: [],
+			scraped: [item(), item({ period: 4 }), item({ lessonName: 'ほかの科目' })],
+			today: '2026-10-01',
+		});
+		if (result.kind !== 'ok') throw new Error('ok のはず');
+		store.apply(result.next, t1);
+		store.assignSubject('線形代数 I', subjectId);
+		store.assignSubject('ほかの科目', subjectId);
+
+		expect(store.unassignSubject('線形代数 I')).toBe(2);
+		expect(store.unassignedLessonNames()).toEqual(['線形代数 I']);
+		expect(store.listBySubject(subjectId)).toHaveLength(1);
+	});
+});
+
 describe('listAssignedBetween', () => {
 	it('期間内の、科目と照合できた休講などを返す。取り消されたものと、科目が決まっていないものは除く', () => {
 		const subjectId = createSubjectStore(database).upsert(

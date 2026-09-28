@@ -386,7 +386,7 @@ test.describe('管理画面', () => {
 				.prepare(
 					`INSERT INTO unmatched_lessons (academic_year, lesson_name, first_seen_at, last_seen_at)
 						VALUES (2026, '架空の演習Ⅱ (再)', 0, 0)
-						ON CONFLICT DO UPDATE SET resolved_subject_id = NULL`,
+						ON CONFLICT DO UPDATE SET resolved_subject_id = NULL, ignored_at = NULL`,
 				)
 				.run();
 			database.sqlite
@@ -435,6 +435,34 @@ test.describe('管理画面', () => {
 			'架空の演習Ⅱ (再) を 架空の演習Ⅱ1-AB に紐付けました (休講などの 1 件に科目を入れました)。',
 		);
 		await expect(page.getByRole('heading', { name: '架空の演習Ⅱ (再)' })).toHaveCount(0);
+
+		// 紐付け済みの一覧に移る。紐付けを外すと、照合できなかった一覧に戻る
+		const resolved = page.getByRole('region', { name: '紐付け済み' });
+		await expect(resolved).toContainText('架空の演習Ⅱ (再)');
+		await expect(resolved.getByRole('link', { name: '架空の演習Ⅱ1-AB' })).toBeVisible();
+		await resolved.getByRole('button', { name: '紐付けを外す' }).click();
+		await expect(page.getByRole('status')).toHaveText(
+			'架空の演習Ⅱ (再) の紐付けを外しました (休講などの 1 件から科目を外しました)。',
+		);
+		await expect(page.getByRole('heading', { name: '架空の演習Ⅱ (再)' })).toBeVisible();
+		await expect(page.getByRole('region', { name: '紐付け済み' })).toHaveCount(0);
+
+		// 科目にしないと、一覧から外れ、あとで戻せる
+		await page
+			.getByRole('listitem')
+			.filter({ hasText: '架空の演習Ⅱ (再)' })
+			.getByRole('button', { name: '科目にしない' })
+			.click();
+		await expect(page.getByRole('heading', { name: '架空の演習Ⅱ (再)' })).toHaveCount(0);
+		const ignored = page.getByRole('region', { name: '科目にしない' });
+		await expect(ignored).toContainText('架空の演習Ⅱ (再)');
+		await ignored
+			.getByRole('listitem')
+			.filter({ hasText: '架空の演習Ⅱ (再)' })
+			.getByRole('button', { name: '一覧に戻す' })
+			.click();
+		await expect(page.getByRole('heading', { name: '架空の演習Ⅱ (再)' })).toBeVisible();
+		await expect(ignored.getByText('架空の演習Ⅱ (再)')).toHaveCount(0);
 	});
 });
 

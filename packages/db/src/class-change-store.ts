@@ -27,6 +27,8 @@ export interface ClassChangeStore {
 	unassignedLessonNames(): string[];
 	/** 科目が決まっていない、その授業名の行に科目を入れ、変えた行の数を返す。決まっている行は変えない */
 	assignSubject(lessonName: string, subjectId: number): number;
+	/** その授業名の行から科目を外し、外した行の数を返す (紐付けを直すときに使う) */
+	unassignSubject(lessonName: string): number;
 }
 
 export interface SubjectClassChange {
@@ -189,6 +191,13 @@ export function createClassChangeStore(database: Database): ClassChangeStore {
 				.update(classChanges)
 				.set({ subjectId })
 				.where(and(eq(classChanges.lessonName, lessonName), isNull(classChanges.subjectId)))
+				.run().changes;
+		},
+		unassignSubject(lessonName) {
+			return db
+				.update(classChanges)
+				.set({ subjectId: null })
+				.where(and(eq(classChanges.lessonName, lessonName), isNotNull(classChanges.subjectId)))
 				.run().changes;
 		},
 	};
