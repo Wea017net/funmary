@@ -3,6 +3,7 @@ import { redirect, type ServerLoad } from '@sveltejs/kit';
 import { DEFAULT_PERIODS, addDays, findNextLesson, isStale, jstDateTime } from '@funmary/core';
 import { PORTAL_SOURCE } from '@funmary/jobs';
 import { getServices } from '$lib/server/services.ts';
+import { eventsOnDate } from '$lib/server/event-view.ts';
 import { toLessonView } from '$lib/server/lesson-view.ts';
 import { buildUserTimetable } from '$lib/server/user-timetable.ts';
 
@@ -28,6 +29,7 @@ export const load: ServerLoad = ({ locals }) => {
 			date: current.date,
 			note: timetable.notes.get(current.date) ?? null,
 			lessons: timetable.lessons.filter((lesson) => lesson.date === current.date).map(toLessonView),
+			events: eventsOnDate(services.userEvents.listByOwner(locals.user.id), current.date),
 			next: next && { ...toLessonView(next.lesson), inProgress: next.inProgress },
 			hasRegistrations,
 			// 履修科目を登録したら、カレンダーに入れられることを知らせる

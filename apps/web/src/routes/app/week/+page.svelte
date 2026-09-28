@@ -8,6 +8,7 @@
 	import IconSubstitute from '~icons/material-symbols/swap-horiz';
 	import LessonRoom from '$lib/components/LessonRoom.svelte';
 	import StatusBadge from '$lib/components/StatusBadge.svelte';
+	import type { EventView } from '$lib/server/event-view.ts';
 	import type { LessonView } from '$lib/server/lesson-view.ts';
 	import type { DayNote } from '$lib/server/user-timetable.ts';
 	import {
@@ -37,6 +38,7 @@
 			view: WeekView;
 			days: { date: string; note: DayNote | null }[];
 			rows: Row[];
+			eventCells: { date: string; events: EventView[] }[];
 			hasLessons: boolean;
 			usesEstimatedTerms: boolean;
 		};
@@ -193,6 +195,24 @@
 				</tr>
 			</thead>
 			<tbody>
+				{#if data.eventCells.some((cell) => cell.events.length > 0)}
+					<tr>
+						<th scope="row">予定</th>
+						{#each data.eventCells as cell (cell.date)}
+							<td class={{ today: cell.date === data.today, off: offDates.has(cell.date) }}>
+								{#each cell.events as event (event.key)}
+									<div class="event">
+										<a href={resolve('/app/events/[id]', { id: String(event.eventId) })}
+											>{event.title}</a
+										>
+										<span class="time">{event.time}{event.continued ? ' (続き)' : ''}</span>
+										{#if event.location}<span class="room">{event.location}</span>{/if}
+									</div>
+								{/each}
+							</td>
+						{/each}
+					</tr>
+				{/if}
 				{#each data.rows as row (row.period)}
 					<tr>
 						<th scope="row">
@@ -421,6 +441,12 @@
 		color: var(--fm-text-muted);
 		font-size: 0.75rem;
 		font-weight: normal;
+	}
+	.event + .event {
+		margin-top: 0.5rem;
+	}
+	.event a {
+		display: block;
 	}
 	.lesson + .lesson {
 		margin-top: 0.5rem;

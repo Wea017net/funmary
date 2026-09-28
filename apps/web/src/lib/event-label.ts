@@ -40,3 +40,17 @@ export function formatEventTime(time: EventTime): string {
 	if (time.kind === 'time') return `${time.start}-${time.end}`;
 	return time.from === time.to ? `${time.from} 限` : `${time.from} 限から ${time.to} 限`;
 }
+
+/** 展開した 1 回の予定の時間を、文にする。例: "終日"、"18:00-19:30"、"2 限から 3 限" */
+export function formatOccurrenceTime(occurrence: {
+	readonly allDay: boolean;
+	readonly start: string | null;
+	readonly end: string | null;
+	readonly periods: { readonly from: number; readonly to: number } | null;
+}): string {
+	if (occurrence.allDay) return '終日';
+	if (occurrence.periods) {
+		return formatEventTime({ kind: 'period', ...occurrence.periods });
+	}
+	return `${occurrence.start ?? ''}-${occurrence.end ?? ''}`;
+}

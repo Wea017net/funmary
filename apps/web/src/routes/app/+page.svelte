@@ -2,6 +2,7 @@
 	import { resolve } from '$app/paths';
 	import LessonRoom from '$lib/components/LessonRoom.svelte';
 	import StatusBadge from '$lib/components/StatusBadge.svelte';
+	import type { EventView } from '$lib/server/event-view.ts';
 	import type { LessonView } from '$lib/server/lesson-view.ts';
 	import type { DayNote } from '$lib/server/user-timetable.ts';
 	import { formatDate, formatDayNote, formatFetchedAt } from '$lib/timetable-label.ts';
@@ -13,6 +14,7 @@
 		date: string;
 		note: DayNote | null;
 		lessons: LessonView[];
+		events: EventView[];
 		next: (LessonView & { inProgress: boolean }) | null;
 		hasRegistrations: boolean;
 		/** カレンダーの購読の URL を発行していない */
@@ -89,6 +91,24 @@
 			<p class="muted">今日の授業はありません。</p>
 		{/if}
 	</section>
+
+	{#if today.events.length > 0}
+		<section aria-labelledby="events-heading">
+			<h2 id="events-heading">今日の予定</h2>
+			<ul class="events">
+				{#each today.events as event (event.key)}
+					<li>
+						<span class="when">{event.time}</span>
+						<span class="what">
+							<a href={resolve('/app/events/[id]', { id: String(event.eventId) })}>{event.title}</a>
+							{#if event.continued}<span class="muted">(続き)</span>{/if}
+							{#if event.location}<span class="muted">{event.location}</span>{/if}
+						</span>
+					</li>
+				{/each}
+			</ul>
+		</section>
+	{/if}
 
 	{#if today.suggestCalendar}
 		<a class="suggest" href={resolve('/app/settings/calendar')}>
@@ -233,6 +253,21 @@
 		li {
 			display: grid;
 			grid-template-columns: 5.5rem minmax(0, 1fr) auto;
+			align-items: baseline;
+			gap: 0.25rem 1rem;
+			padding: 0.75rem 0;
+			border-bottom: 1px dashed var(--fm-divider);
+		}
+	}
+
+	.events {
+		margin: 0;
+		padding: 0;
+		list-style: none;
+
+		li {
+			display: grid;
+			grid-template-columns: 7.5rem minmax(0, 1fr);
 			align-items: baseline;
 			gap: 0.25rem 1rem;
 			padding: 0.75rem 0;
