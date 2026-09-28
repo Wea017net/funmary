@@ -2,6 +2,7 @@
 import { Hono } from 'hono';
 import { createAuthRoutes, type AuthRoutesDeps } from './auth-routes.ts';
 import { createCalendarRoutes, type CalendarRoutesDeps } from './calendar-routes.ts';
+import { errorResponse } from './error-page.ts';
 
 export interface ApiDeps {
 	/** 処理の途中で例外が出たときに呼ぶ。画面には内部の情報を出さず、ここで記録する */
@@ -18,8 +19,9 @@ export function createApi(deps: ApiDeps): Hono {
 	const app = new Hono();
 	app.onError((error, c) => {
 		deps.onError?.(error, c.req.path);
-		return c.text('Internal Server Error', 500);
+		return errorResponse(c, 500);
 	});
+	app.notFound((c) => errorResponse(c, 404));
 	if (deps.auth) app.route('/', createAuthRoutes(deps.auth));
 	if (deps.calendar) app.route('/', createCalendarRoutes(deps.calendar));
 

@@ -4,6 +4,7 @@ import { openFlow, sealFlow, type AuthService, type DenyReason } from '@funmary/
 import { Hono, type Context } from 'hono';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
 import type { CookieOptions } from 'hono/utils/cookie';
+import { errorResponse } from './error-page.ts';
 
 export interface AuthRoutesDeps {
 	readonly service: AuthService;
@@ -98,7 +99,7 @@ export function createAuthRoutes(deps: AuthRoutesDeps): Hono {
 	app.post('/auth/logout', (c) => {
 		// 他のサイトのフォームからの送信を断る。SameSite=Lax でも防げるが、送り元の確認も重ねる
 		const origin = c.req.header('Origin');
-		if (origin !== undefined && origin !== deps.origin) return c.text('Forbidden', 403);
+		if (origin !== undefined && origin !== deps.origin) return errorResponse(c, 403);
 		const token = getCookie(c, sessionName);
 		if (token) deps.deleteSession(token);
 		deleteCookie(c, sessionName, { path: '/', secure });
