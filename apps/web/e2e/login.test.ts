@@ -36,6 +36,52 @@ test('ログインしていないと、トップページにログインへの�
 	await expect(page.getByRole('link', { name: '大学のアカウントではじめる' })).toBeVisible();
 });
 
+test.describe('ホーム画面に追加 (PWA)', () => {
+	test('マニフェストとアイコンを配る', async ({ request }) => {
+		const manifest = await request.get('/manifest.webmanifest');
+		expect(manifest.status()).toBe(200);
+		expect(manifest.headers()['content-type']).toContain('manifest+json');
+		const body = (await manifest.json()) as { icons: { src: string }[] };
+		expect(body).toMatchObject({ start_url: '/app', scope: '/app', display: 'standalone' });
+		for (const icon of [
+			...body.icons.map((i: { src: string }) => i.src),
+			'/apple-touch-icon.png',
+		]) {
+			const response = await request.get(icon);
+			expect(response.status(), icon).toBe(200);
+			expect(response.headers()['content-type']).toBe('image/png');
+		}
+	});
+
+	test('ブラウザで開くと、設定に追加のやり方を出し、追加したアプリで開くと出さない', async ({
+		browser,
+	}) => {
+		const email = 'e2e-pwa@fun.ac.jp';
+		const login = async (page: import('@playwright/test').Page) => {
+			oidc.setIdentity({ sub: email, email, email_verified: true, hd: 'fun.ac.jp' });
+			await page.goto('/auth/google');
+			await expect(page).toHaveURL('/app');
+			await page.goto('/app/settings');
+		};
+
+		const browserPage = await (await browser.newContext()).newPage();
+		await login(browserPage);
+		const guide = browserPage.getByRole('region', { name: 'アプリとして使う' });
+		await expect(guide).toContainText('ホーム画面に追加');
+		await expect(guide).toContainText('プッシュ通知は、今後対応する予定');
+
+		// iOS のホーム画面のアプリは、navigator.standalone が true になる
+		const context = await browser.newContext();
+		await context.addInitScript(() => {
+			Object.defineProperty(navigator, 'standalone', { value: true });
+		});
+		const installedPage = await context.newPage();
+		await login(installedPage);
+		await expect(installedPage.getByRole('heading', { name: '設定', exact: true })).toBeVisible();
+		await expect(installedPage.getByRole('region', { name: 'アプリとして使う' })).toHaveCount(0);
+	});
+});
+
 test('大学のアカウントでログインでき、ログアウトできる', async ({ page }) => {
 	oidc.setIdentity({
 		sub: 'e2e-taro',

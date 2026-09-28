@@ -8,6 +8,7 @@
 		"dev": "node scripts/build-theme.js && vite dev",
 		"build": "node scripts/build-theme.js && vite build && node scripts/copy-migrations.js",
 		"theme": "node scripts/build-theme.js",
+		"build:icons": "node scripts/build-icons.js",
 		"bundle-cli": "tsdown",
 		"preview": "vite preview",
 		"prepare": "svelte-kit sync || echo \"svelte-kit sync をスキップしました\"",
