@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatCalendarReport } from './calendar-report.ts';
+import { formatCalendarImportReport, formatCalendarReport } from './calendar-report.ts';
 
 describe('formatCalendarReport', () => {
 	it('学期の期間を出どころ付きで、振替授業日と全学の休講日を日付の順に出す', () => {
@@ -49,5 +49,50 @@ describe('formatCalendarReport', () => {
 			'全学の休講日',
 			'  (なし)',
 		]);
+	});
+});
+
+describe('formatCalendarImportReport', () => {
+	const report = {
+		kind: 'planned',
+		academicYear: 2030,
+		terms: [{ term: 'spring', start: '2030-04-08', end: '2030-07-26' }],
+		substituteDays: [{ date: '2030-05-01', weekday: 1 }],
+		noClassDays: [],
+		warnings: ['2030-05-13 の回数が合いません'],
+		applied: null,
+	} as const;
+
+	it('確かめるだけのときは、読んだ内容と警告と、書き込んでいないことを出す', () => {
+		expect(formatCalendarImportReport(report)).toEqual([
+			'学年暦の PDF から読んだ 2030 年度の内容',
+			'',
+			'学期の期間',
+			'  前期  2030-04-08 から 2030-07-26  学年暦から自動',
+			'',
+			'振替授業日',
+			'  2030-05-01  月曜の授業',
+			'',
+			'全学の休講日',
+			'  (なし)',
+			'',
+			'警告: 2030-05-13 の回数が合いません',
+			'確かめただけで、DB には書き込んでいません。書き込むには --apply を付けてください。',
+		]);
+	});
+
+	it('書き込んだときは、上書きしなかったものを出す', () => {
+		const lines = formatCalendarImportReport({
+			...report,
+			warnings: [],
+			applied: {
+				skippedTerms: ['spring'],
+				skippedSubstituteDays: [],
+				skippedNoClassDays: ['2030-06-14'],
+			},
+		});
+		expect(lines.at(-1)).toBe(
+			'管理画面で入れた値があるので、上書きしなかったもの: 前期、休講日 2030-06-14',
+		);
 	});
 });

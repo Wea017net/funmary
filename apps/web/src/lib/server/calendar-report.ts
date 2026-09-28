@@ -1,6 +1,7 @@
-// 管理用コマンド calendar show の表示 (設計書 19.4)。学期の期間は値の出どころ付きで出す。
+// 管理用コマンド calendar show と calendar import の表示 (設計書 19.4)。学期の期間は値の出どころ付きで出す。
 import type { ResolvedTerm, SubstituteDay, TermSource } from '@funmary/core';
 import type { NoClassDay } from '@funmary/db';
+import type { AcademicCalendarImportReport } from './academic-calendar-import.ts';
 import { formatTerm, WEEKDAY_LABELS } from '../term-label.ts';
 
 const SOURCE_LABELS: Record<TermSource, string> = {
@@ -45,4 +46,35 @@ export function formatCalendarReport(input: CalendarReportInput): string[] {
 			input.noClassDays.map((day) => (day.label ? `${day.date}  ${day.label}` : day.date)),
 		),
 	];
+}
+
+/** 管理用コマンド calendar import の表示。PDF から読んだ内容と、書き込んだ結果を出す */
+export function formatCalendarImportReport(
+	report: Extract<AcademicCalendarImportReport, { kind: 'planned' }>,
+): string[] {
+	const [, ...body] = formatCalendarReport({
+		academicYear: report.academicYear,
+		terms: report.terms.map((term) => ({ ...term, source: 'auto' })),
+		substituteDays: report.substituteDays,
+		noClassDays: report.noClassDays,
+	});
+	const lines = [`学年暦の PDF から読んだ ${report.academicYear} 年度の内容`, ...body, ''];
+	for (const warning of report.warnings) lines.push(`警告: ${warning}`);
+	if (!report.applied) {
+		lines.push(
+			'確かめただけで、DB には書き込んでいません。書き込むには --apply を付けてください。',
+		);
+		return lines;
+	}
+	const { skippedTerms, skippedSubstituteDays, skippedNoClassDays } = report.applied;
+	lines.push('書き込みました。祝日と重なる休講日は、祝日として扱われるので入れていません。');
+	const skipped = [
+		...skippedTerms.map(formatTerm),
+		...skippedSubstituteDays.map((date) => `振替授業日 ${date}`),
+		...skippedNoClassDays.map((date) => `休講日 ${date}`),
+	];
+	if (skipped.length > 0) {
+		lines.push(`管理画面で入れた値があるので、上書きしなかったもの: ${skipped.join('、')}`);
+	}
+	return lines;
 }

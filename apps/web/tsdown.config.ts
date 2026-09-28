@@ -12,7 +12,7 @@ export default defineConfig({
 	// 拡張子は .js にする。package.json の type が module なので ESM として動く
 	fixedExtension: false,
 	// 同梱するのは、本番の依存に入れない部品だけ。増えたときは、意図したものかを確かめてからここに足す
-	// pdfjs-dist は timetable import (授業時間割の PDF の読み取り) で使う
+	// pdfjs-dist は timetable import と calendar import (授業時間割と学年暦の PDF の読み取り) で使う
 	deps: { onlyBundle: ['citty', 'drizzle-orm', 'valibot', 'pdfjs-dist'] },
 	// 依存の版はリリースで固定するので、宣言ファイルは要らない
 	dts: false,
