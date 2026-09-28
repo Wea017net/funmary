@@ -97,3 +97,11 @@ export {
 	type PdfFillRect,
 	type PdfPageContent,
 } from './academic-calendar-pdf/calendar.ts';
+export {
+	ACADEMIC_INFO_URL,
+	fetchAcademicCalendarPdf,
+	findAcademicCalendarLinks,
+	type AcademicCalendarLink,
+	type FetchAcademicCalendarDeps,
+	type FetchAcademicCalendarResult,
+} from './academic-calendar-site/fetch.ts';

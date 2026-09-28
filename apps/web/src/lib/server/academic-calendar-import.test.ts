@@ -3,7 +3,11 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createAcademicCalendarStore, openDatabase, type Database } from '@funmary/db';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { importAcademicCalendar, type ParsedAcademicCalendar } from './academic-calendar-import.ts';
+import {
+	importAcademicCalendar,
+	importAcademicCalendarPdf,
+	type ParsedAcademicCalendar,
+} from './academic-calendar-import.ts';
 
 let dir: string;
 let database: Database;
@@ -108,5 +112,39 @@ describe('学年暦の取り込み', () => {
 
 		importAcademicCalendar(warned, deps(), { apply: true, now: NOW, ignoreWarnings: true });
 		expect(createAcademicCalendarStore(database).listTerms(2030)).toHaveLength(2);
+	});
+});
+
+describe('importAcademicCalendarPdf (定期処理から使う)', () => {
+	const PDF = new Uint8Array([1, 2, 3]);
+
+	it('読み取って書き込み、年度と、手で入れた値を上書きしなかった数を返す', async () => {
+		createAcademicCalendarStore(database).saveTerm(
+			2030,
+			{ term: 'spring', start: '2030-04-01', end: '2030-07-31' },
+			'manual',
+			NOW,
+		);
+		const outcome = await importAcademicCalendarPdf(PDF, deps(), NOW, () =>
+			Promise.resolve(parsed),
+		);
+		expect(outcome).toEqual({ kind: 'applied', academicYear: 2030, skipped: 1 });
+		expect(
+			createAcademicCalendarStore(database).listSubstituteDays('2030-04-01', '2031-03-31'),
+		).toHaveLength(1);
+	});
+
+	it('読み取れない、警告がある、ときは書き込まない', async () => {
+		expect(
+			await importAcademicCalendarPdf(PDF, deps(), NOW, () =>
+				Promise.resolve({ kind: 'invalid', reason: '凡例がない' }),
+			),
+		).toEqual({ kind: 'invalid', reason: '凡例がない' });
+		expect(
+			await importAcademicCalendarPdf(PDF, deps(), NOW, () =>
+				Promise.resolve({ ...parsed, warnings: ['回数が合わない'] }),
+			),
+		).toEqual({ kind: 'has-warnings', warnings: ['回数が合わない'] });
+		expect(createAcademicCalendarStore(database).listTerms(2030)).toEqual([]);
 	});
 });

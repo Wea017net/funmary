@@ -3,6 +3,7 @@
 // 管理者が入れた値 (manual) は上書きしない。休講日の候補のうち祝日と重なる日は、祝日として扱われるので入れない。
 import type { CalendarDate, Term } from '@funmary/core';
 import type { AcademicCalendarStore } from '@funmary/db';
+import type { AcademicCalendarImportOutcome } from '@funmary/jobs';
 import type { AcademicCalendarPdfResult } from '@funmary/sources';
 
 export type ParsedAcademicCalendar = Extract<AcademicCalendarPdfResult, { kind: 'ok' }>;
@@ -74,4 +75,26 @@ export function importAcademicCalendar(
 			skippedNoClassDays: skippedDays.noClassDays,
 		},
 	};
+}
+
+/**
+ * 学年暦の定期処理から使う。PDF を読み取り、警告がなければ書き込む。
+ * parse は PDF の読み取り (pdfjs-dist を使うので、呼ぶ側が必要なときだけ読み込む)
+ */
+export async function importAcademicCalendarPdf(
+	bytes: Uint8Array,
+	deps: AcademicCalendarImportDeps,
+	now: Date,
+	parse: (bytes: Uint8Array) => Promise<AcademicCalendarPdfResult>,
+): Promise<AcademicCalendarImportOutcome> {
+	const parsed = await parse(bytes);
+	if (parsed.kind === 'invalid') return { kind: 'invalid', reason: parsed.reason };
+	const report = importAcademicCalendar(parsed, deps, { apply: true, now });
+	if (report.kind === 'has-warnings') return { kind: 'has-warnings', warnings: report.warnings };
+	const skipped = report.applied
+		? report.applied.skippedTerms.length +
+			report.applied.skippedSubstituteDays.length +
+			report.applied.skippedNoClassDays.length
+		: 0;
+	return { kind: 'applied', academicYear: report.academicYear, skipped };
 }

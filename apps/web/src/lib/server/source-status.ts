@@ -7,6 +7,7 @@ const SOURCE_LABELS = new Map([
 	['portal', '学生ポータル (休講など)'],
 	['syllabus', '公開シラバス'],
 	['holidays', '内閣府の祝日'],
+	['academic-calendar', '学年暦 (大学サイトの PDF)'],
 ]);
 
 export interface SourceStatusRow {

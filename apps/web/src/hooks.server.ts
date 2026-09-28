@@ -25,6 +25,7 @@ import {
 	type AuthStore,
 } from '@funmary/db';
 import {
+	createImportAcademicCalendarJob,
 	createImportSyllabusJob,
 	createJobRunner,
 	createImportHolidaysJob,
@@ -35,6 +36,7 @@ import {
 import {
 	bundledHolidays,
 	estimateHolidays,
+	fetchAcademicCalendarPdf,
 	fetchHolidays,
 	fetchPortalPage,
 	fetchSyllabusCatalog,
@@ -42,6 +44,7 @@ import {
 import { createAdminAlerter } from '@funmary/notify';
 import { createLogger, type Logger } from '@funmary/log';
 import { parseConfig } from '$lib/server/config.ts';
+import { importAcademicCalendarPdf } from '$lib/server/academic-calendar-import.ts';
 import { findBuildInfo } from '$lib/server/build-info.ts';
 import { loadCalendarFeed } from '$lib/server/calendar-feed.ts';
 import { legacyAppPath } from '$lib/server/legacy-path.ts';
@@ -143,6 +146,28 @@ export const init: ServerInit = () => {
 			alert: (alert) => alerter.send(alert),
 		}),
 	);
+	// 学年暦は、大学サイトの PDF を月に 1 回取り、変わったときだけ取り込む。手で入れた値は上書きしない
+	const academicCalendarStore = createAcademicCalendarStore(database);
+	jobs.push(
+		createImportAcademicCalendarJob({
+			fetchPdf: () => fetchAcademicCalendarPdf({ fetch: (url, init) => fetch(url, init) }),
+			importPdf: (bytes) =>
+				importAcademicCalendarPdf(
+					bytes,
+					{
+						calendar: academicCalendarStore,
+						holidays: holidayStore.list().map((holiday) => holiday.date),
+					},
+					new Date(),
+					// PDF の読み取り (pdfjs-dist) は大きいので、使うときだけ読み込む
+					async (pdf) =>
+						(await import('@funmary/sources/academic-calendar-pdf')).parseAcademicCalendarPdf(pdf),
+				),
+			disabledSources: result.config.sourcesDisabled,
+			health: createSourceHealthStore(database),
+			alert: (alert) => alerter.send(alert),
+		}),
+	);
 	const portal = result.config.portal;
 	const heartbeatUrl = result.config.heartbeatUrl;
 	if (portal) {
@@ -215,7 +240,7 @@ export const init: ServerInit = () => {
 		subjects: subjectStore,
 		classChanges: changeStore,
 		unmatchedLessons: unmatchedStore,
-		academicCalendar: createAcademicCalendarStore(database),
+		academicCalendar: academicCalendarStore,
 		holidays: holidayStore,
 		sourceHealth: createSourceHealthStore(database),
 		jobRuns: jobRunStore,
