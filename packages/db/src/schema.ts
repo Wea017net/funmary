@@ -74,6 +74,25 @@ export const inviteCodes = sqliteTable('invite_codes', {
 	revokedAt: integer('revoked_at', { mode: 'timestamp_ms' }),
 });
 
+/**
+ * 利用者ごとに付けた権限 (例: invite:create は招待コードの発行)。
+ * 将来ロールを足すときは、ロールを権限の組として定義し、この表は個別に付けた分だけを持つ
+ */
+export const userPermissions = sqliteTable(
+	'user_permissions',
+	{
+		userId: text('user_id')
+			.notNull()
+			.references(() => users.id, { onDelete: 'cascade' }),
+		permission: text('permission', { enum: ['invite:create'] }).notNull(),
+		grantedBy: text('granted_by').references((): AnySQLiteColumn => users.id, {
+			onDelete: 'set null',
+		}),
+		grantedAt: integer('granted_at', { mode: 'timestamp_ms' }).notNull(),
+	},
+	(table) => [primaryKey({ columns: [table.userId, table.permission] })],
+);
+
 // ---------------------------------------------------------------------------
 // 科目と履修
 

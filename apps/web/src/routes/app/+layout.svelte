@@ -7,6 +7,7 @@
 	import type { ThemePreference } from '$lib/theme.ts';
 	import IconAdmin from '~icons/material-symbols/shield-person-outline';
 	import IconCourses from '~icons/material-symbols/menu-book-outline';
+	import IconInvite from '~icons/material-symbols/person-add-outline';
 	import IconLogout from '~icons/material-symbols/logout';
 	import IconToday from '~icons/material-symbols/today-outline';
 	import IconWeek from '~icons/material-symbols/calendar-view-week-outline';
@@ -15,7 +16,11 @@
 		data,
 		children,
 	}: {
-		data: { user: { email: string; isAdmin: boolean }; theme: ThemePreference };
+		data: {
+			user: { email: string; isAdmin: boolean };
+			theme: ThemePreference;
+			canInvite: boolean;
+		};
 		children: Snippet;
 	} = $props();
 
@@ -41,6 +46,16 @@
 				page.url.pathname.startsWith('/app/courses') ||
 				page.url.pathname.startsWith('/app/subjects'),
 		},
+		...(data.canInvite
+			? [
+					{
+						href: resolve('/app/invites'),
+						label: '招待',
+						icon: IconInvite,
+						current: page.url.pathname.startsWith('/app/invites'),
+					},
+				]
+			: []),
 		...(data.user.isAdmin
 			? [
 					{

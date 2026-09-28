@@ -1,10 +1,11 @@
-// 利用者、セッション、招待コードの保存 (設計書 8 章)。
+// 利用者、セッション、招待コード、利用者の権限の保存 (設計書 8 章)。
 // セッションの ID と招待コードは、DB には SHA-256 だけを保存する。DB が漏れても、そのまま使われないようにするため。
 import { randomBytes } from 'node:crypto';
-import { and, eq, isNull, lt, sql } from 'drizzle-orm';
+import type { Permission } from '@funmary/core';
+import { and, desc, eq, gt, isNull, lt, sql } from 'drizzle-orm';
 import type { Database } from './database.ts';
 import { generateToken, hashToken } from './secrets.ts';
-import { inviteCodes, sessions, users } from './schema.ts';
+import { inviteCodes, sessions, userPermissions, users } from './schema.ts';
 
 /** セッションの有効期限。使うたびに延ばす */
 export const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
@@ -71,6 +72,42 @@ export interface AuthStore {
 	): string;
 	findInviteCode(code: string): InviteCodeRecord | null;
 	revokeInviteCode(id: number, now: Date): void;
+	/** 招待コードの一覧を、発行の新しい順に返す。createdBy を渡すと、その人が発行したものだけ */
+	listInviteCodes(filter?: { createdBy?: string }): InviteCodeSummary[];
+	/** since より後に、その人が発行した招待コードの数 (取り消したものも数える) */
+	countInviteCodesSince(userId: string, since: Date): number;
+
+	listPermissions(userId: string): Permission[];
+	/** 権限を付ける (granted が true) か外す。付けた人と時刻を残す */
+	setPermission(
+		userId: string,
+		permission: Permission,
+		granted: boolean,
+		grantedBy: string | null,
+		now: Date,
+	): void;
+	/** 利用者の一覧を、メールアドレスの順に返す (管理画面の権限の設定に使う) */
+	listUsers(): UserSummary[];
+}
+
+export interface InviteCodeSummary {
+	readonly id: number;
+	readonly note: string | null;
+	readonly maxUses: number;
+	readonly usedCount: number;
+	readonly expiresAt: Date | null;
+	readonly revoked: boolean;
+	readonly createdAt: Date;
+	readonly createdBy: string | null;
+	readonly createdByEmail: string | null;
+}
+
+export interface UserSummary {
+	readonly id: string;
+	readonly email: string;
+	readonly role: 'user' | 'admin';
+	readonly status: 'active' | 'suspended';
+	readonly permissions: readonly Permission[];
 }
 
 type UserRow = typeof users.$inferSelect;
@@ -235,6 +272,71 @@ export function createAuthStore(database: Database): AuthStore {
 						revoked: row.revokedAt !== null,
 					}
 				: null;
+		},
+		listInviteCodes(filter) {
+			return db
+				.select({
+					id: inviteCodes.id,
+					note: inviteCodes.note,
+					maxUses: inviteCodes.maxUses,
+					usedCount: inviteCodes.usedCount,
+					expiresAt: inviteCodes.expiresAt,
+					revokedAt: inviteCodes.revokedAt,
+					createdAt: inviteCodes.createdAt,
+					createdBy: inviteCodes.createdBy,
+					createdByEmail: users.email,
+				})
+				.from(inviteCodes)
+				.leftJoin(users, eq(users.id, inviteCodes.createdBy))
+				.where(filter?.createdBy ? eq(inviteCodes.createdBy, filter.createdBy) : undefined)
+				.orderBy(desc(inviteCodes.createdAt), desc(inviteCodes.id))
+				.all()
+				.map(({ revokedAt, ...row }) => ({ ...row, revoked: revokedAt !== null }));
+		},
+		countInviteCodesSince(userId, since) {
+			return (
+				db
+					.select({ count: sql<number>`count(*)` })
+					.from(inviteCodes)
+					.where(and(eq(inviteCodes.createdBy, userId), gt(inviteCodes.createdAt, since)))
+					.get()?.count ?? 0
+			);
+		},
+		listPermissions(userId) {
+			return db
+				.select({ permission: userPermissions.permission })
+				.from(userPermissions)
+				.where(eq(userPermissions.userId, userId))
+				.all()
+				.map((row) => row.permission);
+		},
+		setPermission(userId, permission, granted, grantedBy, now) {
+			if (granted) {
+				db.insert(userPermissions)
+					.values({ userId, permission, grantedBy, grantedAt: now })
+					.onConflictDoNothing()
+					.run();
+			} else {
+				db.delete(userPermissions)
+					.where(
+						and(eq(userPermissions.userId, userId), eq(userPermissions.permission, permission)),
+					)
+					.run();
+			}
+		},
+		listUsers() {
+			const permissions = db.select().from(userPermissions).all();
+			return db
+				.select({ id: users.id, email: users.email, role: users.role, status: users.status })
+				.from(users)
+				.orderBy(users.email)
+				.all()
+				.map((user) => ({
+					...user,
+					permissions: permissions
+						.filter((row) => row.userId === user.id)
+						.map((row) => row.permission),
+				}));
 		},
 		revokeInviteCode(id, now) {
 			db.update(inviteCodes).set({ revokedAt: now }).where(eq(inviteCodes.id, id)).run();

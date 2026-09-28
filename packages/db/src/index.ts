@@ -45,8 +45,10 @@ export {
 	type AuthStore,
 	type AuthUser,
 	type InviteCodeRecord,
+	type InviteCodeSummary,
 	type NewUser,
 	type RegisterResult,
+	type UserSummary,
 } from './auth-store.ts';
 export {
 	createSubjectStore,
@@ -70,3 +72,4 @@ export {
 	type UnmatchedLesson,
 	type UnmatchedLessonStore,
 } from './unmatched-lesson-store.ts';
+export { createSettingsStore, type SettingsStore } from './settings-store.ts';

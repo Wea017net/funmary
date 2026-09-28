@@ -27,6 +27,9 @@
 				({data.calendarYear} 年度は入力済み)
 			{/if}
 		</li>
+		<li>
+			<a href={resolve('/app/admin/invites')}>招待コード</a> (発行できる人と、発行されたコード)
+		</li>
 		<li><a href={resolve('/app/admin/status')}>取得元と実行履歴</a></li>
 	</ul>
 </div>

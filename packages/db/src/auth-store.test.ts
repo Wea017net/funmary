@@ -225,3 +225,60 @@ describe('登録 (利用者の作成と招待コードの使用)', () => {
 		expect(store.findUserBySub('g-1')?.role).toBe('admin');
 	});
 });
+
+describe('招待コードの一覧と、今月の発行数', () => {
+	it('発行者とメモと利用状況の一覧を、新しい順に返す。発行者で絞れる', () => {
+		const store = createAuthStore(database);
+		const taro = newUser(store);
+		const hanako = newUser(store, 'g-2', 'hanako@fun.ac.jp');
+		store.createInviteCode({ maxUses: 1, note: '1 つ目', createdBy: taro }, T0);
+		store.createInviteCode(
+			{ maxUses: 3, note: '2 つ目', createdBy: hanako },
+			at('2026-10-02T00:00:00Z'),
+		);
+		expect(store.listInviteCodes()).toMatchObject([
+			{ note: '2 つ目', maxUses: 3, usedCount: 0, createdByEmail: 'hanako@fun.ac.jp' },
+			{ note: '1 つ目', maxUses: 1, usedCount: 0, createdByEmail: 'taro@fun.ac.jp' },
+		]);
+		expect(store.listInviteCodes({ createdBy: taro })).toMatchObject([{ note: '1 つ目' }]);
+	});
+
+	it('指定した時刻より後に、その人が発行した数を数える (取り消したものも数える)', () => {
+		const store = createAuthStore(database);
+		const taro = newUser(store);
+		store.createInviteCode({ maxUses: 1, createdBy: taro }, at('2026-09-30T00:00:00Z'));
+		store.createInviteCode({ maxUses: 1, createdBy: taro }, at('2026-10-05T00:00:00Z'));
+		const code = store.createInviteCode(
+			{ maxUses: 1, createdBy: taro },
+			at('2026-10-06T00:00:00Z'),
+		);
+		store.revokeInviteCode(store.findInviteCode(code)!.id, T0);
+		store.createInviteCode({ maxUses: 1 }, at('2026-10-07T00:00:00Z'));
+		expect(store.countInviteCodesSince(taro, at('2026-10-01T00:00:00Z'))).toBe(2);
+	});
+});
+
+describe('利用者の権限', () => {
+	it('権限を付けて外せる。付けた人と時刻を残し、同じ権限を 2 回付けても 1 つにする', () => {
+		const store = createAuthStore(database);
+		const admin = newUser(store, 'g-admin', 'admin@fun.ac.jp');
+		const taro = newUser(store);
+		expect(store.listPermissions(taro)).toEqual([]);
+		store.setPermission(taro, 'invite:create', true, admin, T0);
+		store.setPermission(taro, 'invite:create', true, admin, T0);
+		expect(store.listPermissions(taro)).toEqual(['invite:create']);
+		store.setPermission(taro, 'invite:create', false, admin, T0);
+		expect(store.listPermissions(taro)).toEqual([]);
+	});
+
+	it('利用者の一覧に、それぞれの権限を付けて返す', () => {
+		const store = createAuthStore(database);
+		const taro = newUser(store);
+		newUser(store, 'g-2', 'hanako@fun.ac.jp');
+		store.setPermission(taro, 'invite:create', true, null, T0);
+		expect(store.listUsers()).toMatchObject([
+			{ email: 'hanako@fun.ac.jp', role: 'user', status: 'active', permissions: [] },
+			{ email: 'taro@fun.ac.jp', role: 'user', status: 'active', permissions: ['invite:create'] },
+		]);
+	});
+});

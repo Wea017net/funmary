@@ -15,6 +15,13 @@
       "when": 1790475380594,
       "tag": "0001_timetable_slot_source",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1790561602353,
+      "tag": "0002_user_permissions",
+      "breakpoints": true
     }
   ]
 }

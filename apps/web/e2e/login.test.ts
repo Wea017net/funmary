@@ -788,3 +788,87 @@ test.describe('取得元と実行履歴', () => {
 		expect(response?.status()).toBe(404);
 	});
 });
+
+test.describe('招待コード', () => {
+	const loginAs = async (page: import('@playwright/test').Page, email: string) => {
+		oidc.setIdentity({ sub: email, email, email_verified: true, hd: 'fun.ac.jp' });
+		await page.goto('/auth/google');
+		await expect(page).toHaveURL('/app');
+	};
+	// E2E の DB は実行をまたいで残る。月の上限に届かないよう、実行ごとに別の人にする
+	const member = `e2e-invite-${Date.now()}@fun.ac.jp`;
+
+	test('管理者は招待コードを発行でき、登録の URL を 1 回だけ出す。一覧に出て、取り消せる', async ({
+		page,
+	}) => {
+		await loginAs(page, 'e2e-admin@fun.ac.jp');
+		await page
+			.getByRole('navigation', { name: 'メニュー' })
+			.first()
+			.getByRole('link', { name: '招待' })
+			.click();
+		await expect(page).toHaveURL('/app/invites');
+		await page.getByLabel('使用回数').fill('2');
+		await page.getByLabel(/^メモ/).fill('E2E の研究室');
+		await page.getByRole('button', { name: '招待コードを発行する' }).click();
+
+		const url = page.getByLabel('登録の URL');
+		await expect(url).toHaveValue(/\/signup\?code=[\w-]+$/);
+		const list = page.getByRole('region', { name: '発行した招待コード' });
+		await expect(list).toContainText('E2E の研究室');
+		await expect(list).toContainText('使用 0 / 2 回');
+
+		// 開き直すと、コードはもう出ない
+		await page.reload();
+		await expect(page.getByLabel('登録の URL')).toHaveCount(0);
+
+		await list
+			.getByRole('listitem')
+			.filter({ hasText: 'E2E の研究室' })
+			.first()
+			.getByRole('button', { name: /^取り消す/ })
+			.click();
+		await expect(page.getByRole('status').first()).toHaveText('招待コードを取り消しました。');
+		await expect(list).toContainText('取り消し済み');
+	});
+
+	test('管理者のみのモードでは、ほかの人には招待が出ない。許可したユーザーのモードで許可すると、発行できる', async ({
+		browser,
+	}) => {
+		const memberPage = await (await browser.newContext()).newPage();
+		await loginAs(memberPage, member);
+		await expect(memberPage.getByRole('link', { name: '招待' })).toHaveCount(0);
+		await memberPage.goto('/app/invites');
+		await expect(memberPage.getByRole('button', { name: '招待コードを発行する' })).toHaveCount(0);
+
+		const adminPage = await (await browser.newContext()).newPage();
+		await loginAs(adminPage, 'e2e-admin@fun.ac.jp');
+		await adminPage.goto('/app/admin/invites');
+		const memberRow = adminPage.getByRole('listitem').filter({ hasText: member });
+		await adminPage.getByLabel(/許可したユーザー/).check();
+		await adminPage.getByRole('button', { name: '保存する' }).click();
+		await expect(adminPage.getByRole('status')).toHaveText(
+			'招待コードを発行できる人の設定を保存しました。',
+		);
+		await memberRow.getByRole('button', { name: /^許可する/ }).click();
+		await expect(memberRow.getByRole('button', { name: /^許可を外す/ })).toBeVisible();
+
+		await memberPage.goto('/app/invites');
+		// 管理者でない人は、回数と期限を決められない
+		await expect(memberPage.getByLabel('使用回数')).toHaveCount(0);
+		await expect(memberPage.getByText('今月はあと 5')).toBeVisible();
+		await memberPage.getByRole('button', { name: '招待コードを発行する' }).click();
+		await expect(memberPage.getByLabel('登録の URL')).toHaveValue(/\/signup\?code=/);
+		await expect(memberPage.getByRole('region', { name: '発行した招待コード' })).toContainText(
+			'使用 0 / 1 回',
+		);
+
+		// ほかのテストに影響しないよう、管理者のみに戻す
+		await memberRow.getByRole('button', { name: /^許可を外す/ }).click();
+		await adminPage.getByLabel(/管理者のみ/).check();
+		await adminPage.getByRole('button', { name: '保存する' }).click();
+		await expect(adminPage.getByRole('status')).toHaveText(
+			'招待コードを発行できる人の設定を保存しました。',
+		);
+	});
+});

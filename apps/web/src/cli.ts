@@ -7,6 +7,7 @@ import { defineCommand, runMain } from 'citty';
 import {
 	backupDatabase,
 	createAcademicCalendarStore,
+	createAuthStore,
 	createHolidayStore,
 	createSourceHealthStore,
 	createCourseStore,
@@ -380,6 +381,66 @@ const calendar = defineCommand({
 	subCommands: { show: calendarShow, import: calendarImport },
 });
 
+const inviteCreate = defineCommand({
+	meta: {
+		name: 'create',
+		description:
+			'招待コードを発行する。コードは DB にハッシュだけを保存するので、ここで 1 回だけ出す',
+	},
+	args: {
+		uses: { type: 'string', description: '使用回数の上限 (1 から 100)', default: '1' },
+		days: {
+			type: 'string',
+			description: '期限までの日数 (1 から 365)。0 なら期限なし',
+			default: '30',
+		},
+		note: { type: 'string', description: '誰に渡したかなどのメモ' },
+	},
+	run({ args }) {
+		const uses = Number(args.uses);
+		const days = Number(args.days);
+		if (!Number.isInteger(uses) || uses < 1 || uses > 100) {
+			console.error(`使用回数は 1 から 100 の整数で指定してください: ${args.uses}`);
+			process.exit(1);
+		}
+		if (!Number.isInteger(days) || days < 0 || days > 365) {
+			console.error(`期限の日数は 0 から 365 の整数で指定してください: ${args.days}`);
+			process.exit(1);
+		}
+		const config = loadConfigOrExit();
+		const database = openDatabase(join(config.dataDir, 'funmary.db'), {
+			backupDir: join(config.dataDir, 'backups'),
+			...(bundledMigrations && { migrationsFolder: bundledMigrations }),
+		});
+		try {
+			const now = new Date();
+			const expiresAt = days === 0 ? null : new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
+			const code = createAuthStore(database).createInviteCode(
+				{ maxUses: uses, expiresAt, note: args.note?.trim() || null },
+				now,
+			);
+			const origin = config.origin ?? 'http://localhost:5173';
+			console.log(`招待コード: ${code}`);
+			console.log(`登録の URL: ${origin}/signup?code=${encodeURIComponent(code)}`);
+			console.log(
+				`使用回数 ${uses} 回、期限 ${expiresAt ? `${jstDateTime(expiresAt).date} ${jstDateTime(expiresAt).time} (日本時間)` : 'なし'}`,
+			);
+			if (config.registration !== 'invite') {
+				console.log(
+					`いまの登録の方式 (REGISTRATION) は ${config.registration} なので、招待コードは登録に使われません。`,
+				);
+			}
+		} finally {
+			database.close();
+		}
+	},
+});
+
+const invite = defineCommand({
+	meta: { name: 'invite', description: '招待コードを扱う' },
+	subCommands: { create: inviteCreate },
+});
+
 const sourcesStatus = defineCommand({
 	meta: { name: 'status', description: '取得元ごとの最終成功時刻と、連続の失敗回数を表示する' },
 	run() {
@@ -405,7 +466,7 @@ const sources = defineCommand({
 
 const main = defineCommand({
 	meta: { name: 'funmary-admin', description: 'Funmary の管理用コマンド' },
-	subCommands: { init, migrate, backup, restore, timetable, calendar, sources },
+	subCommands: { init, migrate, backup, restore, timetable, calendar, invite, sources },
 });
 
 await runMain(main);
