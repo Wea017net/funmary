@@ -1,7 +1,7 @@
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitest/config';
 
-// パッケージごとの設定 (vitest.config.ts) を 1 回の実行にまとめる
+// パッケージごとの設定 (vitest.config.js) を 1 回の実行にまとめる
 export default defineConfig({
 	test: {
 		projects: [

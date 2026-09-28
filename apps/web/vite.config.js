@@ -3,7 +3,7 @@ import { sveltekit } from '@sveltejs/kit/vite';
 import Icons from 'unplugin-icons/vite';
 import { defineConfig } from 'vite';
 
-// 単体テストの設定はルートの vitest.config.ts に置く
+// 単体テストの設定はルートの vitest.config.js に置く
 export default defineConfig({
 	plugins: [
 		sveltekit(),
