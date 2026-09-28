@@ -462,7 +462,7 @@ test.describe('管理画面', () => {
 			.getByRole('button', { name: '一覧に戻す' })
 			.click();
 		await expect(page.getByRole('heading', { name: '架空の演習Ⅱ (再)' })).toBeVisible();
-		await expect(ignored).not.toContainText('架空の演習Ⅱ (再)');
+		await expect(ignored.getByText('架空の演習Ⅱ (再)')).toHaveCount(0);
 	});
 });
 
