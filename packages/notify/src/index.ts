@@ -21,6 +21,11 @@ export {
 	type DiscordRole,
 } from './discord-bot.ts';
 export {
+	createDiscordPresence,
+	type DiscordPresence,
+	type DiscordPresenceOptions,
+} from './discord-presence.ts';
+export {
 	ADMIN_CHANNELS,
 	ADMIN_ROLES,
 	checkChannel,

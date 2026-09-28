@@ -1,5 +1,5 @@
 import { createLogger } from '@funmary/log';
-import { createDiscordBot, type DiscordLayout } from '@funmary/notify';
+import type { DiscordBot, DiscordLayout } from '@funmary/notify';
 import { describe, expect, it } from 'vitest';
 import { sendAdminNotification } from './admin-notify.ts';
 
@@ -10,19 +10,15 @@ const layout: DiscordLayout = {
 };
 const log = createLogger({ level: 'error', format: 'text', mode: 'production', write: () => {} });
 
-function setup(status = 204) {
-	const posts: { url: string; body: { content: string } }[] = [];
-	const bot = createDiscordBot({
-		token: 'dummy-bot-token-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
-		guildId: '111',
-		fetch: (url, init) => {
-			posts.push({
-				url,
-				body: JSON.parse(typeof init?.body === 'string' ? init.body : '{}') as { content: string },
-			});
-			return Promise.resolve(new Response(null, { status }));
+function setup(fail = false) {
+	const posts: { channelId: string; body: { content: string } }[] = [];
+	const bot = {
+		postMessage: (channelId: string, content: string) => {
+			if (fail) return Promise.reject(new Error('失敗'));
+			posts.push({ channelId, body: { content } });
+			return Promise.resolve();
 		},
-	});
+	} as unknown as DiscordBot;
 	return { bot, posts };
 }
 
@@ -41,7 +37,7 @@ describe('sendAdminNotification', () => {
 			}),
 		).resolves.toBe('sent');
 		expect(posts).toHaveLength(1);
-		expect(posts[0]?.url).toBe('https://discord.com/api/v10/channels/21/messages');
+		expect(posts[0]?.channelId).toBe('21');
 		expect(posts[0]?.body.content).toBe('<@&31>\n**反映に失敗**');
 	});
 
@@ -70,7 +66,7 @@ describe('sendAdminNotification', () => {
 	});
 
 	it('送れなかったら failed を返す', async () => {
-		const { bot } = setup(500);
+		const { bot } = setup(true);
 		await expect(
 			sendAdminNotification({ ...base, bot, channel: 'deploy', severity: 'info', message: 'x' }),
 		).resolves.toBe('failed');

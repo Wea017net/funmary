@@ -14,6 +14,17 @@ import {
 /** チャンネルとロールの配置を保存する設定の名前 */
 export const DISCORD_LAYOUT_KEY = 'discord-layout';
 
+/** Bot をオンライン表示にするかを保存する設定の名前。値は { enabled: boolean }。なければ、オン */
+export const DISCORD_PRESENCE_KEY = 'discord-presence';
+
+export function readPresenceEnabled(value: unknown): boolean {
+	return !(
+		typeof value === 'object' &&
+		value !== null &&
+		(value as { enabled?: unknown }).enabled === false
+	);
+}
+
 export const CHANNEL_LABELS: Record<AdminChannel, string> = {
 	deploy: 'ビルドとデプロイの結果',
 	errors: '予期しないエラー、取得元の不調',
@@ -38,14 +49,21 @@ export interface DiscordRow {
 
 export interface DiscordAdminView {
 	readonly botConfigured: boolean;
+	/** オンライン表示の状態。available は、いま動かせる環境か (本番で、送信を止めていないとき) */
+	readonly presence: { readonly available: boolean; readonly enabled: boolean };
 	readonly guildId: string | null;
 	readonly channels: readonly DiscordRow[];
 	readonly roles: readonly DiscordRow[];
 }
 
-export function toDiscordView(bot: DiscordBot | null, layout: DiscordLayout): DiscordAdminView {
+export function toDiscordView(
+	bot: DiscordBot | null,
+	layout: DiscordLayout,
+	presence: { available: boolean; enabled: boolean } = { available: false, enabled: true },
+): DiscordAdminView {
 	return {
 		botConfigured: bot !== null,
+		presence,
 		guildId: bot?.guildId ?? null,
 		channels: ADMIN_CHANNELS.map((name) => ({
 			name,
