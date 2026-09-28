@@ -7,3 +7,11 @@ export {
 	type AuthRoutesDeps,
 	type LoginErrorCode,
 } from './auth-routes.ts';
+export { createCalendarRoutes, type CalendarRoutesDeps } from './calendar-routes.ts';
+export {
+	buildIcs,
+	type CalendarDayEvent,
+	type CalendarFeed,
+	type CalendarLesson,
+	type IcsOptions,
+} from './ics.ts';
