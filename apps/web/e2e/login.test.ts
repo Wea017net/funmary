@@ -1162,6 +1162,82 @@ test.describe('招待コード', () => {
 	});
 });
 
+test.describe('自分の予定', () => {
+	// E2E の DB は実行をまたいで残るので、実行ごとに別の人にする
+	const owner = `e2e-events-${Date.now()}@fun.ac.jp`;
+	const other = `e2e-events-other-${Date.now()}@fun.ac.jp`;
+	const login = async (page: import('@playwright/test').Page, email: string) => {
+		oidc.setIdentity({ sub: email, email, email_verified: true, hd: 'fun.ac.jp' });
+		await page.goto('/auth/google');
+		await expect(page).toHaveURL('/app');
+	};
+
+	test('予定を足し、繰り返しを設定し、ある日を除き、直し、消せる。ほかの人には見えない', async ({
+		browser,
+		page,
+	}) => {
+		await login(page, owner);
+		await page.getByRole('link', { name: '時間割', exact: true }).click();
+		await page.getByRole('link', { name: '自分の予定' }).click();
+		await expect(page.getByText('まだ予定がありません')).toBeVisible();
+
+		// 毎週 月と水、時限で、4 回まで
+		await page.getByRole('link', { name: '予定を足す' }).click();
+		await page.getByLabel('予定の名前').fill('架空のサークル練習');
+		await page.getByLabel('場所 (任意)').fill('架空の部室');
+		await page.getByLabel('開始日').fill('2026-11-02');
+		await page.getByRole('radio', { name: '時限で決める' }).check();
+		await page.getByLabel('始まりの時限').selectOption('5');
+		await page.getByLabel('終わりの時限').selectOption('6');
+		await page.getByLabel('繰り返しの種類').selectOption('weekly');
+		await page.getByRole('checkbox', { name: '月' }).check();
+		await page.getByRole('checkbox', { name: '水' }).check();
+		await page.getByRole('radio', { name: '回数まで' }).check();
+		await page.getByLabel('繰り返す回数').fill('4');
+		await page.getByRole('button', { name: '足す' }).click();
+
+		await expect(page.getByRole('status')).toHaveText('予定を足しました。');
+		const item = page.getByRole('listitem').filter({ hasText: '架空のサークル練習' });
+		await expect(item).toContainText('11/2 (月)、5 限から 6 限');
+		await expect(item).toContainText('繰り返し: 毎週 月、水、4 回まで');
+		await expect(item).toContainText('場所: 架空の部室');
+
+		// 11/4 の回を除く
+		await item.getByRole('link', { name: /^編集/ }).click();
+		await expect(page.getByLabel('予定の名前')).toHaveValue('架空のサークル練習');
+		await page.getByRole('checkbox', { name: /^11\/4 \(水\)/ }).check();
+		await page.getByRole('button', { name: '保存する' }).click();
+		await expect(page.getByRole('status')).toHaveText('予定を直しました。');
+		await page.getByRole('link', { name: /^編集/ }).click();
+		await expect(page.getByRole('checkbox', { name: /^11\/4 \(水\)/ })).toBeChecked();
+		await expect(page.getByRole('checkbox', { name: /^11\/2 \(月\)/ })).not.toBeChecked();
+
+		// 誤りは、入力を残して知らせる
+		await page.getByLabel('終了日 (数日にわたるときだけ)').fill('2026-10-01');
+		await page.getByRole('button', { name: '保存する' }).click();
+		await expect(page.getByRole('alert')).toContainText('終了日は、開始日以降にしてください');
+		await expect(page.getByLabel('場所 (任意)')).toHaveValue('架空の部室');
+
+		// ほかの人には、見えず、開けない
+		const editUrl = page.url();
+		const otherPage = await (await browser.newContext()).newPage();
+		await login(otherPage, other);
+		expect((await otherPage.goto(editUrl))?.status()).toBe(404);
+		await otherPage.goto('/app/events');
+		await expect(otherPage.getByText('まだ予定がありません')).toBeVisible();
+
+		// 消す
+		await page.getByRole('button', { name: 'この予定を消す' }).click();
+		await expect(page.getByRole('status')).toHaveText('予定を消しました。');
+		await expect(page.getByText('まだ予定がありません')).toBeVisible();
+	});
+
+	test('ログインしていなければ、ログインの画面に移る', async ({ page }) => {
+		await page.goto('/app/events');
+		await expect(page).toHaveURL('/login');
+	});
+});
+
 test.describe('カレンダーの購読', () => {
 	// E2E の DB は実行をまたいで残るので、実行ごとに別の人にする
 	const email = `e2e-calendar-${Date.now()}@fun.ac.jp`;
