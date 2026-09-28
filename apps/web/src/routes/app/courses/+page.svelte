@@ -17,6 +17,8 @@
 		teacher: string | null;
 		term: string;
 		userAdded: boolean;
+		/** 学期の期間が学年暦にないので、時間割に出ない */
+		noPeriod: boolean;
 		path: SubjectPathParams;
 		slots: Slot[];
 	}
@@ -79,6 +81,13 @@
 									subject.term,
 								)}{#if subject.teacher}、{subject.teacher}{/if}{#if subject.userAdded}、シラバスにない授業{/if}
 							</p>
+							{#if subject.noPeriod}
+								<p class="note">
+									{formatTerm(
+										subject.term,
+									)}の期間が学年暦にまだないため、この科目は時間割に出ません。管理者が期間を入れると出ます。
+								</p>
+							{/if}
 							{#if subject.slots.length === 0}
 								<p>曜日と時限が、まだ登録されていません。</p>
 							{:else}

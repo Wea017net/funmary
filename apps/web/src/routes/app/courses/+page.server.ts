@@ -1,7 +1,7 @@
 // 履修科目の登録 (設計書 12.1)。科目を探して登録し、曜日と時限が分からない科目には、利用者が手で枠を足す。
 // 枠は科目ごとに共有するので、既にある枠は上書きしない。教室が食い違えば、管理者に知らせる。
 import { fail, redirect, type Actions, type ServerLoad } from '@sveltejs/kit';
-import { jstDateTime } from '@funmary/core';
+import { jstDateTime, resolveAcademicTerms } from '@funmary/core';
 import { parseSlotForm, parseSubjectId } from '$lib/server/course-form.ts';
 import { getServices } from '$lib/server/services.ts';
 import { alertSlotConflicts } from '$lib/server/slot-conflicts.ts';
@@ -21,6 +21,12 @@ export const load: ServerLoad = ({ locals, url }) => {
 		return { academicYear: null, registered: [], query: '', results: [], defaultTerm };
 	}
 
+	// 学年暦に期間がない学期 (集中講義など) の科目は、時間割のどの日にも出ない。画面で知らせる
+	const termsWithPeriod = new Set(
+		resolveAcademicTerms(academicYear, getServices().academicCalendar.listTerms(academicYear)).map(
+			(period) => period.term,
+		),
+	);
 	const registered = courses
 		.listRegistrations(locals.user.id)
 		.flatMap(({ subjectId }) => {
@@ -33,6 +39,7 @@ export const load: ServerLoad = ({ locals, url }) => {
 					teacher: subject.teacher,
 					term: subject.term,
 					userAdded: subject.source === 'user',
+					noPeriod: !termsWithPeriod.has(subject.term as never),
 					path: subjectPathParams(subject),
 					slots: courses
 						.slotsOf(subject.id)

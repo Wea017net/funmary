@@ -1,6 +1,6 @@
 // 学期の期間の決め方 (設計書 10 章)。値は、管理者が入れた値、学年暦から取った値、既定の規則による推定の順に探す。
 // 規則で推定するのは前期と後期だけ。1Q と 2Q は前期、3Q と 4Q は後期の推定の期間をそのまま使う。
-// 集中講義は、保存された値があるときだけ使う。
+// 通年は、前期の始まりから後期の終わりまで。集中講義は、保存された値があるときだけ使う。
 // I/O は持たない。保存された値は引数で受け取る。
 import { addDays, isoWeekday, type CalendarDate } from './calendar-date.ts';
 import type { Term, TermPeriod } from './timetable.ts';
@@ -76,6 +76,17 @@ export function resolveAcademicTerms(
 				source: 'estimated',
 			});
 		}
+	}
+	// 通年は、前期の始まりから後期の終わりまでを使う。期間がないと、通年の授業が時間割のどの日にも出ない
+	const spring = byTerm.get('spring');
+	const fall = byTerm.get('fall');
+	if (spring && fall && !byTerm.has('full-year')) {
+		byTerm.set('full-year', {
+			term: 'full-year',
+			start: spring.start,
+			end: fall.end,
+			source: 'estimated',
+		});
 	}
 	// 開始日の順。同じ日に始まるものは、終わりが遅い (期間が長い) 方を先にする
 	return [...byTerm.values()].sort((a, b) =>
