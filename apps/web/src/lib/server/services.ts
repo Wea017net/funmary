@@ -11,6 +11,7 @@ import type {
 	SourceHealthStore,
 	SubjectStore,
 	UnmatchedLessonStore,
+	UserEventStore,
 } from '@funmary/db';
 import type { DiscordBot, DiscordLayout } from '@funmary/notify';
 import type { BuildInfo } from './build-info.ts';
@@ -34,6 +35,8 @@ export interface Services {
 		};
 	};
 	readonly courses: CourseStore;
+	/** 利用者が自分の時間割に足した予定 (持ち主だけが読み書きできる) */
+	readonly userEvents: UserEventStore;
 	readonly subjects: SubjectStore;
 	readonly classChanges: ClassChangeStore;
 	readonly unmatchedLessons: UnmatchedLessonStore;

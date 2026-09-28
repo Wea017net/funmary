@@ -149,6 +149,7 @@
 				aria-hidden="true"
 			/>
 		</div>
+		<a class="text-button" href={resolve('/app/events')}>自分の予定</a>
 		<div class="views" role="group" aria-label="時間割の見せ方">
 			{#each WEEK_VIEWS as option (option)}
 				<button
