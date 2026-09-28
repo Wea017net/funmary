@@ -80,6 +80,16 @@ export {
 	type UnmatchedName,
 } from './slot-import.ts';
 export {
+	expandUserEvents,
+	recurrenceToRrule,
+	rruleToRecurrence,
+	type EventOccurrence,
+	type EventTime,
+	type Recurrence,
+	type RecurrenceEnd,
+	type UserEvent,
+} from './user-events.ts';
+export {
 	DEFAULT_INVITE_SETTINGS,
 	INVITE_ISSUERS,
 	MEMBER_INVITE_DAYS,

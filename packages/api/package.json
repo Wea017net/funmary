@@ -11,7 +11,7 @@
 		"@funmary/auth": "workspace:*",
 		"hono": "^4.13.9",
 		"hono-rate-limiter": "^0.5.4",
-		"ical.js": "^2.2.1"
+		"ical.js": "catalog:"
 	},
 	"devDependencies": {
 		"@funmary/db": "workspace:*"

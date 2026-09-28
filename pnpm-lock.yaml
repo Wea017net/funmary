@@ -48,6 +48,9 @@ catalogs:
     globals:
       specifier: ^17.12.0
       version: 17.12.0
+    ical.js:
+      specifier: ^2.2.1
+      version: 2.2.1
     lint-staged:
       specifier: ^17.5.1
       version: 17.5.1
@@ -235,7 +238,7 @@ importers:
         specifier: ^0.5.4
         version: 0.5.4(hono@4.13.9)
       ical.js:
-        specifier: ^2.2.1
+        specifier: 'catalog:'
         version: 2.2.1
     devDependencies:
       '@funmary/db':
@@ -257,7 +260,11 @@ importers:
         specifier: 'catalog:'
         version: 1.5.0(typescript@6.0.3)
 
-  packages/core: {}
+  packages/core:
+    dependencies:
+      ical.js:
+        specifier: 'catalog:'
+        version: 2.2.1
 
   packages/db:
     dependencies:
