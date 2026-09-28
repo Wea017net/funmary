@@ -3,6 +3,7 @@
 	import type { InviteIssuance } from '@funmary/core';
 	import { enhance } from '$app/forms';
 	import InviteCodeList from '$lib/components/InviteCodeList.svelte';
+	import SettingsBreadcrumb from '$lib/components/SettingsBreadcrumb.svelte';
 	import type { InviteCodeView } from '$lib/server/invites.ts';
 
 	let {
@@ -44,6 +45,7 @@
 </svelte:head>
 
 <div class="page">
+	<SettingsBreadcrumb current="招待" />
 	<h1>招待</h1>
 	<p>
 		招待コードを渡すと、その人が Funmary に登録できます。コードは、渡したい人にだけ伝えてください。

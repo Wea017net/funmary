@@ -979,12 +979,17 @@ test.describe('招待コード', () => {
 		page,
 	}) => {
 		await loginAs(page, 'e2e-admin@fun.ac.jp');
-		await page
-			.getByRole('navigation', { name: 'メニュー' })
-			.first()
-			.getByRole('link', { name: '招待' })
-			.click();
+		// 招待は、メニューではなく、設定の中にある
+		await expect(
+			page
+				.getByRole('navigation', { name: 'メニュー' })
+				.first()
+				.getByRole('link', { name: '招待' }),
+		).toHaveCount(0);
+		await page.goto('/app/settings');
+		await page.getByRole('link', { name: /^招待 友だち/ }).click();
 		await expect(page).toHaveURL('/app/invites');
+		await expect(page.getByRole('navigation', { name: 'パンくず' })).toContainText('設定');
 		await page.getByLabel('使用回数').fill('2');
 		await page.getByLabel(/^メモ/).fill('E2E の研究室');
 		await page.getByRole('button', { name: '招待コードを発行する' }).click();
@@ -1015,7 +1020,8 @@ test.describe('招待コード', () => {
 	}) => {
 		const memberPage = await (await browser.newContext()).newPage();
 		await loginAs(memberPage, member);
-		await expect(memberPage.getByRole('link', { name: '招待' })).toHaveCount(0);
+		await memberPage.goto('/app/settings');
+		await expect(memberPage.getByRole('link', { name: /^招待 友だち/ })).toHaveCount(0);
 		await memberPage.goto('/app/invites');
 		await expect(memberPage.getByRole('button', { name: '招待コードを発行する' })).toHaveCount(0);
 

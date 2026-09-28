@@ -13,7 +13,11 @@
 	let {
 		data,
 	}: {
-		data: { admin: AdminSummary | null; documents: { title: string; url: string }[] };
+		data: {
+			admin: AdminSummary | null;
+			canInvite: boolean;
+			documents: { title: string; url: string }[];
+		};
 	} = $props();
 
 	interface Item {
@@ -25,14 +29,24 @@
 		attention?: boolean;
 	}
 
-	const personal: Item[] = [
+	const personal = $derived.by((): Item[] => [
 		{
 			href: resolve('/app/settings/calendar'),
 			icon: IconCalendar,
 			title: 'カレンダーの購読',
 			description: '授業の予定を、Google カレンダーや iPhone のカレンダーに入れる',
 		},
-	];
+		...(data.canInvite
+			? [
+					{
+						href: resolve('/app/invites'),
+						icon: IconInvite,
+						title: '招待',
+						description: '友だちを招待するコードを発行する',
+					},
+				]
+			: []),
+	]);
 
 	const adminItems = $derived.by((): Item[] => {
 		const admin = data.admin;
