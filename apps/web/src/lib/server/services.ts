@@ -4,6 +4,7 @@ import type {
 	AuthStore,
 	ClassChangeStore,
 	CourseStore,
+	FeedTokenStore,
 	HolidayStore,
 	SettingsStore,
 	StoredJobRunStore,
@@ -27,6 +28,8 @@ export interface Services {
 	readonly sourceHealth: SourceHealthStore;
 	readonly jobRuns: StoredJobRunStore;
 	readonly estimateHolidays: TimetableSources['estimateHolidays'];
+	/** カレンダー購読の URL のトークン */
+	readonly feedTokens: FeedTokenStore;
 	/** 新規登録の方式 (設計書 8.2)。紹介の画面の案内に使う */
 	readonly registration: 'invite' | 'open' | 'closed';
 	/** 公開 URL の origin (ブックマークレットの戻り先に使う) */

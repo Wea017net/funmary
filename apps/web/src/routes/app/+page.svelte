@@ -5,6 +5,7 @@
 	import type { LessonView } from '$lib/server/lesson-view.ts';
 	import type { DayNote } from '$lib/server/user-timetable.ts';
 	import { formatDate, formatDayNote, formatFetchedAt } from '$lib/timetable-label.ts';
+	import IconCalendar from '~icons/material-symbols/calendar-add-on-outline';
 	import IconInfo from '~icons/material-symbols/info-outline';
 	import IconWarning from '~icons/material-symbols/warning-outline';
 
@@ -14,6 +15,8 @@
 		lessons: LessonView[];
 		next: (LessonView & { inProgress: boolean }) | null;
 		hasRegistrations: boolean;
+		/** カレンダーの購読の URL を発行していない */
+		suggestCalendar: boolean;
 		usesEstimatedTerms: boolean;
 		fetchedAt: { date: string; time: string } | null;
 		stale: boolean;
@@ -89,6 +92,18 @@
 		{/if}
 	</section>
 
+	{#if today.suggestCalendar}
+		<a class="suggest" href={resolve('/app/settings/calendar')}>
+			<IconCalendar aria-hidden="true" class="icon" />
+			<span>
+				<span class="suggest-title">授業をカレンダーに入れる</span>
+				<span class="muted"
+					>Google カレンダーや iPhone のカレンダーに、休講を反映した授業の予定が入ります。</span
+				>
+			</span>
+		</a>
+	{/if}
+
 	{#if today.stale}
 		<p class="stale" role="alert">
 			<IconWarning aria-hidden="true" class="icon" />
@@ -114,6 +129,34 @@
 <style lang="scss">
 	.page {
 		max-width: 44rem;
+	}
+
+	.suggest {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		margin-top: 1.5rem;
+		padding: 0.75rem 1rem;
+		border-radius: 0.75rem;
+		background: var(--fm-primary-soft);
+		color: inherit;
+		text-decoration: none;
+
+		:global(.icon) {
+			flex: none;
+			width: 1.5rem;
+			height: 1.5rem;
+			color: var(--fm-primary);
+		}
+
+		> span {
+			display: flex;
+			flex-direction: column;
+		}
+	}
+
+	.suggest-title {
+		font-weight: 700;
 	}
 
 	h1 time {
