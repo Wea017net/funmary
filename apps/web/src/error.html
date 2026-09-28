@@ -1,0 +1,93 @@
+<!doctype html>
+<!--
+	ルートのレイアウトの読み込みで起きたエラーなど、エラーの画面 (+error.svelte) を出せないときに SvelteKit が使う画面。
+	JavaScript は動かないので、見出しは共通の文にし、状態の番号の猫 (http.cat) を出す。
+	見た目は packages/api/src/error-page.ts とそろえる。エラーの文は内部の情報を含みうるので出さない
+-->
+<html lang="ja">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="robots" content="noindex" />
+		<title>%sveltekit.status% エラーが起きました - Funmary</title>
+		<style>
+			/* 色はテーマ (--fm-text、--fm-text-muted、--fm-background、--fm-primary) と同じ値 */
+			:root {
+				color-scheme: light dark;
+				--text: #333333;
+				--muted: #666666;
+				--bg: #ffffff;
+				--link: #9d2126;
+			}
+			@media (prefers-color-scheme: dark) {
+				:root {
+					--text: #e6e1e1;
+					--muted: #b3abab;
+					--bg: #141212;
+					--link: #d6999e;
+				}
+			}
+			body {
+				margin: 0;
+				background: var(--bg);
+				color: var(--text);
+				font-family: system-ui, sans-serif;
+				line-height: 1.7;
+			}
+			main {
+				max-width: 40rem;
+				margin: 2rem auto;
+				padding: 0 1rem;
+			}
+			.status {
+				margin: 0;
+				color: var(--muted);
+				font-size: 2.5rem;
+				font-weight: 700;
+				line-height: 1;
+			}
+			h1 {
+				margin: 0.5rem 0 1rem;
+				font-size: 1.5rem;
+			}
+			a {
+				color: var(--link);
+			}
+			figure {
+				margin: 2rem 0 0;
+			}
+			img {
+				display: block;
+				max-width: 100%;
+				height: auto;
+				border-radius: 0.5rem;
+			}
+			figcaption {
+				color: var(--muted);
+				font-size: 0.8125rem;
+			}
+		</style>
+	</head>
+	<body>
+		<main>
+			<p class="status">%sveltekit.status%</p>
+			<h1>エラーが起きました</h1>
+			<p>時間をおいて、もう一度お試しください。</p>
+			<p><a href="/">トップページへ戻る</a></p>
+			<figure>
+				<img
+					src="https://http.cat/%sveltekit.status%.jpg"
+					alt="HTTP %sveltekit.status% を表す猫の写真"
+					width="750"
+					height="600"
+					referrerpolicy="no-referrer"
+					onerror="this.parentElement.remove()"
+				/>
+				<figcaption>
+					猫の写真:
+					<a href="https://http.cat/" target="_blank" rel="noopener noreferrer">http.cat</a>
+				</figcaption>
+			</figure>
+		</main>
+	</body>
+</html>

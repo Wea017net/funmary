@@ -63,3 +63,23 @@ test('フッターに版とクライアントの情報を出し、まとめて�
 	// OS によって、クリップボードの改行が \r\n になる
 	expect(copied).toMatch(/^Funmary 開発版\r?\nクライアント .+、ブラウザ$/);
 });
+
+test('機械向けの口 (Hono) のエラーも、ブラウザで開けば猫の付いた画面を出す', async ({
+	page,
+	request,
+}) => {
+	await page.route('https://http.cat/**', (route) =>
+		route.fulfill({ contentType: 'image/png', body: PIXEL }),
+	);
+	const response = await page.goto('/cal/no-such-token.ics');
+	expect(response?.status()).toBe(404);
+	await expect(page.getByRole('heading', { level: 1 })).toHaveText('ページが見つかりません');
+	await expect(page.getByRole('img', { name: 'HTTP 404 を表す猫の写真' })).toHaveAttribute(
+		'src',
+		'https://http.cat/404.jpg',
+	);
+	// カレンダーアプリなど、HTML を求めないものには、文字だけを返す
+	const plain = await request.get('/cal/no-such-token.ics', { headers: { Accept: '*/*' } });
+	expect(plain.status()).toBe(404);
+	expect(await plain.text()).toBe('Not Found');
+});

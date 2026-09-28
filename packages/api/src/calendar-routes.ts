@@ -2,6 +2,7 @@
 import { Hono } from 'hono';
 import { etag } from 'hono/etag';
 import { rateLimiter } from 'hono-rate-limiter';
+import { errorResponse, errorResponseFor } from './error-page.ts';
 import { buildIcs, type CalendarFeed } from './ics.ts';
 
 /** 発行するトークンの形 (32 バイトの乱数の base64url)。形が違えば DB を引かずに 404 にする */
@@ -28,6 +29,7 @@ export function createCalendarRoutes(deps: CalendarRoutesDeps): Hono {
 		rateLimiter({
 			...RATE_LIMIT,
 			standardHeaders: 'draft-7',
+			handler: (c) => errorResponseFor(c.req.header('Accept'), 429),
 			keyGenerator: (c) => c.req.param('file') ?? '',
 		}),
 	);
@@ -35,7 +37,7 @@ export function createCalendarRoutes(deps: CalendarRoutesDeps): Hono {
 	app.get('/cal/:file', (c) => {
 		const token = TOKEN_FILE.exec(c.req.param('file'))?.[1];
 		const loaded = token ? deps.loadFeed(token) : null;
-		if (!loaded) return c.text('Not Found', 404);
+		if (!loaded) return errorResponse(c, 404);
 		// URL にトークンが入るので、共有のキャッシュには残させない
 		c.header('Cache-Control', 'private, max-age=900');
 		c.header('Content-Type', 'text/calendar; charset=utf-8');
