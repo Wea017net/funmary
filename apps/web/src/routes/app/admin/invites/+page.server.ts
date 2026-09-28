@@ -7,7 +7,7 @@ import {
 	readInviteSettings,
 	revokeInvite,
 	saveInviteSettings,
-	toInviteCodeView,
+	usableInviteCodes,
 } from '$lib/server/invites.ts';
 import { getServices } from '$lib/server/services.ts';
 
@@ -18,7 +18,7 @@ export const load: ServerLoad = ({ locals }) => {
 	return {
 		settings: readInviteSettings(services.settings),
 		registration: services.registration,
-		codes: services.auth.listInviteCodes().map((code) => toInviteCodeView(code, now)),
+		codes: usableInviteCodes(services.auth.listInviteCodes(), now),
 		// 管理者は権限がなくても発行できるので、権限を付ける対象は管理者でない人だけ
 		users: services.auth
 			.listUsers()

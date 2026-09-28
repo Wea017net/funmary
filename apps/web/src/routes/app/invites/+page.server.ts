@@ -7,7 +7,7 @@ import {
 	issueInvite,
 	loadInviteStatus,
 	revokeInvite,
-	toInviteCodeView,
+	usableInviteCodes,
 } from '$lib/server/invites.ts';
 import { getServices } from '$lib/server/services.ts';
 
@@ -19,9 +19,7 @@ export const load: ServerLoad = ({ locals }) => {
 	return {
 		issuance,
 		registration: services.registration,
-		codes: services.auth
-			.listInviteCodes({ createdBy: locals.user.id })
-			.map((code) => toInviteCodeView(code, now)),
+		codes: usableInviteCodes(services.auth.listInviteCodes({ createdBy: locals.user.id }), now),
 	};
 };
 

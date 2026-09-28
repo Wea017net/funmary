@@ -822,14 +822,15 @@ test.describe('招待コード', () => {
 		await page.reload();
 		await expect(page.getByLabel('登録の URL')).toHaveCount(0);
 
-		await list
-			.getByRole('listitem')
-			.filter({ hasText: 'E2E の研究室' })
+		// 取り消したコードは、一覧から消える (E2E の DB は実行をまたいで残るので、数で確かめる)
+		const lab = list.getByRole('listitem').filter({ hasText: 'E2E の研究室' });
+		const before = await lab.count();
+		await lab
 			.first()
 			.getByRole('button', { name: /^取り消す/ })
 			.click();
 		await expect(page.getByRole('status').first()).toHaveText('招待コードを取り消しました。');
-		await expect(list).toContainText('取り消し済み');
+		await expect(lab).toHaveCount(before - 1);
 	});
 
 	test('管理者のみのモードでは、ほかの人には招待が出ない。許可したユーザーのモードで許可すると、発行できる', async ({

@@ -16,6 +16,7 @@ import {
 	revokeInvite,
 	saveInviteSettings,
 	toInviteCodeView,
+	usableInviteCodes,
 } from './invites.ts';
 
 let dir: string;
@@ -163,5 +164,16 @@ describe('一覧に出すコードの状態', () => {
 		expect(toInviteCodeView(base, new Date('2026-10-20T00:00:00Z')).state).toBe('expired');
 		expect(toInviteCodeView({ ...base, usedCount: 2, revoked: true }, NOW).state).toBe('revoked');
 		expect(toInviteCodeView({ ...base, expiresAt: null }, NOW).expiresAt).toBeNull();
+	});
+
+	it('一覧には、まだ使えるコードだけを出す (使い切り、期限切れ、取り消し済みは出さない)', () => {
+		const codes = [
+			{ ...base, id: 1 },
+			{ ...base, id: 2, usedCount: 2 },
+			{ ...base, id: 3, expiresAt: new Date('2026-10-02T00:00:00Z') },
+			{ ...base, id: 4, revoked: true },
+			{ ...base, id: 5, expiresAt: null },
+		];
+		expect(usableInviteCodes(codes, NOW).map((code) => code.id)).toEqual([1, 5]);
 	});
 });
