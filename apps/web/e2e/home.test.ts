@@ -20,3 +20,32 @@ test('ログインしていなければ、アプリの紹介と、はじめる�
 	// 画面の色のボタンは上部に置く
 	await expect(page.getByRole('banner').getByRole('button', { name: /^画面の色/ })).toBeVisible();
 });
+
+// 1 px の透明な PNG。テストでは http.cat に通信せず、これを返す
+const PIXEL = Buffer.from(
+	'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
+	'base64',
+);
+
+test('ないページは、404 と、番号に合った http.cat の猫の画像を出す', async ({ page }) => {
+	await page.route('https://http.cat/**', (route) =>
+		route.fulfill({ contentType: 'image/png', body: PIXEL }),
+	);
+	const response = await page.goto('/no-such-page');
+	expect(response?.status()).toBe(404);
+	await expect(page.getByRole('heading', { level: 1 })).toHaveText('ページが見つかりません');
+	// SvelteKit の既定の英語のメッセージは出さない
+	await expect(page.getByText('Not Found')).toHaveCount(0);
+	const image = page.getByRole('img', { name: 'HTTP 404 を表す猫の写真' });
+	await expect(image).toHaveAttribute('src', 'https://http.cat/404.jpg');
+	await expect(image).toHaveAttribute('referrerpolicy', 'no-referrer');
+	await expect(page.getByRole('link', { name: 'http.cat' })).toHaveAttribute('target', '_blank');
+	await expect(page.getByRole('link', { name: 'トップページへ戻る' })).toHaveAttribute('href', '/');
+});
+
+test('http.cat の画像を読めなくても、エラーの画面は出す', async ({ page }) => {
+	await page.route('https://http.cat/**', (route) => route.abort());
+	await page.goto('/no-such-page');
+	await expect(page.getByRole('heading', { level: 1 })).toHaveText('ページが見つかりません');
+	await expect(page.getByRole('img', { name: 'HTTP 404 を表す猫の写真' })).toHaveCount(0);
+});
