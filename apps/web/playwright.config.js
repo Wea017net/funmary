@@ -39,6 +39,8 @@ export default defineConfig({
 		stdout: 'pipe',
 		stderr: 'pipe',
 		reuseExistingServer: !process.env['CI'],
+		// 起動の前にビルドする。依存をすべて同梱し PDF の読み取りも入るので、手元では 1 分ほどかかる
+		timeout: 180_000,
 		env: serverEnv,
 	},
 });

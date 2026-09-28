@@ -136,13 +136,13 @@
 					<div class="warnings">
 						<p>読み取りに警告があります。PDF と見比べて、内容を確かめてください。</p>
 						<ul>
-							{#each pdf.warnings as warning (warning)}<li>{warning}</li>{/each}
+							{#each pdf.warnings as warning, i (i)}<li>{warning}</li>{/each}
 						</ul>
 					</div>
 				{/if}
 				<h4>学期の期間</h4>
 				<ul class="plain">
-					{#each pdf.terms as term (term.term)}
+					{#each pdf.terms as term, i (i)}
 						<li>
 							{formatTerm(term.term)}: <span class="numeric">{term.start} から {term.end}</span>
 						</li>
@@ -152,7 +152,7 @@
 				</ul>
 				<h4>振替授業日</h4>
 				<ul class="plain">
-					{#each pdf.substituteDays as day (day.date)}
+					{#each pdf.substituteDays as day, i (i)}
 						<li>
 							<time datetime={day.date}>{formatDate(day.date)}</time> は {weekdayName(
 								day.weekday,
@@ -164,7 +164,7 @@
 				</ul>
 				<h4>全学の休講日 (祝日を除く)</h4>
 				<ul class="plain">
-					{#each pdf.noClassDays as day (day.date)}
+					{#each pdf.noClassDays as day, i (i)}
 						<li>
 							<time datetime={day.date}>{formatDate(day.date)}</time>{day.label
 								? ` (${day.label})`
