@@ -1232,6 +1232,41 @@ test.describe('自分の予定', () => {
 		await expect(page.getByText('まだ予定がありません')).toBeVisible();
 	});
 
+	test('足した予定が、今日の画面と週の時間割に出る', async ({ page }) => {
+		await login(page, `e2e-events-views-${Date.now()}@fun.ac.jp`);
+		// 日本時間の今日
+		const today = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
+		await page.goto('/app/events');
+		await page.getByRole('link', { name: '予定を足す' }).click();
+		await expect(page.getByRole('heading', { name: '予定を足す' })).toBeVisible();
+		await page.getByLabel('予定の名前').fill('今日の架空の予定');
+		await page.getByLabel('場所 (任意)').fill('架空の広場');
+		await page.getByLabel('開始日').fill(today);
+		await page.getByRole('radio', { name: '終日' }).check();
+		await page.getByRole('button', { name: '足す' }).click();
+		await expect(page.getByRole('status')).toHaveText('予定を足しました。');
+
+		// 今日の画面
+		await page
+			.getByRole('navigation', { name: 'メニュー' })
+			.getByRole('link', { name: '今日', exact: true })
+			.click();
+		const section = page.getByRole('region', { name: '今日の予定' });
+		await expect(section).toContainText('終日');
+		await expect(section).toContainText('今日の架空の予定');
+		await expect(section).toContainText('架空の広場');
+		await section.getByRole('link', { name: '今日の架空の予定' }).click();
+		await expect(page.getByRole('heading', { name: '予定を直す' })).toBeVisible();
+
+		// 週の時間割の「予定」の行
+		await page.goto('/app/week');
+		const row = page
+			.getByRole('row')
+			.filter({ has: page.getByRole('rowheader', { name: '予定' }) });
+		await expect(row).toContainText('今日の架空の予定');
+		await expect(row).toContainText('終日');
+	});
+
 	test('ログインしていなければ、ログインの画面に移る', async ({ page }) => {
 		await page.goto('/app/events');
 		await expect(page).toHaveURL('/login');

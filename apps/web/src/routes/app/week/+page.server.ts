@@ -9,6 +9,7 @@ import {
 	startOfWeek,
 } from '@funmary/core';
 import { parseDateParam } from '$lib/server/date-param.ts';
+import { eventViewsByDate } from '$lib/server/event-view.ts';
 import { toLessonView, type LessonView } from '$lib/server/lesson-view.ts';
 import { getServices } from '$lib/server/services.ts';
 import { buildUserTimetable } from '$lib/server/user-timetable.ts';
@@ -27,10 +28,17 @@ export const load: ServerLoad = ({ cookies, locals, url }) => {
 	const range = { start: sunday, end: addDays(sunday, 6) };
 	const timetable = buildUserTimetable(getServices(), locals.user.id, range);
 	const lessons = timetable.lessons.map(toLessonView);
+	// 自分の予定 (日付ごと)。土日は、授業か予定のあるときだけ列を出す
+	const events = eventViewsByDate(
+		getServices().userEvents.listByOwner(locals.user.id),
+		range.start,
+		range.end,
+	);
 
 	// 月曜から金曜は必ず出し、土日は授業のある週だけ出す
 	const days = [...eachDate(range.start, range.end)].filter(
-		(day) => isoWeekday(day) <= 5 || lessons.some((lesson) => lesson.date === day),
+		(day) =>
+			isoWeekday(day) <= 5 || events.has(day) || lessons.some((lesson) => lesson.date === day),
 	);
 	const periods = [
 		...new Set([
@@ -61,6 +69,7 @@ export const load: ServerLoad = ({ cookies, locals, url }) => {
 				cells: days.map((day) => ({ date: day, lessons: cells.get(`${day}|${number}`) ?? [] })),
 			};
 		}),
+		eventCells: days.map((day) => ({ date: day, events: events.get(day) ?? [] })),
 		hasLessons: lessons.length > 0,
 		usesEstimatedTerms: timetable.usesEstimatedTerms,
 	};
