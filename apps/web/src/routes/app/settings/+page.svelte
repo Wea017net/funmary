@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button, { Label } from '@smui/button';
 	import type { Component } from 'svelte';
 	import { resolve } from '$app/paths';
 	import InstallGuide from '$lib/components/InstallGuide.svelte';
@@ -158,6 +159,14 @@
 			{@render links(adminItems)}
 		</section>
 	{/if}
+
+	<section aria-labelledby="account-heading">
+		<h2 id="account-heading">アカウント</h2>
+		<!-- /auth は、サーバーが処理する。SvelteKit の form の処理を通さず、通常の送信にする -->
+		<form method="POST" action="/auth/logout" data-sveltekit-reload>
+			<Button type="submit" variant="outlined"><Label>ログアウト</Label></Button>
+		</form>
+	</section>
 </div>
 
 <style>

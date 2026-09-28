@@ -7,7 +7,6 @@
 	import ThemeToggle from '$lib/components/ThemeToggle.svelte';
 	import type { ThemePreference } from '$lib/theme.ts';
 	import IconCourses from '~icons/material-symbols/menu-book-outline';
-	import IconLogout from '~icons/material-symbols/logout';
 	import IconSettings from '~icons/material-symbols/settings-outline';
 	import IconToday from '~icons/material-symbols/today-outline';
 	import IconWeek from '~icons/material-symbols/calendar-view-week-outline';
@@ -71,22 +70,6 @@
 	</ul>
 {/snippet}
 
-{#snippet logout(compact: boolean)}
-	<!-- /auth は、サーバーが処理する。SvelteKit の form の処理を通さず、通常の送信にする -->
-	<form method="POST" action="/auth/logout" data-sveltekit-reload>
-		<!-- 狭い画面ではアイコンだけにし、画面の色のボタンと同じ 48px 四方にそろえる -->
-		<button
-			type="submit"
-			class={['logout', { compact }]}
-			aria-label={compact ? 'ログアウト' : undefined}
-			title={compact ? 'ログアウト' : undefined}
-		>
-			<IconLogout aria-hidden="true" class="icon" />
-			{#if !compact}<span>ログアウト</span>{/if}
-		</button>
-	</form>
-{/snippet}
-
 {#snippet unofficial()}
 	<p class="unofficial">Funmary は公立はこだて未来大学の公式のアプリではありません。</p>
 {/snippet}
@@ -96,7 +79,6 @@
 		<a class="brand" href={resolve('/app')}>Funmary</a>
 		<div class="top-actions">
 			<ThemeToggle initial={data.theme} compact />
-			{@render logout(true)}
 		</div>
 	</header>
 
@@ -106,7 +88,6 @@
 		<div class="account">
 			<div class="email"><MaskedEmail email={data.user.email} /></div>
 			<ThemeToggle initial={data.theme} />
-			{@render logout(false)}
 		</div>
 	</nav>
 
@@ -156,39 +137,7 @@
 		text-decoration: none;
 	}
 
-	.logout {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.375rem;
-		min-height: 48px;
-		padding: 0 0.75rem;
-		border: 0;
-		border-radius: 0.5rem;
-		background: none;
-		color: var(--fm-text-muted);
-		font: inherit;
-		font-size: 0.875rem;
-		cursor: pointer;
-
-		&:hover {
-			background: var(--fm-surface-muted);
-			color: var(--fm-text);
-		}
-
-		&.compact {
-			justify-content: center;
-			width: 48px;
-			height: 48px;
-			padding: 0;
-		}
-	}
-
-	/* 左のメニューでは、画面の色のボタンとログアウトのボタンを、横幅いっぱいの同じ大きさにそろえる */
-	.account form {
-		width: 100%;
-	}
-
-	.account .logout,
+	/* 左のメニューでは、画面の色のボタンを、横幅いっぱいの高さにそろえる */
 	.account :global(.toggle) {
 		justify-content: flex-start;
 		width: 100%;

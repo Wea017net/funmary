@@ -122,6 +122,9 @@ test('大学のアカウントでログインでき、ログアウトできる',
 	await page.getByRole('link', { name: 'アプリを開く' }).click();
 	await expect(page).toHaveURL('/app');
 
+	// ログアウトは、メニューではなく、設定の中にある
+	await expect(menu.getByRole('button', { name: 'ログアウト' })).toHaveCount(0);
+	await page.goto('/app/settings');
 	await page.getByRole('button', { name: 'ログアウト' }).click();
 	await expect(page).toHaveURL('/');
 	await expect(page.getByRole('link', { name: '大学のアカウントではじめる' })).toBeVisible();
@@ -717,17 +720,14 @@ test.describe('今日と週の時間割', () => {
 		await loginAs(page);
 		const menu = page.getByRole('navigation', { name: 'メニュー' });
 		const toggle = menu.getByRole('button', { name: /^画面の色/ });
-		const logout = menu.getByRole('button', { name: 'ログアウト' });
 		const show = menu.getByRole('button', { name: /^メールアドレスを/ });
 
-		// 画面の色のボタンは、表示名が変わっても同じ大きさ。ログアウトのボタンとも同じ大きさ
+		// 画面の色のボタンは、表示名が変わっても同じ大きさ
 		const first = await toggle.boundingBox();
 		for (let i = 0; i < 3; i++) {
 			await toggle.click();
 			expect(await toggle.boundingBox()).toEqual(first);
 		}
-		const logoutBox = await logout.boundingBox();
-		expect([logoutBox?.width, logoutBox?.height]).toEqual([first?.width, first?.height]);
 
 		// メールアドレスを表示しても、ボタンの位置とアドレスの欄の大きさは変わらない
 		const address = menu.locator('.masked-email');
@@ -745,16 +745,27 @@ test.describe('今日と週の時間割', () => {
 		await expect(page).toHaveURL(/date=/);
 		expect(await next.boundingBox()).toEqual(thisWeek);
 
-		// スマホの幅では、上部の 2 つのボタンは同じ 48px 四方
+		// スマホの幅では、上部の画面の色のボタンは 48px 四方
 		await page.setViewportSize({ width: 412, height: 915 });
 		const header = page.getByRole('banner');
-		for (const button of [
-			header.getByRole('button', { name: /^画面の色/ }),
-			header.getByRole('button', { name: 'ログアウト' }),
-		]) {
-			const box = await button.boundingBox();
-			expect([box?.width, box?.height]).toEqual([48, 48]);
-		}
+		const box = await header.getByRole('button', { name: /^画面の色/ }).boundingBox();
+		expect([box?.width, box?.height]).toEqual([48, 48]);
+	});
+
+	test('ログアウトは、設定の画面にあり、PC のメニューとスマホの上部からは外れている', async ({
+		page,
+	}) => {
+		await loginAs(page);
+		await expect(
+			page
+				.getByRole('navigation', { name: 'メニュー' })
+				.getByRole('button', { name: 'ログアウト' }),
+		).toHaveCount(0);
+		await expect(page.getByRole('banner').getByRole('button', { name: 'ログアウト' })).toHaveCount(
+			0,
+		);
+		await page.goto('/app/settings');
+		await expect(page.getByRole('region', { name: 'アカウント' })).toContainText('ログアウト');
 	});
 
 	test('週の時間割の見せ方は、狭い画面では自動で 1 日ずつ、選べば週を並べ、読み込み直しても保たれる', async ({
