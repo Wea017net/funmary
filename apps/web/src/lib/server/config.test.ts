@@ -62,7 +62,7 @@ describe('parseConfig', () => {
 	});
 
 	it('Discord の Bot は、トークンとギルドの ID がそろったときだけ使い、片方だけなら誤りにする', () => {
-		const token = 'MTIzNDU2Nzg5MDEyMzQ1Njc4.Gabcde.' + 'x'.repeat(30);
+		const token = 'dummy-bot-token-' + 'x'.repeat(30);
 		expect(parseConfig(developmentEnv())).toMatchObject({
 			ok: true,
 			config: { discordBot: undefined },
