@@ -95,8 +95,8 @@
 			{
 				href: resolve('/app/admin/discord'),
 				icon: IconDiscord,
-				title: '管理用の Discord',
-				description: 'Bot が作るチャンネルとロールを、確かめて置き換える',
+				title: 'Discord設定',
+				description: 'Bot のチャンネルとロールを整え、ロールをユーザーに付ける',
 			},
 		];
 	});

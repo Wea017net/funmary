@@ -67,6 +67,16 @@ describe('createDiscordBot', () => {
 		});
 	});
 
+	it('メンバーにロールを付け、外す (PUT と DELETE)', async () => {
+		const { bot, calls } = setup(() => new Response(null, { status: 204 }));
+		await bot.addMemberRole('222', '333');
+		await bot.removeMemberRole('222', '333');
+		expect(calls.map((c) => `${c.method} ${c.url}`)).toEqual([
+			'PUT https://discord.com/api/v10/guilds/111/members/222/roles/333',
+			'DELETE https://discord.com/api/v10/guilds/111/members/222/roles/333',
+		]);
+	});
+
 	it('存在しない、または見えないチャンネルは null にする', async () => {
 		const { bot } = setup(() => json({ message: 'Unknown Channel' }, 404));
 		await expect(bot.getChannel('5')).resolves.toBeNull();

@@ -1,6 +1,11 @@
-import { EMPTY_LAYOUT, type DiscordBot, type DiscordLayout } from '@funmary/notify';
+import {
+	DiscordApiError,
+	EMPTY_LAYOUT,
+	type DiscordBot,
+	type DiscordLayout,
+} from '@funmary/notify';
 import { describe, expect, it } from 'vitest';
-import { replaceEntry, toDiscordView, useBot } from './discord-admin.ts';
+import { changeMemberRole, replaceEntry, toDiscordView, useBot } from './discord-admin.ts';
 
 const bot = {
 	guildId: '111',
@@ -78,5 +83,63 @@ describe('useBot と toDiscordView', () => {
 		expect(view.channels[2]).toMatchObject({ id: null, managed: true });
 		expect(view.roles).toHaveLength(2);
 		expect(toDiscordView(null, layout).botConfigured).toBe(false);
+	});
+});
+
+describe('changeMemberRole', () => {
+	const layout: DiscordLayout = {
+		...EMPTY_LAYOUT,
+		roles: { deploy: { id: '31313', managed: true } },
+	};
+	function memberBot(failWith?: number) {
+		const calls: string[] = [];
+		const fake = {
+			addMemberRole: (user: string, role: string) => {
+				calls.push(`add ${user} ${role}`);
+				return failWith ? Promise.reject(new DiscordApiError(failWith, 'x')) : Promise.resolve();
+			},
+			removeMemberRole: (user: string, role: string) => {
+				calls.push(`remove ${user} ${role}`);
+				return Promise.resolve();
+			},
+		} as unknown as DiscordBot;
+		return { fake, calls };
+	}
+
+	it('ロールを付け、外す', async () => {
+		const { fake, calls } = memberBot();
+		await expect(changeMemberRole(fake, layout, 'add', 'deploy', ' 22222 ')).resolves.toEqual({
+			ok: true,
+			message: 'ユーザー 22222 に、ロール funmary-deploy を付けました。',
+		});
+		await expect(
+			changeMemberRole(fake, layout, 'remove', 'deploy', '22222'),
+		).resolves.toMatchObject({
+			ok: true,
+		});
+		expect(calls).toEqual(['add 22222 31313', 'remove 22222 31313']);
+	});
+
+	it('数字でない ID、知らないロール、まだ決まっていないロールは、Discord に送らない', async () => {
+		const { fake, calls } = memberBot();
+		await expect(changeMemberRole(fake, layout, 'add', 'deploy', 'abc')).resolves.toMatchObject({
+			ok: false,
+		});
+		await expect(changeMemberRole(fake, layout, 'add', 'nope', '22222')).resolves.toMatchObject({
+			ok: false,
+		});
+		await expect(changeMemberRole(fake, layout, 'add', 'errors', '22222')).resolves.toMatchObject({
+			ok: false,
+		});
+		expect(calls).toEqual([]);
+	});
+
+	it('サーバーにいないユーザー (404) と、権限がないとき (403) は、直し方を返す', async () => {
+		const notMember = await changeMemberRole(memberBot(404).fake, layout, 'add', 'deploy', '22222');
+		expect(notMember.ok).toBe(false);
+		expect(notMember.ok ? '' : notMember.error).toContain('サーバーにいません');
+		const forbidden = await changeMemberRole(memberBot(403).fake, layout, 'add', 'deploy', '22222');
+		expect(forbidden.ok).toBe(false);
+		expect(forbidden.ok ? '' : forbidden.error).toContain('Bot のロール');
 	});
 });
