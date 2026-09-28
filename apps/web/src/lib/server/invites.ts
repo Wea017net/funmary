@@ -117,6 +117,16 @@ export const formatJstDateTime = (date: Date) => {
 	return `${day} ${time}`;
 };
 
+/**
+ * 画面の一覧に出すコード。使い切り、期限切れ、取り消し済みは出さない (DB には残し、誰の招待で登録したかは追える)
+ */
+export function usableInviteCodes(
+	codes: readonly InviteCodeSummary[],
+	now: Date,
+): InviteCodeView[] {
+	return codes.map((code) => toInviteCodeView(code, now)).filter((code) => code.state === 'active');
+}
+
 /** 画面に出す形。コードそのものは DB にないので含まれない */
 export function toInviteCodeView(code: InviteCodeSummary, now: Date): InviteCodeView {
 	const state: InviteState = code.revoked
