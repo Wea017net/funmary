@@ -31,6 +31,10 @@ Funmary は開発を始めたばかりで、まだ使える機能はありませ
 
 サーバーは VPS 1 台で、Node.js のプロセス 1 つと SQLite のファイル 1 つだけで動かします。
 
+## セルフホストする
+
+自分の VPS で Funmary を動かす手順は [docs/self-hosting.md](docs/self-hosting.md) にあります。
+
 ## 開発に参加する
 
 手元で動かす手順と、コミットメッセージやブランチの決まりは [CONTRIBUTING.md](CONTRIBUTING.md) にあります。AI エージェントで開発するときの指示は [AGENTS.md](AGENTS.md) にあります。
