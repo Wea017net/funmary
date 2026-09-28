@@ -52,9 +52,7 @@
 			</p>
 			<p class="next-room"><LessonRoom room={next.room} tentative={next.roomIsTentative} /></p>
 			<p class="next-subject">
-				<a href={resolve('/app/subjects/[id]', { id: String(next.subjectId) })}
-					>{next.subjectName}</a
-				>
+				<a href={resolve('/app/subjects/[year]/[code]', next.subjectPath)}>{next.subjectName}</a>
 				<StatusBadge status={next.status} />
 			</p>
 		{:else if today.hasRegistrations}
@@ -76,7 +74,7 @@
 							{#if lesson.start}<time class="muted">{lesson.start}</time>{/if}
 						</span>
 						<span class="what">
-							<a href={resolve('/app/subjects/[id]', { id: String(lesson.subjectId) })}
+							<a href={resolve('/app/subjects/[year]/[code]', lesson.subjectPath)}
 								>{lesson.subjectName}</a
 							>
 							<StatusBadge status={lesson.status} />

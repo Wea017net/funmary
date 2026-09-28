@@ -41,13 +41,13 @@ export function loadCalendarFeed(
 			period: view.period,
 			start: view.start,
 			end: view.end,
-			subjectId: view.subjectId,
+			subjectKey: `${view.subjectPath.year}-${view.subjectPath.code}`,
 			subjectName: view.subjectName,
 			teacher: subject?.teacher ?? null,
 			room: view.room,
 			roomIsTentative: view.roomIsTentative,
 			status: view.status,
-			detailUrl: `${sources.origin}/app/subjects/${view.subjectId}`,
+			detailUrl: `${sources.origin}/app/subjects/${view.subjectPath.year}/${encodeURIComponent(view.subjectPath.code)}`,
 			syllabusUrl: httpsOnly(subject?.syllabusUrl ?? null),
 		};
 	});

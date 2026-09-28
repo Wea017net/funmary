@@ -196,7 +196,7 @@
 							<td class={{ today: cell.date === data.today, off: offDates.has(cell.date) }}>
 								{#each cell.lessons as lesson (lesson.key)}
 									<div class={['lesson', { cancelled: lesson.status === 'cancelled' }]}>
-										<a href={resolve('/app/subjects/[id]', { id: String(lesson.subjectId) })}
+										<a href={resolve('/app/subjects/[year]/[code]', lesson.subjectPath)}
 											>{lesson.subjectName}</a
 										>
 										<StatusBadge status={lesson.status} />

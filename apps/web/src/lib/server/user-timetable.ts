@@ -38,6 +38,9 @@ export interface TimetableLesson {
 	readonly period: number;
 	readonly subjectId: number;
 	readonly subjectName: string;
+	/** 授業の詳細の URL (/app/subjects/<年度>/<シラバスの番号>) とカレンダーの予定の ID に使う */
+	readonly academicYear: number;
+	readonly syllabusId: string;
 	readonly room: string | null;
 	/** 補講の教室が分からず、ふだんの教室を仮に出しているとき true */
 	readonly roomIsTentative: boolean;
@@ -124,12 +127,15 @@ export function buildUserTimetable(
 			substituteDays,
 			classChanges: changes.map(toClassChange),
 		});
-		const names = new Map(ofYear.map((subject) => [String(subject.id), subject.name]));
+		const byId = new Map(ofYear.map((subject) => [String(subject.id), subject]));
 		for (const lesson of expanded) {
+			const subject = byId.get(lesson.subjectId);
 			lessons.push({
 				...lesson,
 				subjectId: Number(lesson.subjectId),
-				subjectName: names.get(lesson.subjectId) ?? '',
+				subjectName: subject?.name ?? '',
+				academicYear: year,
+				syllabusId: subject?.syllabusId ?? '',
 			});
 		}
 	}
