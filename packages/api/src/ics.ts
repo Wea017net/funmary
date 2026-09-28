@@ -33,9 +33,32 @@ export interface CalendarDayEvent {
 	readonly summary: string;
 }
 
+/** 利用者が足した予定 (Issue #144)。繰り返しは、展開せずに RRULE のまま書く */
+export interface CalendarUserEvent {
+	/** DB の予定の ID。UID に使う (予定を直しても、UID は変わらない) */
+	readonly id: number;
+	readonly title: string;
+	readonly location: string | null;
+	readonly notes: string | null;
+	/** 始まりの日と、終わりの日 (この日を含む)。YYYY-MM-DD */
+	readonly startDate: string;
+	readonly endDate: string;
+	readonly allDay: boolean;
+	/** 終日でないときの、開始と終了の時刻 (日本時間の HH:MM。同じ日の中) */
+	readonly start: string | null;
+	readonly end: string | null;
+	/** RFC 5545 の RRULE の値。繰り返さないなら null */
+	readonly rrule: string | null;
+	/** 繰り返しから除く日 (始まりの日で数える) */
+	readonly excludedDates: readonly string[];
+	readonly detailUrl: string;
+}
+
 export interface CalendarFeed {
 	readonly lessons: readonly CalendarLesson[];
 	readonly days: readonly CalendarDayEvent[];
+	/** 省くと、なし */
+	readonly events?: readonly CalendarUserEvent[];
 }
 
 export interface IcsOptions {
@@ -65,6 +88,8 @@ export function buildIcs(feed: CalendarFeed, options: IcsOptions): string {
 	calendar.addPropertyWithValue('x-published-ttl', 'PT1H');
 
 	const stamp = ICAL.Time.fromJSDate(options.stamp, true);
+	// 時刻のある予定は、日本時間 (TZID) で書く。繰り返しの曜日が、UTC にずれて数えられないようにするため
+	if (feed.events?.some((event) => !event.allDay)) calendar.addSubcomponent(tokyoTimezone());
 	for (const lesson of feed.lessons) {
 		calendar.addSubcomponent(lessonEvent(lesson, stamp, options.uidDomain));
 	}
@@ -77,7 +102,80 @@ export function buildIcs(feed: CalendarFeed, options: IcsOptions): string {
 		vevent.addPropertyWithValue('transp', 'TRANSPARENT');
 		calendar.addSubcomponent(vevent);
 	}
+	for (const event of feed.events ?? []) {
+		calendar.addSubcomponent(userEvent(event, stamp, options.uidDomain));
+	}
 	return calendar.toString() + '\r\n';
+}
+
+const TOKYO = 'Asia/Tokyo';
+
+/** 日本には夏時間がないので、UTC+9 の固定 */
+function tokyoTimezone(): ICAL.Component {
+	return new ICAL.Component(
+		ICAL.parse(
+			[
+				'BEGIN:VTIMEZONE',
+				`TZID:${TOKYO}`,
+				'BEGIN:STANDARD',
+				'DTSTART:19700101T000000',
+				'TZOFFSETFROM:+0900',
+				'TZOFFSETTO:+0900',
+				'TZNAME:JST',
+				'END:STANDARD',
+				'END:VTIMEZONE',
+			].join('\r\n'),
+		) as unknown[],
+	);
+}
+
+/** 日本時間の日時の、TZID 付きの項目 (例: DTSTART;TZID=Asia/Tokyo:20261102T170000) */
+function zonedProperty(name: string, date: string, time: string): ICAL.Property {
+	const property = new ICAL.Property(name);
+	property.setParameter('tzid', TOKYO);
+	property.setValue(ICAL.Time.fromDateTimeString(`${date}T${time}:00`));
+	return property;
+}
+
+function userEvent(event: CalendarUserEvent, stamp: ICAL.Time, uidDomain: string) {
+	const vevent = new ICAL.Component('vevent');
+	vevent.addPropertyWithValue('uid', `user-event-${event.id}@${uidDomain}`);
+	vevent.addPropertyWithValue('dtstamp', stamp);
+	const timed = !event.allDay && event.start !== null && event.end !== null;
+	if (timed) {
+		vevent.addProperty(zonedProperty('dtstart', event.startDate, event.start ?? '00:00'));
+		vevent.addProperty(zonedProperty('dtend', event.startDate, event.end ?? '00:00'));
+	} else {
+		const start = ICAL.Time.fromDateString(event.startDate);
+		const end = ICAL.Time.fromDateString(event.endDate);
+		end.adjust(1, 0, 0, 0);
+		vevent.addPropertyWithValue('dtstart', start);
+		vevent.addPropertyWithValue('dtend', end);
+	}
+	vevent.addPropertyWithValue('summary', event.title);
+	if (event.location) vevent.addPropertyWithValue('location', event.location);
+	vevent.addPropertyWithValue(
+		'description',
+		[...(event.notes ? [event.notes] : []), `詳細: ${event.detailUrl}`].join('\n'),
+	);
+	vevent.addPropertyWithValue('url', event.detailUrl);
+	if (event.rrule) {
+		vevent.addPropertyWithValue('rrule', ICAL.Recur.fromString(rruleForIcs(event.rrule, !timed)));
+		for (const date of event.excludedDates) {
+			if (timed) vevent.addProperty(zonedProperty('exdate', date, event.start ?? '00:00'));
+			else vevent.addPropertyWithValue('exdate', ICAL.Time.fromDateString(date));
+		}
+	}
+	return vevent;
+}
+
+/**
+ * RRULE の UNTIL は、DTSTART と同じ種類でなければならない (RFC 5545)。画面で選んだ日付 (YYYYMMDD) は、
+ * 時刻の予定では、日本時間のその日の終わり (23:59:59+09:00) を、UTC (同じ日の 14:59:59Z) で書く
+ */
+function rruleForIcs(rrule: string, allDay: boolean): string {
+	if (allDay) return rrule;
+	return rrule.replace(/(^|;)UNTIL=(\d{8})(?=;|$)/, '$1UNTIL=$2T145959Z');
 }
 
 function lessonEvent(lesson: CalendarLesson, stamp: ICAL.Time, uidDomain: string) {

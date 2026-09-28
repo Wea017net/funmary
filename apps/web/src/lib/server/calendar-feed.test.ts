@@ -9,6 +9,7 @@ import {
 	createFeedTokenStore,
 	createHolidayStore,
 	createSubjectStore,
+	createUserEventStore,
 	openDatabase,
 	type Database,
 } from '@funmary/db';
@@ -40,6 +41,7 @@ function sources(): CalendarFeedSources {
 		holidays: createHolidayStore(database),
 		estimateHolidays: () => [],
 		feedTokens: createFeedTokenStore(database),
+		userEvents: createUserEventStore(database),
 		origin: 'https://funmary.example.com',
 	};
 }
@@ -133,5 +135,78 @@ describe('loadCalendarFeed', () => {
 		if (!subject) throw new Error('あるはず');
 		subjects.upsert({ ...subject, syllabusUrl: 'javascript:alert(1)' }, NOW);
 		expect(loadCalendarFeed(sources(), token, NOW)?.feed.lessons[0]?.syllabusUrl).toBeNull();
+	});
+
+	describe('利用者の予定', () => {
+		const input = (
+			overrides: Partial<Parameters<ReturnType<typeof createUserEventStore>['create']>[1]> = {},
+		) => ({
+			title: '架空のサークル',
+			location: null,
+			notes: null,
+			startDate: '2026-11-02',
+			endDate: '2026-11-02',
+			time: { kind: 'time' as const, start: '17:00', end: '18:30' },
+			rrule: null,
+			excludedDates: [],
+			...overrides,
+		});
+
+		it('持ち主の予定を、繰り返しのまま、時刻や時限を時刻にして返す。ほかの人の予定は含めない', () => {
+			const { userId, token } = setup();
+			const other = createAuthStore(database).createUser(
+				{ googleSub: 'b', email: 'b@fun.ac.jp', name: null, role: 'user' },
+				NOW,
+			);
+			const events = createUserEventStore(database);
+			const weekly = events.create(
+				userId,
+				input({ rrule: 'FREQ=WEEKLY;BYDAY=MO', excludedDates: ['2026-11-09'] }),
+				NOW,
+			);
+			const period = events.create(
+				userId,
+				input({
+					startDate: '2026-11-03',
+					endDate: '2026-11-03',
+					time: { kind: 'period', from: 2, to: 3 },
+				}),
+				NOW,
+			);
+			const allDay = events.create(
+				userId,
+				input({ startDate: '2026-11-05', endDate: '2026-11-07', time: { kind: 'allDay' } }),
+				NOW,
+			);
+			events.create(other, input({ title: 'ほかの人の予定' }), NOW);
+
+			const loaded = loadCalendarFeed(sources(), token, NOW);
+			const byId = new Map((loaded?.feed.events ?? []).map((event) => [event.id, event]));
+			expect(byId.size).toBe(3);
+			expect(byId.get(weekly)).toMatchObject({
+				allDay: false,
+				start: '17:00',
+				end: '18:30',
+				rrule: 'FREQ=WEEKLY;BYDAY=MO',
+				excludedDates: ['2026-11-09'],
+				detailUrl: `https://funmary.example.com/app/events/${weekly}`,
+			});
+			expect(byId.get(period)).toMatchObject({ allDay: false, start: '10:40', end: '14:40' });
+			expect(byId.get(allDay)).toMatchObject({ allDay: true, start: null, endDate: '2026-11-07' });
+		});
+
+		it('期間の外の単発の予定は含めず、期間より前に始まった繰り返しは含める', () => {
+			const { userId, token } = setup();
+			const events = createUserEventStore(database);
+			events.create(userId, input({ startDate: '2025-01-05', endDate: '2025-01-05' }), NOW);
+			events.create(userId, input({ startDate: '2028-01-05', endDate: '2028-01-05' }), NOW);
+			const running = events.create(
+				userId,
+				input({ startDate: '2025-01-06', endDate: '2025-01-06', rrule: 'FREQ=WEEKLY' }),
+				NOW,
+			);
+			const loaded = loadCalendarFeed(sources(), token, NOW);
+			expect(loaded?.feed.events?.map((event) => event.id)).toEqual([running]);
+		});
 	});
 });

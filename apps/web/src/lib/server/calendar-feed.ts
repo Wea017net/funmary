@@ -1,7 +1,7 @@
 // カレンダー購読の ICS に載せる予定 (設計書 13 章)。トークンの持ち主の時間割を、Hono の ICS の組み立てに渡す形にする。
-import type { CalendarFeed } from '@funmary/api';
-import { addDays, jstDateTime } from '@funmary/core';
-import type { FeedTokenStore } from '@funmary/db';
+import type { CalendarFeed, CalendarUserEvent } from '@funmary/api';
+import { addDays, findPeriod, jstDateTime, type UserEvent } from '@funmary/core';
+import type { FeedTokenStore, UserEventStore } from '@funmary/db';
 import { formatDayNote } from '$lib/timetable-label.ts';
 import { toLessonView } from './lesson-view.ts';
 import { buildUserTimetable, type TimetableSources } from './user-timetable.ts';
@@ -12,6 +12,8 @@ const DAYS_AFTER = 182;
 
 export interface CalendarFeedSources extends TimetableSources {
 	readonly feedTokens: Pick<FeedTokenStore, 'findOwner' | 'markUsed'>;
+	/** 利用者が足した予定 */
+	readonly userEvents: Pick<UserEventStore, 'listByOwner'>;
 	/** 公開 URL の origin。授業の詳細画面の URL に使う */
 	readonly origin: string;
 }
@@ -60,9 +62,43 @@ export function loadCalendarFeed(
 			summary:
 				note.kind === 'substitute' ? `振替授業日 (${formatDayNote(note)})` : formatDayNote(note),
 		}));
+	const range = { start: addDays(today, -DAYS_BEFORE), end: addDays(today, DAYS_AFTER) };
+	const events = sources.userEvents
+		.listByOwner(owner.userId)
+		// 繰り返しは、いつ始まっていても入れる (カレンダーアプリが、自分で展開する)。単発は、載せる期間に掛かるものだけ
+		.filter(
+			(event) =>
+				event.rrule !== null || (event.endDate >= range.start && event.startDate <= range.end),
+		)
+		.map((event) => toCalendarEvent(event, sources.origin));
 	return {
-		feed: { lessons, days },
+		feed: { lessons, days, events },
 		// 同じ日のうちは同じ内容になり、ETag で 304 を返せるようにする
 		stamp: new Date(`${today}T00:00:00+09:00`),
+	};
+}
+
+/** 時限で決めた予定は、時限の時刻にする。時限が分からなければ、終日にする */
+function toCalendarEvent(event: UserEvent, origin: string): CalendarUserEvent {
+	let times: { start: string; end: string } | null = null;
+	if (event.time.kind === 'time') times = { start: event.time.start, end: event.time.end };
+	if (event.time.kind === 'period') {
+		const first = findPeriod(event.time.from);
+		const last = findPeriod(event.time.to);
+		if (first && last) times = { start: first.start, end: last.end };
+	}
+	return {
+		id: event.id,
+		title: event.title,
+		location: event.location,
+		notes: event.notes,
+		startDate: event.startDate,
+		endDate: event.endDate,
+		allDay: times === null,
+		start: times?.start ?? null,
+		end: times?.end ?? null,
+		rrule: event.rrule,
+		excludedDates: event.excludedDates,
+		detailUrl: `${origin}/app/events/${event.id}`,
 	};
 }

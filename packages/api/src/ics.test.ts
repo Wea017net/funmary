@@ -1,6 +1,6 @@
 import ICAL from 'ical.js';
 import { describe, expect, it } from 'vitest';
-import { buildIcs, type CalendarFeed, type CalendarLesson } from './ics.ts';
+import { buildIcs, type CalendarFeed, type CalendarLesson, type CalendarUserEvent } from './ics.ts';
 
 const lesson = (overrides: Partial<CalendarLesson> = {}): CalendarLesson => ({
 	date: '2026-10-05',
@@ -120,5 +120,93 @@ describe('buildIcs', () => {
 	it('同じ入力なら同じ内容になる (ETag で 304 を返せるように)', () => {
 		const feed = { lessons: [lesson()], days: [] };
 		expect(buildIcs(feed, options)).toBe(buildIcs(feed, options));
+	});
+});
+
+describe('buildIcs: 利用者の予定', () => {
+	const userEvent = (overrides: Partial<CalendarUserEvent> = {}): CalendarUserEvent => ({
+		id: 7,
+		title: '架空のサークル練習',
+		location: '架空の部室',
+		notes: '差し入れあり',
+		startDate: '2026-11-02',
+		endDate: '2026-11-02',
+		allDay: false,
+		start: '17:00',
+		end: '18:30',
+		rrule: null,
+		excludedDates: [],
+		detailUrl: 'https://funmary.example.com/app/events/7',
+		...overrides,
+	});
+	const build = (event: CalendarUserEvent) =>
+		buildIcs({ lessons: [], days: [], events: [event] }, options);
+
+	it('時刻の予定は、日本時間 (TZID) で書き、VTIMEZONE を付ける。UID は予定の ID から決める', () => {
+		const text = build(userEvent());
+		expect(text).toContain('BEGIN:VTIMEZONE');
+		expect(text).toContain('TZID:Asia/Tokyo');
+		expect(text).toContain('DTSTART;TZID=Asia/Tokyo:20261102T170000');
+		expect(text).toContain('DTEND;TZID=Asia/Tokyo:20261102T183000');
+		expect(text).toContain('UID:user-event-7@funmary.example.com');
+		expect(text).toContain('SUMMARY:架空のサークル練習');
+		expect(text).toContain('LOCATION:架空の部室');
+		const [first] = events({ lessons: [], days: [], events: [userEvent()] });
+		expect(first?.event.startDate.toJSDate()).toEqual(new Date('2026-11-02T17:00:00+09:00'));
+		expect(first?.event.description).toContain('差し入れあり');
+		expect(first?.event.description).toContain('https://funmary.example.com/app/events/7');
+	});
+
+	it('授業だけの購読には、VTIMEZONE を付けない', () => {
+		expect(buildIcs({ lessons: [lesson()], days: [] }, options)).not.toContain('VTIMEZONE');
+	});
+
+	it('終日の予定は、DATE で書く。数日にわたるときは、終わりの日の翌日を DTEND にする', () => {
+		const text = build(userEvent({ allDay: true, start: null, end: null, endDate: '2026-11-04' }));
+		expect(text).toContain('DTSTART;VALUE=DATE:20261102');
+		expect(text).toContain('DTEND;VALUE=DATE:20261105');
+		expect(text).not.toContain('VTIMEZONE');
+	});
+
+	it('繰り返しは RRULE のまま書き、除く日は EXDATE にする。日付形式の UNTIL は、時刻の予定では日本時間の終わりの日の UTC にする', () => {
+		const text = build(
+			userEvent({
+				rrule: 'FREQ=WEEKLY;BYDAY=MO,WE;UNTIL=20261231',
+				excludedDates: ['2026-11-04', '2026-11-09'],
+			}),
+		);
+		expect(text).toContain('RRULE:FREQ=WEEKLY;BYDAY=MO,WE;UNTIL=20261231T145959Z');
+		expect(text).toContain('EXDATE;TZID=Asia/Tokyo:20261104T170000');
+		expect(text).toContain('EXDATE;TZID=Asia/Tokyo:20261109T170000');
+	});
+
+	it('終日の繰り返しでは、UNTIL は日付のまま。EXDATE も DATE', () => {
+		const text = build(
+			userEvent({
+				allDay: true,
+				start: null,
+				end: null,
+				rrule: 'FREQ=WEEKLY;UNTIL=20261231',
+				excludedDates: ['2026-11-09'],
+			}),
+		);
+		expect(text).toContain('RRULE:FREQ=WEEKLY;UNTIL=20261231');
+		expect(text).toContain('EXDATE;VALUE=DATE:20261109');
+	});
+
+	it('ical.js で読み戻すと、除く日を飛ばして、各回が展開できる', () => {
+		const [first] = events({
+			lessons: [],
+			days: [],
+			events: [userEvent({ rrule: 'FREQ=WEEKLY;COUNT=3', excludedDates: ['2026-11-09'] })],
+		});
+		expect(first?.event.isRecurring()).toBe(true);
+		const days: string[] = [];
+		const iterator = first!.event.iterator();
+		for (let next = iterator.next(); next && days.length < 5; next = iterator.next()) {
+			days.push(next.toString().slice(0, 10));
+		}
+		// COUNT は除く日も数えるので、11/2、(11/9 は除く)、11/16
+		expect(days).toEqual(['2026-11-02', '2026-11-16']);
 	});
 });
