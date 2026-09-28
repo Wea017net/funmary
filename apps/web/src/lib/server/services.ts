@@ -53,6 +53,8 @@ export interface Services {
 	readonly registration: 'invite' | 'open' | 'closed';
 	/** 公開 URL の origin (ブックマークレットの戻り先に使う) */
 	readonly origin: string;
+	/** セルフホストの運営者の情報。設定されていなければ null */
+	readonly operator: { readonly name: string; readonly url: string } | null;
 	/** 管理者への知らせ。秘密の値を含めない */
 	readonly alertAdmin: (alert: {
 		severity: 'info' | 'warn' | 'error';

@@ -45,6 +45,8 @@ export interface Config {
 	readonly logFormat: 'text' | 'json';
 	/** リバースプロキシ経由で利用者の IP アドレスを得るための設定 */
 	readonly proxy: { readonly addressHeader: string; readonly xffDepth: number } | undefined;
+	/** セルフホストの運営者の情報 (設計書、Issue #109)。フッターに出す。設定しなければ出さない */
+	readonly operator: { readonly name: string; readonly url: string } | undefined;
 }
 
 export interface ConfigIssue {
@@ -230,6 +232,10 @@ function envSchema(mode: Mode) {
 		LOG_FORMAT: oneOf(['text', 'json'], 'text'),
 		ADDRESS_HEADER: v.optional(v.string()),
 		XFF_DEPTH: v.optional(integer(1, 10), '1'),
+		OPERATOR_NAME: v.optional(v.pipe(v.string(), v.maxLength(100))),
+		OPERATOR_URL: v.optional(
+			v.pipe(v.string(), v.url('https:// で始まる URL を書いてください'), v.startsWith('https://')),
+		),
 	});
 }
 
@@ -265,6 +271,13 @@ export function parseConfig(env: Readonly<Record<string, string | undefined>>): 
 		});
 	}
 	if (result.success) {
+		const { OPERATOR_NAME, OPERATOR_URL } = result.output;
+		if ((OPERATOR_NAME === undefined) !== (OPERATOR_URL === undefined)) {
+			issues.push({
+				name: OPERATOR_NAME === undefined ? 'OPERATOR_NAME' : 'OPERATOR_URL',
+				message: 'OPERATOR_NAME と OPERATOR_URL は、両方書くか、両方空にしてください。',
+			});
+		}
 		const { DISCORD_BOT_TOKEN: token, DISCORD_GUILD_ID: guildId } = result.output;
 		if (token !== undefined && guildId === undefined) {
 			issues.push({
@@ -328,6 +341,10 @@ export function parseConfig(env: Readonly<Record<string, string | undefined>>): 
 			proxy:
 				e.ADDRESS_HEADER !== undefined
 					? { addressHeader: e.ADDRESS_HEADER, xffDepth: e.XFF_DEPTH }
+					: undefined,
+			operator:
+				e.OPERATOR_NAME !== undefined && e.OPERATOR_URL !== undefined
+					? { name: e.OPERATOR_NAME, url: e.OPERATOR_URL }
 					: undefined,
 		},
 	};

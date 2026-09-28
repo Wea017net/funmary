@@ -87,6 +87,40 @@ describe('parseConfig', () => {
 		});
 	});
 
+	it('セルフホストの運営者の情報は、名前と URL がそろったときだけ使う (Issue #109)', () => {
+		expect(parseConfig(developmentEnv())).toMatchObject({
+			ok: true,
+			config: { operator: undefined },
+		});
+		expect(
+			parseConfig({
+				...developmentEnv(),
+				OPERATOR_NAME: '架空の運営',
+				OPERATOR_URL: 'https://example.com',
+			}),
+		).toMatchObject({
+			ok: true,
+			config: { operator: { name: '架空の運営', url: 'https://example.com' } },
+		});
+		expect(parseConfig({ ...developmentEnv(), OPERATOR_NAME: '架空の運営' })).toMatchObject({
+			ok: false,
+			issues: [{ name: 'OPERATOR_URL' }],
+		});
+		expect(parseConfig({ ...developmentEnv(), OPERATOR_URL: 'https://example.com' })).toMatchObject(
+			{
+				ok: false,
+				issues: [{ name: 'OPERATOR_NAME' }],
+			},
+		);
+		expect(
+			parseConfig({
+				...developmentEnv(),
+				OPERATOR_NAME: '架空の運営',
+				OPERATOR_URL: 'http://example.com',
+			}),
+		).toMatchObject({ ok: false });
+	});
+
 	it('DB の置き場所は DATA_DIR、systemd の STATE_DIRECTORY、./data の順に、値のあるものを使う', () => {
 		const stateDirectory = '/var/lib/funmary';
 		const dataDirOf = (extra: Record<string, string>) => {

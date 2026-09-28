@@ -5,6 +5,7 @@
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import AboutApp, { type About } from '$lib/components/AboutApp.svelte';
+	import FooterLinks from '$lib/components/FooterLinks.svelte';
 	import ThemeToggle from '$lib/components/ThemeToggle.svelte';
 	import type { ThemePreference } from '$lib/theme.ts';
 
@@ -12,7 +13,11 @@
 		data,
 		children,
 	}: {
-		data: { theme: ThemePreference; about: About };
+		data: {
+			theme: ThemePreference;
+			about: About;
+			operator: { name: string; url: string } | null;
+		};
 		children: Snippet;
 	} = $props();
 
@@ -32,6 +37,7 @@
 		{@render children()}
 		<footer>
 			<p class="unofficial">Funmary は公立はこだて未来大学の公式のアプリではありません。</p>
+			<FooterLinks operator={data.operator} />
 			<AboutApp about={data.about} />
 		</footer>
 	</main>
