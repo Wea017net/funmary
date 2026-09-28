@@ -12,8 +12,9 @@ import { parseDateParam } from '$lib/server/date-param.ts';
 import { toLessonView, type LessonView } from '$lib/server/lesson-view.ts';
 import { getServices } from '$lib/server/services.ts';
 import { buildUserTimetable } from '$lib/server/user-timetable.ts';
+import { parseWeekView, WEEK_VIEW_COOKIE } from '$lib/week-view.ts';
 
-export const load: ServerLoad = ({ locals, url }) => {
+export const load: ServerLoad = ({ cookies, locals, url }) => {
 	if (!locals.user) redirect(303, '/login');
 	const today = jstDateTime(new Date()).date;
 	const param = url.searchParams.get('date');
@@ -49,6 +50,7 @@ export const load: ServerLoad = ({ locals, url }) => {
 		next: addDays(monday, 7),
 		isThisWeek: sunday === startOfWeek(today),
 		today,
+		view: parseWeekView(cookies.get(WEEK_VIEW_COOKIE)),
 		days: days.map((day) => ({ date: day, note: timetable.notes.get(day) ?? null })),
 		rows: periods.map((number) => {
 			const period = DEFAULT_PERIODS.find((p) => p.number === number);
