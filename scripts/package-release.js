@@ -121,6 +121,28 @@ function hashTree(dir) {
 const buildHash = hashTree(stage);
 writeFileSync(join(outDir, 'build-hash.txt'), `${buildHash}\n`);
 
+// 画面のフッターに出す版の情報。コミットごとに変わるので、ビルド結果の hash を取ったあとに置く
+// (hash に含めると、ビルド結果が同じでも「変化なし」と見分けられなくなる)
+const git = (/** @type {string[]} */ args) =>
+	execFileSync('git', args, { cwd: root, encoding: 'utf8' }).trim();
+writeFileSync(
+	join(stage, 'build-info.json'),
+	JSON.stringify(
+		{
+			version,
+			commit: git(['rev-parse', 'HEAD']),
+			// main のコミットの数。リリースのたびに増える。履歴が浅いクローンでは正しく数えられないので出さない
+			buildNumber:
+				git(['rev-parse', '--is-shallow-repository']) === 'true'
+					? null
+					: Number(git(['rev-list', '--count', '--first-parent', 'HEAD'])),
+			builtAt: new Date().toISOString(),
+		},
+		null,
+		'\t',
+	) + '\n',
+);
+
 const tarball = `${stageName}.tar.gz`;
 // tar は Windows 10 以降にも入っている。展開したときに funmary-<版>/ の下へ出る
 execFileSync('tar', ['-czf', tarball, stageName], { cwd: outDir, stdio: 'inherit' });

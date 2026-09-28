@@ -4,6 +4,7 @@
 	import type { Snippet } from 'svelte';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
+	import AboutApp, { type About } from '$lib/components/AboutApp.svelte';
 	import ThemeToggle from '$lib/components/ThemeToggle.svelte';
 	import type { ThemePreference } from '$lib/theme.ts';
 
@@ -11,7 +12,7 @@
 		data,
 		children,
 	}: {
-		data: { theme: ThemePreference };
+		data: { theme: ThemePreference; about: About };
 		children: Snippet;
 	} = $props();
 
@@ -31,6 +32,7 @@
 		{@render children()}
 		<footer>
 			<p class="unofficial">Funmary は公立はこだて未来大学の公式のアプリではありません。</p>
+			<AboutApp about={data.about} />
 		</footer>
 	</main>
 {/if}
