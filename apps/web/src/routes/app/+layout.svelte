@@ -7,7 +7,6 @@
 	import ThemeToggle from '$lib/components/ThemeToggle.svelte';
 	import type { ThemePreference } from '$lib/theme.ts';
 	import IconCourses from '~icons/material-symbols/menu-book-outline';
-	import IconInvite from '~icons/material-symbols/person-add-outline';
 	import IconLogout from '~icons/material-symbols/logout';
 	import IconSettings from '~icons/material-symbols/settings-outline';
 	import IconToday from '~icons/material-symbols/today-outline';
@@ -20,14 +19,13 @@
 		data: {
 			user: { email: string };
 			theme: ThemePreference;
-			canInvite: boolean;
 			about: About;
 		};
 		children: Snippet;
 	} = $props();
 
 	// PC では左のメニュー、スマホでは下のタブに同じ項目を出す (設計書 12.4)。
-	// 管理は設定の中にあるので、管理の画面を開いているときも設定を選んだ状態にする
+	// 招待と管理は設定の中にあるので、それらの画面を開いているときも設定を選んだ状態にする
 	const items = $derived([
 		{
 			href: resolve('/app'),
@@ -49,22 +47,14 @@
 				page.url.pathname.startsWith('/app/courses') ||
 				page.url.pathname.startsWith('/app/subjects'),
 		},
-		...(data.canInvite
-			? [
-					{
-						href: resolve('/app/invites'),
-						label: '招待',
-						icon: IconInvite,
-						current: page.url.pathname.startsWith('/app/invites'),
-					},
-				]
-			: []),
 		{
 			href: resolve('/app/settings'),
 			label: '設定',
 			icon: IconSettings,
 			current:
-				page.url.pathname.startsWith('/app/settings') || page.url.pathname.startsWith('/app/admin'),
+				page.url.pathname.startsWith('/app/settings') ||
+				page.url.pathname.startsWith('/app/admin') ||
+				page.url.pathname.startsWith('/app/invites'),
 		},
 	]);
 </script>
