@@ -12,7 +12,11 @@ export interface CalendarLesson {
 	/** 時限の時刻。分からない時限なら null で、終日の予定にする */
 	readonly start: string | null;
 	readonly end: string | null;
-	readonly subjectId: number;
+	/**
+	 * 科目を見分ける値 (例: 2026-100201。年度とシラバスの番号)。予定の UID に使う。
+	 * DB の ID は作り直すと変わるので使わない (変わると、購読しているカレンダーの予定が作り直される)
+	 */
+	readonly subjectKey: string;
 	readonly subjectName: string;
 	readonly teacher: string | null;
 	readonly room: string | null;
@@ -80,7 +84,7 @@ function lessonEvent(lesson: CalendarLesson, stamp: ICAL.Time, uidDomain: string
 	const vevent = new ICAL.Component('vevent');
 	vevent.addPropertyWithValue(
 		'uid',
-		`${lesson.date}-${lesson.period}-${lesson.subjectId}@${uidDomain}`,
+		`${lesson.date}-${lesson.period}-${lesson.subjectKey}@${uidDomain}`,
 	);
 	vevent.addPropertyWithValue('dtstamp', stamp);
 	if (lesson.start && lesson.end) {

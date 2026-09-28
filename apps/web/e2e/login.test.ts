@@ -292,6 +292,8 @@ test.describe('履修科目の登録', () => {
 
 		// 授業の詳細
 		await registered.getByRole('link', { name: '架空の演習Ⅱ1-AB' }).click();
+		// 授業の URL は、DB の ID でなく、年度とシラバスの番号で作る
+		await expect(page).toHaveURL('/app/subjects/2026/900001');
 		await expect(page.getByRole('heading', { level: 1 })).toHaveText('架空の演習Ⅱ1-AB');
 		await expect(page.getByText('2026 年度 後期')).toBeVisible();
 		await expect(page.getByText('火曜 3 限、363')).toBeVisible();
@@ -368,8 +370,9 @@ test.describe('履修科目の登録', () => {
 
 	test('ない科目の詳細は、見つからないと出す', async ({ page }) => {
 		await loginAs(page);
-		for (const id of ['999999999', 'abc']) {
-			const response = await page.goto(`/app/subjects/${id}`);
+		// 授業の URL は /app/subjects/<年度>/<シラバスの番号>。前の形 (DB の ID) は転送しない
+		for (const path of ['2026/999999', '26/900001', '2026/..%2Fx', '1']) {
+			const response = await page.goto(`/app/subjects/${path}`);
 			expect(response?.status()).toBe(404);
 		}
 	});

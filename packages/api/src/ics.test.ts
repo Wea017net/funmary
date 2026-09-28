@@ -7,13 +7,13 @@ const lesson = (overrides: Partial<CalendarLesson> = {}): CalendarLesson => ({
 	period: 1,
 	start: '09:00',
 	end: '10:30',
-	subjectId: 12,
+	subjectKey: '2026-100201',
 	subjectName: '情報処理演習',
 	teacher: '未来 花子',
 	room: '363',
 	roomIsTentative: false,
 	status: 'normal',
-	detailUrl: 'https://funmary.example.com/app/subjects/12',
+	detailUrl: 'https://funmary.example.com/app/subjects/2026/100201',
 	syllabusUrl: 'https://portal.example.com/Lesson/Syllabus?lesson_id=1&year=2026',
 	...overrides,
 });
@@ -36,9 +36,11 @@ describe('buildIcs', () => {
 		expect(first?.event.startDate.toJSDate()).toEqual(new Date('2026-10-05T09:00:00+09:00'));
 		expect(first?.event.endDate.toJSDate()).toEqual(new Date('2026-10-05T10:30:00+09:00'));
 		expect(first?.event.description).toContain('教員: 未来 花子');
-		expect(first?.event.description).toContain('https://funmary.example.com/app/subjects/12');
+		expect(first?.event.description).toContain(
+			'https://funmary.example.com/app/subjects/2026/100201',
+		);
 		expect(first?.event.description).toContain('lesson_id=1');
-		expect(first?.event.uid).toBe('2026-10-05-1-12@funmary.example.com');
+		expect(first?.event.uid).toBe('2026-10-05-1-2026-100201@funmary.example.com');
 	});
 
 	it('UID は日付、時限、科目から決まり、作り直しても変わらない', () => {

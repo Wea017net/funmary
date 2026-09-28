@@ -6,6 +6,7 @@ import { parseSlotForm, parseSubjectId } from '$lib/server/course-form.ts';
 import { getServices } from '$lib/server/services.ts';
 import { alertSlotConflicts } from '$lib/server/slot-conflicts.ts';
 import { findSameName, parseUserSubjectForm } from '$lib/server/user-subject.ts';
+import { subjectPathParams } from '$lib/subject-path.ts';
 import { searchSubjects } from '$lib/subject-search.ts';
 
 export const load: ServerLoad = ({ locals, url }) => {
@@ -32,6 +33,7 @@ export const load: ServerLoad = ({ locals, url }) => {
 					teacher: subject.teacher,
 					term: subject.term,
 					userAdded: subject.source === 'user',
+					path: subjectPathParams(subject),
 					slots: courses
 						.slotsOf(subject.id)
 						.map(({ weekday, period, room }) => ({ weekday, period, room })),
@@ -45,12 +47,13 @@ export const load: ServerLoad = ({ locals, url }) => {
 	const results = searchSubjects(
 		subjects.list(academicYear).filter((subject) => !registeredIds.has(subject.id)),
 		query,
-	).map(({ id, name, teacher, term, source }) => ({
-		id,
-		name,
-		teacher,
-		term,
-		userAdded: source === 'user',
+	).map((subject) => ({
+		id: subject.id,
+		name: subject.name,
+		teacher: subject.teacher,
+		term: subject.term,
+		userAdded: subject.source === 'user',
+		path: subjectPathParams(subject),
 	}));
 
 	return { academicYear, registered, query, results, defaultTerm };

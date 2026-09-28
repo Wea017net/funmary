@@ -2,8 +2,8 @@
 	import Button, { Label } from '@smui/button';
 	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
-	import { DEFAULT_PERIODS } from '@funmary/core';
-	import { TERMS } from '@funmary/core';
+	import { DEFAULT_PERIODS, TERMS } from '@funmary/core';
+	import type { SubjectPathParams } from '$lib/subject-path.ts';
 	import { formatSlot, formatTerm, WEEKDAY_LABELS } from '$lib/term-label.ts';
 
 	interface Slot {
@@ -17,6 +17,7 @@
 		teacher: string | null;
 		term: string;
 		userAdded: boolean;
+		path: SubjectPathParams;
 		slots: Slot[];
 	}
 	interface FoundSubject {
@@ -25,6 +26,7 @@
 		teacher: string | null;
 		term: string;
 		userAdded: boolean;
+		path: SubjectPathParams;
 	}
 
 	let {
@@ -70,9 +72,7 @@
 					{#each data.registered as subject (subject.id)}
 						<li>
 							<h3>
-								<a href={resolve('/app/subjects/[id]', { id: String(subject.id) })}
-									>{subject.name}</a
-								>
+								<a href={resolve('/app/subjects/[year]/[code]', subject.path)}>{subject.name}</a>
 							</h3>
 							<p class="meta">
 								{formatTerm(
@@ -152,9 +152,7 @@
 						{#each data.results as subject (subject.id)}
 							<li>
 								<h3>
-									<a href={resolve('/app/subjects/[id]', { id: String(subject.id) })}
-										>{subject.name}</a
-									>
+									<a href={resolve('/app/subjects/[year]/[code]', subject.path)}>{subject.name}</a>
 								</h3>
 								<p class="meta">
 									{formatTerm(

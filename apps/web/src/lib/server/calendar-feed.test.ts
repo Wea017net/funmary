@@ -77,7 +77,7 @@ function setup() {
 
 describe('loadCalendarFeed', () => {
 	it('トークンの持ち主の授業を、2 週間前から半年先まで、時刻と教員と URL を付けて返す', () => {
-		const { subjectId, token } = setup();
+		const { token } = setup();
 		const loaded = loadCalendarFeed(sources(), token, NOW);
 		if (!loaded) throw new Error('見つかるはず');
 		const dates = loaded.feed.lessons.map((lesson) => lesson.date);
@@ -88,13 +88,14 @@ describe('loadCalendarFeed', () => {
 			period: 1,
 			start: '09:00',
 			end: '10:30',
-			subjectId,
+			subjectKey: '2026-100001',
 			subjectName: '代数学',
 			teacher: '未来 花子',
 			room: '363',
 			roomIsTentative: false,
 			status: 'normal',
-			detailUrl: `https://funmary.example.com/app/subjects/${subjectId}`,
+			// 授業の詳細の URL と予定の ID は、DB の ID でなく、年度とシラバスの番号で作る
+			detailUrl: 'https://funmary.example.com/app/subjects/2026/100001',
 			syllabusUrl: 'https://portal.example.com/Lesson/Syllabus?lesson_id=1&year=2026',
 		});
 		// 同じ日のうちは同じ内容になるよう、DTSTAMP は日本時間の今日の 0 時にする

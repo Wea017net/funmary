@@ -4,6 +4,7 @@ import { error, fail, redirect, type Actions, type ServerLoad } from '@sveltejs/
 import { describeClassChange } from '$lib/class-change-label.ts';
 import { getServices } from '$lib/server/services.ts';
 import { canEditSubject, findSameName, parseUserSubjectForm } from '$lib/server/user-subject.ts';
+import { parseSubjectPath } from '$lib/subject-path.ts';
 
 /** 休講などの種類を、時間割の画面と同じ表示 (StatusBadge) にそろえる */
 const CHANGE_STATUS = {
@@ -15,11 +16,10 @@ const CHANGE_STATUS = {
 /** 画面に出すリンクは https のものだけにする (javascript: などを href に入れないため) */
 const httpsOnly = (url: string | null) => (url?.startsWith('https://') ? url : null);
 
-/** URL の科目。なければ 404 */
+/** URL (/app/subjects/<年度>/<シラバスの番号>) の科目。なければ 404 */
 function findSubject(params: Partial<Record<string, string>>) {
-	const id = params['id'] ?? '';
-	if (!/^[1-9]\d{0,9}$/.test(id)) error(404, '科目が見つかりません');
-	const subject = getServices().subjects.findById(Number(id));
+	const key = parseSubjectPath(params);
+	const subject = key && getServices().subjects.findBySyllabus(key.academicYear, key.syllabusId);
 	if (!subject) error(404, '科目が見つかりません');
 	return subject;
 }
