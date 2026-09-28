@@ -157,10 +157,10 @@ describe('GET /auth/google/callback', () => {
 			headers: cookie ? { Cookie: `__Secure-funmary_login=${cookie}` } : {},
 		});
 
-	it('ログインできたら、セッションの Cookie を渡して、途中の Cookie を消す', async () => {
+	it('ログインできたら、セッションの Cookie を渡して、途中の Cookie を消し、アプリ (/app) に移る', async () => {
 		const res = await callback(makeApi(), sealFlow(flowNow(), KEY));
 		expect(res.status).toBe(302);
-		expect(res.headers.get('Location')).toBe('/');
+		expect(res.headers.get('Location')).toBe('/app');
 		const set = cookies(res);
 		const session = set.get('__Host-funmary_session')!;
 		expect(session.attributes).toContain('HttpOnly');
