@@ -42,6 +42,7 @@ import {
 import { createAdminAlerter } from '@funmary/notify';
 import { createLogger, type Logger } from '@funmary/log';
 import { parseConfig } from '$lib/server/config.ts';
+import { findBuildInfo } from '$lib/server/build-info.ts';
 import { loadCalendarFeed } from '$lib/server/calendar-feed.ts';
 import { legacyAppPath } from '$lib/server/legacy-path.ts';
 import { findMigrationsFolder } from '$lib/server/migrations-path.ts';
@@ -223,6 +224,8 @@ export const init: ServerInit = () => {
 		origin: publicOrigin,
 		alertAdmin: (alert: Parameters<typeof alerter.send>[0]) => alerter.send(alert),
 		feedTokens: createFeedTokenStore(database),
+		// リリースでは、tar.gz に同梱した build-info.json を、上の階層へたどって探す
+		build: findBuildInfo(dirname(fileURLToPath(import.meta.url))),
 	};
 	setServices(services);
 	const authService: AuthService = createAuthService({

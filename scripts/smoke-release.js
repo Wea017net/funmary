@@ -71,6 +71,12 @@ try {
 	console.log(
 		`リリース ${version} は、空の HOST と PORT のままでも 127.0.0.1:28461 で起動し、/healthz が ok を返しました`,
 	);
+	// 同梱した build-info.json を読めていれば、紹介の画面のフッターに版が出る
+	const landing = await (await fetch('http://127.0.0.1:28461/')).text();
+	if (!landing.includes(`Funmary ${version}`)) {
+		throw new Error(`紹介の画面に版 (${version}) が出ていません。build-info.json を読めていません`);
+	}
+	console.log(`紹介の画面に、版 ${version} が出ました`);
 } catch (error) {
 	console.error(error instanceof Error ? error.message : error);
 	console.error('--- サーバーの出力 ---');

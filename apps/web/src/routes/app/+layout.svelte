@@ -2,6 +2,7 @@
 	import type { Snippet } from 'svelte';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
+	import AboutApp, { type About } from '$lib/components/AboutApp.svelte';
 	import MaskedEmail from '$lib/components/MaskedEmail.svelte';
 	import ThemeToggle from '$lib/components/ThemeToggle.svelte';
 	import type { ThemePreference } from '$lib/theme.ts';
@@ -21,6 +22,7 @@
 			user: { email: string; isAdmin: boolean };
 			theme: ThemePreference;
 			canInvite: boolean;
+			about: About;
 		};
 		children: Snippet;
 	} = $props();
@@ -146,7 +148,10 @@
 
 	<main>
 		{@render children()}
-		<footer>{@render unofficial()}</footer>
+		<footer>
+			{@render unofficial()}
+			<AboutApp about={data.about} />
+		</footer>
 	</main>
 
 	<nav class="tabs" aria-label="メニュー">

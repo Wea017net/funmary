@@ -49,3 +49,17 @@ test('http.cat の画像を読めなくても、エラーの画面は出す', as
 	await expect(page.getByRole('heading', { level: 1 })).toHaveText('ページが見つかりません');
 	await expect(page.getByRole('img', { name: 'HTTP 404 を表す猫の写真' })).toHaveCount(0);
 });
+
+test('フッターに版とクライアントの情報を出し、まとめてコピーできる', async ({ page, context }) => {
+	await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+	await page.goto('/');
+	const footer = page.locator('footer');
+	// E2E のサーバーは build-info.json のないビルドなので、開発版と出る
+	await expect(footer).toContainText('Funmary 開発版');
+	await expect(footer).toContainText('ブラウザ');
+	await footer.getByRole('button', { name: '情報をコピー' }).click();
+	await expect(footer.getByRole('button', { name: 'コピーしました' })).toBeVisible();
+	const copied = await page.evaluate(() => navigator.clipboard.readText());
+	// OS によって、クリップボードの改行が \r\n になる
+	expect(copied).toMatch(/^Funmary 開発版\r?\nクライアント .+、ブラウザ$/);
+});

@@ -12,6 +12,7 @@ import type {
 	SubjectStore,
 	UnmatchedLessonStore,
 } from '@funmary/db';
+import type { BuildInfo } from './build-info.ts';
 import type { TimetableSources } from './user-timetable.ts';
 
 export interface Services {
@@ -28,6 +29,8 @@ export interface Services {
 	readonly sourceHealth: SourceHealthStore;
 	readonly jobRuns: StoredJobRunStore;
 	readonly estimateHolidays: TimetableSources['estimateHolidays'];
+	/** 動いているアプリの版。手元の開発では null */
+	readonly build: BuildInfo | null;
 	/** カレンダー購読の URL のトークン */
 	readonly feedTokens: FeedTokenStore;
 	/** 新規登録の方式 (設計書 8.2)。紹介の画面の案内に使う */
