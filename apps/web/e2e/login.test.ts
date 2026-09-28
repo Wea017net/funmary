@@ -845,11 +845,20 @@ test.describe('招待コード', () => {
 		await loginAs(adminPage, 'e2e-admin@fun.ac.jp');
 		await adminPage.goto('/app/admin/invites');
 		const memberRow = adminPage.getByRole('listitem').filter({ hasText: member });
+		const limit = adminPage.getByLabel('管理者でない人が 1 か月に発行できる数');
+		// 管理者のみのときは、月の上限を使わない
+		await expect(limit).toBeDisabled();
 		await adminPage.getByLabel(/許可したユーザー/).check();
+		await expect(limit).toBeEnabled();
+		await expect(adminPage.getByText('保存していない変更があります')).toBeVisible();
 		await adminPage.getByRole('button', { name: '保存する' }).click();
 		await expect(adminPage.getByRole('status')).toHaveText(
 			'招待コードを発行できる人の設定を保存しました。',
 		);
+		// 保存したあとも、選んだモードと上限がそのまま出ている
+		await expect(adminPage.getByLabel(/許可したユーザー/)).toBeChecked();
+		await expect(limit).toHaveValue('5');
+		await expect(adminPage.getByText('保存していない変更があります')).toBeHidden();
 		await memberRow.getByRole('button', { name: /^許可する/ }).click();
 		await expect(memberRow.getByRole('button', { name: /^許可を外す/ })).toBeVisible();
 
@@ -866,9 +875,13 @@ test.describe('招待コード', () => {
 		// ほかのテストに影響しないよう、管理者のみに戻す
 		await memberRow.getByRole('button', { name: /^許可を外す/ }).click();
 		await adminPage.getByLabel(/管理者のみ/).check();
+		await expect(limit).toBeDisabled();
 		await adminPage.getByRole('button', { name: '保存する' }).click();
 		await expect(adminPage.getByRole('status')).toHaveText(
 			'招待コードを発行できる人の設定を保存しました。',
 		);
+		await expect(adminPage.getByLabel(/管理者のみ/)).toBeChecked();
+		// 無効にした欄は送られないが、前に決めた上限は残る
+		await expect(limit).toHaveValue('5');
 	});
 });

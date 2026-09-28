@@ -35,9 +35,10 @@ export const load: ServerLoad = ({ locals }) => {
 export const actions: Actions = {
 	saveSettings: async ({ request, locals }) => {
 		requireAdmin(locals);
-		const parsed = parseInviteSettingsForm(await request.formData());
+		const { settings } = getServices();
+		const parsed = parseInviteSettingsForm(await request.formData(), readInviteSettings(settings));
 		if (!parsed.ok) return fail(400, { error: parsed.error });
-		saveInviteSettings(getServices().settings, parsed.value, new Date());
+		saveInviteSettings(settings, parsed.value, new Date());
 		return { message: '招待コードを発行できる人の設定を保存しました。' };
 	},
 	revoke: async ({ request, locals }) => {
