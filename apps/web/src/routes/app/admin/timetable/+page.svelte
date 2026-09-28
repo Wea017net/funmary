@@ -3,6 +3,7 @@
 	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
 	import type { TimetableImportView } from '$lib/server/timetable-import-view.ts';
+	import SettingsBreadcrumb from '$lib/components/SettingsBreadcrumb.svelte';
 
 	let {
 		form,
@@ -76,7 +77,7 @@
 {/snippet}
 
 <div class="page">
-	<p><a href={resolve('/app/settings')}>設定</a></p>
+	<SettingsBreadcrumb current="授業時間割の取り込み" />
 	<h1>授業時間割の取り込み</h1>
 	<p>
 		大学が配る授業時間割の PDF (前期か後期)

@@ -5,6 +5,7 @@
 	import YearCalendar from '$lib/components/YearCalendar.svelte';
 	import { formatTerm, WEEKDAY_LABELS } from '$lib/term-label.ts';
 	import { formatDate } from '$lib/timetable-label.ts';
+	import SettingsBreadcrumb from '$lib/components/SettingsBreadcrumb.svelte';
 
 	type Source = 'manual' | 'auto' | 'estimated';
 
@@ -72,7 +73,7 @@
 </svelte:head>
 
 <div class="page">
-	<p><a href={resolve('/app/settings')}>設定</a></p>
+	<SettingsBreadcrumb current="学年暦" />
 	<h1>{data.academicYear} 年度の学年暦</h1>
 
 	<nav aria-label="年度の切り替え" class="years">

@@ -43,7 +43,7 @@
 		},
 		{
 			href: resolve('/app/courses'),
-			label: '履修科目',
+			label: '科目',
 			icon: IconCourses,
 			current:
 				page.url.pathname.startsWith('/app/courses') ||
@@ -287,6 +287,8 @@
 			gap: 1.5rem;
 			box-sizing: border-box;
 			height: 100dvh;
+			/* 高さが足りないときは、下の要素を上の要素に重ねず、メニューの中でスクロールする */
+			overflow-y: auto;
 			padding: 1.5rem 1rem;
 			border-right: 1px dashed var(--fm-divider);
 		}
@@ -344,6 +346,7 @@
 		display: flex;
 		flex-direction: column;
 		align-items: flex-start;
+		flex-shrink: 0;
 		margin-top: auto;
 		padding-top: 1rem;
 		border-top: 1px dashed var(--fm-divider);
