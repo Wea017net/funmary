@@ -1,9 +1,11 @@
 // 画面のサーバー側の処理 (load、action) が使う部品。起動時に hooks.server.ts の init が 1 回だけ入れる。
 import type {
 	AcademicCalendarStore,
+	AuthStore,
 	ClassChangeStore,
 	CourseStore,
 	HolidayStore,
+	SettingsStore,
 	StoredJobRunStore,
 	SourceHealthStore,
 	SubjectStore,
@@ -12,6 +14,10 @@ import type {
 import type { TimetableSources } from './user-timetable.ts';
 
 export interface Services {
+	/** 利用者、招待コード、利用者の権限 */
+	readonly auth: AuthStore;
+	/** 管理画面で変える設定 (招待コードを発行できる人など) */
+	readonly settings: SettingsStore;
 	readonly courses: CourseStore;
 	readonly subjects: SubjectStore;
 	readonly classChanges: ClassChangeStore;

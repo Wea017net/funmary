@@ -12,6 +12,7 @@ import {
 	checkHealth,
 	createAcademicCalendarStore,
 	createAuthStore,
+	createSettingsStore,
 	createClassChangeStore,
 	createCourseStore,
 	createHolidayStore,
@@ -202,7 +203,11 @@ export const init: ServerInit = () => {
 	});
 
 	publicOrigin = result.config.origin ?? DEV_ORIGIN;
+	const store = createAuthStore(database);
+	authStore = store;
 	setServices({
+		auth: store,
+		settings: createSettingsStore(database),
 		courses: createCourseStore(database),
 		subjects: subjectStore,
 		classChanges: changeStore,
@@ -216,8 +221,6 @@ export const init: ServerInit = () => {
 		origin: publicOrigin,
 		alertAdmin: (alert) => alerter.send(alert),
 	});
-	const store = createAuthStore(database);
-	authStore = store;
 	const authService: AuthService = createAuthService({
 		oidc: createGoogleOidcClient({
 			clientId: result.config.google.clientId,
