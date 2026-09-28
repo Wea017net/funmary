@@ -20,6 +20,10 @@ const serverEnv = {
 	PORTAL_USER_ID: 'e2e-student',
 	PORTAL_PASSWORD: 'e2e-password',
 	DATA_DIR: E2E_DATA_DIR,
+	// 手元の .env に本物の Bot のトークンがあっても、テストでは使わない (空の値は、設定しないのと同じ)
+	DISCORD_BOT_TOKEN: '',
+	DISCORD_GUILD_ID: '',
+	ADMIN_DISCORD_WEBHOOK_URL: '',
 };
 
 export default defineConfig({
