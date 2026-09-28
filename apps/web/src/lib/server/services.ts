@@ -26,6 +26,12 @@ export interface Services {
 		readonly bot: DiscordBot | null;
 		layout(): DiscordLayout;
 		saveLayout(layout: DiscordLayout): void;
+		/** Bot のオンライン表示 (Gateway につなぐ)。available は本番で、送信を止めていないときだけ true */
+		readonly presence: {
+			readonly available: boolean;
+			enabled(): boolean;
+			setEnabled(enabled: boolean): void;
+		};
 	};
 	readonly courses: CourseStore;
 	readonly subjects: SubjectStore;

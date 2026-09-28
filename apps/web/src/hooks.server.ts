@@ -45,6 +45,7 @@ import {
 	createAdminAlerter,
 	createAdminDiscordSink,
 	createDiscordBot,
+	createDiscordPresence,
 	parseLayout,
 	type DiscordLayout,
 } from '@funmary/notify';
@@ -53,7 +54,11 @@ import { parseConfig } from '$lib/server/config.ts';
 import { importAcademicCalendarPdf } from '$lib/server/academic-calendar-import.ts';
 import { findBuildInfo } from '$lib/server/build-info.ts';
 import { loadCalendarFeed } from '$lib/server/calendar-feed.ts';
-import { DISCORD_LAYOUT_KEY } from '$lib/server/discord-admin.ts';
+import {
+	DISCORD_LAYOUT_KEY,
+	DISCORD_PRESENCE_KEY,
+	readPresenceEnabled,
+} from '$lib/server/discord-admin.ts';
 import { OFFICIAL_CALENDAR_KEY } from '$lib/server/official-documents.ts';
 import { legacyAppPath } from '$lib/server/legacy-path.ts';
 import { findMigrationsFolder } from '$lib/server/migrations-path.ts';
@@ -122,6 +127,19 @@ export const init: ServerInit = () => {
 			})
 		: null;
 	const readDiscordLayout = () => parseLayout(settingsStore.get(DISCORD_LAYOUT_KEY));
+	// Bot のオンライン表示は、見た目のためだけに Gateway につなぐ。本番で、送信を止めていないときだけ動かす
+	// (手元の開発で、同じトークンをつなぎ、本番と取り合わないため)。管理画面で切り替えられる
+	const presence = result.config.discordBot
+		? createDiscordPresence({ token: result.config.discordBot.token, log: logger })
+		: null;
+	const presenceAvailable =
+		presence !== null && result.config.mode === 'production' && !result.config.notifyDryRun;
+	const presenceEnabled = () => readPresenceEnabled(settingsStore.get(DISCORD_PRESENCE_KEY));
+	const applyPresence = () => {
+		if (presenceAvailable && presenceEnabled()) presence.start();
+		else presence?.stop();
+	};
+	applyPresence();
 	const alerter = createAdminAlerter({
 		webhookUrl: result.config.adminDiscordWebhookUrl,
 		...(discordBot
@@ -249,6 +267,7 @@ export const init: ServerInit = () => {
 		if (abandoned.length > 0) {
 			logger?.withTag('app').warn(`終わらなかった定期処理を中断しました: ${abandoned.join('、')}`);
 		}
+		presence?.stop();
 		database.close();
 	});
 
@@ -261,6 +280,14 @@ export const init: ServerInit = () => {
 		discord: {
 			bot: discordBot,
 			layout: readDiscordLayout,
+			presence: {
+				available: presenceAvailable,
+				enabled: presenceEnabled,
+				setEnabled: (enabled: boolean) => {
+					settingsStore.set(DISCORD_PRESENCE_KEY, { enabled }, new Date());
+					applyPresence();
+				},
+			},
 			saveLayout: (layout: DiscordLayout) =>
 				settingsStore.set(DISCORD_LAYOUT_KEY, layout, new Date()),
 		},

@@ -97,6 +97,31 @@
 		</form>
 	{/if}
 
+	{#if data.view.botConfigured}
+		<section aria-labelledby="presence-heading">
+			<h2 id="presence-heading">オンライン表示</h2>
+			<p>
+				Bot
+				を、メンバー一覧で「オンライン」に見せます。見た目のためだけの設定で、通知の送信には関係しません
+				(切っても、通知は届きます)。本番の Funmary だけで動き、手元の開発では動きません。
+			</p>
+			<p class="meta">
+				いまの状態: {data.view.presence.enabled ? '入れています' : '切っています'}{data.view
+					.presence.available
+					? ''
+					: ' (この環境では動かしていません)'}
+			</p>
+			<form method="POST" action="?/presence" use:enhance>
+				<input type="hidden" name="enabled" value={String(!data.view.presence.enabled)} />
+				<Button type="submit" variant="outlined">
+					<Label
+						>{data.view.presence.enabled ? 'オンライン表示を切る' : 'オンライン表示を入れる'}</Label
+					>
+				</Button>
+			</form>
+		</section>
+	{/if}
+
 	<section aria-labelledby="channels-heading">
 		<h2 id="channels-heading">チャンネル</h2>
 		{@render rows('channel', data.view.channels)}

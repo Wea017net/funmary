@@ -1,6 +1,6 @@
 import { builtinModules } from 'node:module';
 import { defineConfig } from 'tsdown';
-import { UNBUNDLED_DEPS } from './bundled-deps.js';
+import { BUILD_ALIASES, UNBUNDLED_DEPS } from './bundled-deps.js';
 
 // 管理用コマンド (cli.js) と、本番の入口 (server.js) を、本番で node だけで動かせる JavaScript にまとめる (設計書 20.6)。
 // better-sqlite3 は C++ の拡張なので同梱せず、リリースの package.json から入れる
@@ -20,6 +20,8 @@ export default defineConfig({
 			!builtinModules.includes(id) &&
 			!UNBUNDLED_DEPS.some((name) => id === name || id.startsWith(`${name}/`)),
 	},
+	// あれば使うだけの依存 (zlib-sync) は、空の部品に置き換える
+	alias: BUILD_ALIASES,
 	// 依存の版はリリースで固定するので、宣言ファイルは要らない
 	dts: false,
 });

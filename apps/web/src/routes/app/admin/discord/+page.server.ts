@@ -23,7 +23,12 @@ const describeError = (error: unknown) =>
 export const load: ServerLoad = ({ locals }) => {
 	requireAdmin(locals);
 	const { discord } = getServices();
-	return { view: toDiscordView(discord.bot, discord.layout()) };
+	return {
+		view: toDiscordView(discord.bot, discord.layout(), {
+			available: discord.presence.available,
+			enabled: discord.presence.enabled(),
+		}),
+	};
 };
 
 export const actions: Actions = {
@@ -98,6 +103,16 @@ export const actions: Actions = {
 			userId,
 		);
 		return result.ok ? { message: result.message } : fail(400, { error: result.error });
+	},
+	/** Bot のオンライン表示を、入れる、切る */
+	presence: async ({ request, locals }) => {
+		requireAdmin(locals);
+		const { discord } = getServices();
+		const enabled = (await request.formData()).get('enabled') === 'true';
+		discord.presence.setEnabled(enabled);
+		return {
+			message: enabled ? 'オンライン表示を入れました。' : 'オンライン表示を切りました。',
+		};
 	},
 	/** チャンネルに、テストのメッセージを送る */
 	test: async ({ request, locals }) => {
