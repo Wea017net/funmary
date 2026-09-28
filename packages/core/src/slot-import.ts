@@ -24,9 +24,9 @@ export interface PlannedSlot {
 	readonly room: string | null;
 	/** 照合に使った名前 (科目名 + クラス) */
 	readonly lessonName: string;
-	/** manual は、管理者が手で紐付けた名前 */
+	/** manual は、管理者が手で紐付けた名前。split は、まとめて書かれたコマを分けて照合したもの */
 	readonly method:
-		Exclude<Extract<MatchResult, { kind: 'matched' }>['method'], 'similarity'> | 'manual';
+		Exclude<Extract<MatchResult, { kind: 'matched' }>['method'], 'similarity'> | 'manual' | 'split';
 }
 
 /**
@@ -43,7 +43,10 @@ export interface SlotImportPlan {
 }
 
 type PlannedMatch =
-	MatchResult | { readonly kind: 'matched'; readonly subjectId: number; readonly method: 'manual' };
+	| MatchResult
+	| { readonly kind: 'matched'; readonly subjectId: number; readonly method: 'manual' }
+	/** まとめて書かれたコマを分けて、それぞれの科目に決まったもの */
+	| { readonly kind: 'split'; readonly subjectIds: readonly number[] };
 
 const MAX_WEEKDAY = 6;
 const MAX_PERIOD = 6;
@@ -64,6 +67,84 @@ export function subjectsInSemester<T extends { readonly term: string }>(
 	if (semester === null) return [...subjects];
 	const terms: readonly string[] = SEMESTER_TERMS[semester];
 	return subjects.filter((subject) => terms.includes(subject.term));
+}
+
+/** 空白を除き、NFKC で正規化する (科目名とクラスを比べるため) */
+const compact = (text: string) => text.normalize('NFKC').replace(/\s+/g, '');
+
+/** すべてが確かに (類似度でなく) 決まり、科目が重ならなければ、その科目の ID */
+function allDecided(results: readonly MatchResult[]): number[] | null {
+	const ids: number[] = [];
+	for (const result of results) {
+		if (result.kind !== 'matched' || result.method === 'similarity') return null;
+		ids.push(result.subjectId);
+	}
+	return new Set(ids).size === ids.length ? ids : null;
+}
+
+/**
+ * クラスの文字をまとめたもの (例: 2-EFJKL) を、同じ科目名と学年の科目 (2-EF と 2-JKL) で、重ならずにちょうど覆う。
+ * 覆い方が 1 通りに決まるときだけ、その科目の ID を返す
+ */
+function coverClasses(
+	subject: string,
+	year: string,
+	letters: string,
+	subjects: readonly SubjectName[],
+): number[] | null {
+	const base = compact(subject) + year + '-';
+	const candidates = subjects.flatMap((candidate) => {
+		const name = compact(candidate.name);
+		if (!name.startsWith(base)) return [];
+		const own = name.slice(base.length);
+		return /^[A-Z]+$/.test(own) && own !== letters && [...own].every((c) => letters.includes(c))
+			? [{ id: candidate.id, letters: own }]
+			: [];
+	});
+	const covers: number[][] = [];
+	const search = (index: number, used: string, chosen: number[]) => {
+		if (used.length === letters.length) {
+			covers.push(chosen);
+			return;
+		}
+		for (let i = index; i < candidates.length; i++) {
+			const next = candidates[i];
+			if (!next || [...next.letters].some((c) => used.includes(c))) continue;
+			search(i + 1, used + next.letters, [...chosen, next.id]);
+		}
+	};
+	search(0, '', []);
+	const [only] = covers;
+	return covers.length === 1 && only && only.length >= 2 ? only : null;
+}
+
+/**
+ * まとめて書かれたコマを分けて照合する。例: "画像工学" の "3-JKL,4-GHI" は 画像工学3-JKL と 画像工学4-GHI、
+ * "アルゴリズムとデータ構造" の "2-EFJKL" は 2-EF と 2-JKL。分けたものがすべて決まるときだけ返す
+ */
+function splitCombinedCell(cell: TimetableCell, subjects: readonly SubjectName[]): number[] | null {
+	if (!cell.classes) return null;
+	const parts = cell.classes
+		.split(/[,、]/)
+		.map((part) => part.trim())
+		.filter(Boolean);
+	if (parts.length >= 2) {
+		return allDecided(parts.map((part) => matchLessonName(`${cell.subject}${part}`, subjects)));
+	}
+	const grouped = /^(\d)-([A-Z]{2,})$/.exec(compact(cell.classes));
+	if (!grouped?.[1] || !grouped[2]) return null;
+	return coverClasses(cell.subject, grouped[1], grouped[2], subjects);
+}
+
+/** 枠を付ける科目と照合の方法。決まらない (似た名前でしか合わないものを含む) なら null */
+function decidedTargets(
+	match: PlannedMatch,
+): { subjectId: number; method: PlannedSlot['method'] }[] | null {
+	if (match.kind === 'split') {
+		return match.subjectIds.map((subjectId) => ({ subjectId, method: 'split' }));
+	}
+	if (match.kind !== 'matched' || match.method === 'similarity') return null;
+	return [{ subjectId: match.subjectId, method: match.method }];
 }
 
 /**
@@ -93,10 +174,15 @@ export function planSlotImport(
 				manual !== undefined && ids.has(manual)
 					? { kind: 'matched', subjectId: manual, method: 'manual' }
 					: matchLessonName(lessonName, subjects);
+			if (match.kind !== 'matched' || match.method === 'similarity') {
+				const split = splitCombinedCell(cell, subjects);
+				if (split) match = { kind: 'split', subjectIds: split };
+			}
 			matches.set(lessonName, match);
 		}
-		if (match.kind !== 'matched' || match.method === 'similarity') {
-			if (!unmatched.has(lessonName)) {
+		const targets = decidedTargets(match);
+		if (!targets) {
+			if (!unmatched.has(lessonName) && match.kind !== 'split') {
 				unmatched.set(
 					lessonName,
 					match.kind === 'matched'
@@ -107,25 +193,27 @@ export function planSlotImport(
 			continue;
 		}
 
-		const key = `${match.subjectId}:${cell.weekday}:${cell.period}`;
-		const existing = slots.get(key);
-		if (existing) {
-			for (const room of cell.rooms) {
-				if (!existing.rooms.includes(room)) existing.rooms.push(room);
+		for (const { subjectId, method } of targets) {
+			const key = `${subjectId}:${cell.weekday}:${cell.period}`;
+			const existing = slots.get(key);
+			if (existing) {
+				for (const room of cell.rooms) {
+					if (!existing.rooms.includes(room)) existing.rooms.push(room);
+				}
+				continue;
 			}
-			continue;
+			slots.set(key, {
+				slot: {
+					subjectId,
+					weekday: cell.weekday,
+					period: cell.period,
+					room: null,
+					lessonName,
+					method,
+				},
+				rooms: [...new Set(cell.rooms)],
+			});
 		}
-		slots.set(key, {
-			slot: {
-				subjectId: match.subjectId,
-				weekday: cell.weekday,
-				period: cell.period,
-				room: null,
-				lessonName,
-				method: match.method,
-			},
-			rooms: [...new Set(cell.rooms)],
-		});
 	}
 
 	return {

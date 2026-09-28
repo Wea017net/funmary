@@ -136,6 +136,8 @@ const METHOD_LABELS = {
 	exact: '完全一致',
 	normalized: '表記の揺れを除いて一致',
 	'old-name-removed': '旧名を除いて一致',
+	alias: '略称を言い換えて一致',
+	split: 'まとめて書かれたコマを分けて一致',
 	manual: '管理画面で紐付け済み',
 } as const;
 

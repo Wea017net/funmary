@@ -1,5 +1,5 @@
 // 授業名を科目と照合する (設計書 9.1 の 7)。休講一覧などに書かれた授業名は、シラバスの科目名と表記が違うことがある。
-// 完全一致、Unicode 正規化 (NFKC) 後の一致、"(旧:...)" を除いた一致、類似度の順に試す。
+// 完全一致、Unicode 正規化 (NFKC) 後の一致、"(旧:...)" を除いた一致、略称を言い換えた一致、類似度の順に試す。
 // 類似度で選ぶのは、1 位が閾値を超え、かつ 2 位と十分な差があるときだけにする。
 // 誤った科目に紐付けると、別の授業の休講を通知してしまうので、迷うときは決めずに人の確認へ回す。
 
@@ -12,7 +12,7 @@ export type MatchResult =
 	| {
 			readonly kind: 'matched';
 			readonly subjectId: number;
-			readonly method: 'exact' | 'normalized' | 'old-name-removed' | 'similarity';
+			readonly method: 'exact' | 'normalized' | 'old-name-removed' | 'alias' | 'similarity';
 	  }
 	/** 決められない。管理画面に出して、手で紐付ける */
 	| { readonly kind: 'ambiguous'; readonly reason: 'same-name' | 'close-candidates' }
@@ -28,12 +28,33 @@ export const SIMILARITY_MARGIN = 0.1;
  * 波ダッシュ (〜) とチルダ、ハイフンと負号 (−) などは、文字コードの変換で入れ替わりやすいので、同じ文字にそろえる
  */
 function normalize(text: string): string {
-	return text
-		.normalize('NFKC')
-		.replace(/[〜∼]/g, '~')
-		.replace(/[‐-―−]/g, '-')
-		.replace(/\s+/g, '')
-		.toLowerCase();
+	return (
+		text
+			.normalize('NFKC')
+			.replace(/[〜∼]/g, '~')
+			.replace(/[‐-―−]/g, '-')
+			.replace(/\s+/g, '')
+			// 中黒の有無 (バーチャル・イングリッシュ と バーチャルイングリッシュ) は同じとみなす
+			.replace(/・/g, '')
+			.toLowerCase()
+	);
+}
+
+/**
+ * 授業時間割などで使われる略称と英語の名前を、シラバスの科目名の書き方に言い換える。
+ * 例: "VEPⅠ1" は "バーチャル・イングリッシュ・プログラムⅠ1"、"CommunicationI1-A" は "コミュニケーションI1-A"
+ */
+const ALIASES: readonly [pattern: RegExp, replacement: string][] = [
+	[/virtual\s*english\s*program/giu, 'バーチャル・イングリッシュ・プログラム'],
+	[/VEP/gu, 'バーチャル・イングリッシュ・プログラム'],
+	[/communication/giu, 'コミュニケーション'],
+];
+
+function expandAliases(text: string): string {
+	return ALIASES.reduce(
+		(current, [pattern, replacement]) => current.replace(pattern, replacement),
+		text,
+	);
 }
 
 /** 末尾の "(旧:...)" を除く。括弧と冒号は全角と半角の両方を受け付ける */
@@ -84,8 +105,9 @@ function differentNumber(a: string, b: string): boolean {
 export function matchLessonName(lessonName: string, subjects: readonly SubjectName[]): MatchResult {
 	if (lessonName.trim() === '' || subjects.length === 0) return { kind: 'unmatched' };
 
+	const expanded = expandAliases(lessonName);
 	const steps: {
-		method: 'exact' | 'normalized' | 'old-name-removed';
+		method: 'exact' | 'normalized' | 'old-name-removed' | 'alias';
 		test: (s: SubjectName) => boolean;
 	}[] = [
 		{ method: 'exact', test: (s) => s.name === lessonName },
@@ -93,6 +115,12 @@ export function matchLessonName(lessonName: string, subjects: readonly SubjectNa
 		{
 			method: 'old-name-removed',
 			test: (s) => normalize(removeOldName(s.name)) === normalize(removeOldName(lessonName)),
+		},
+		{
+			method: 'alias',
+			test: (s) =>
+				expanded !== lessonName &&
+				normalize(removeOldName(s.name)) === normalize(removeOldName(expanded)),
 		},
 	];
 	for (const { method, test } of steps) {
