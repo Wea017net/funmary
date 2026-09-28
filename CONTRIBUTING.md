@@ -141,6 +141,12 @@ chore(deps): 依存を更新: svelte → ^5.58.0
 - E2E テストは Playwright で書き、`apps/web/e2e/` に置きます。
 - 不具合を直すときは、先にその不具合を再現するテストを書きます。
 
+## 依存の置き方
+
+- アプリが実行時に使うパッケージは `dependencies` に、ビルドやテストの道具は `devDependencies` に置きます。
+- 本番のビルドは、better-sqlite3 のほかの依存を、`dependencies` にあるものも含めてすべて同梱します (`apps/web/bundled-deps.js`)。VPS に入れるのは better-sqlite3 だけです。リリースを作るとき、ほかのパッケージをビルドの外から読み込んでいれば止まります。
+- package.json の依存の欄は、ほかの `*Dependencies`、`dependencies`、`devDependencies` の順に並べます。テストで確かめます。
+
 ## 依存の更新
 
 依存の更新は Renovate が PR を作ります。自分で依存を上げる PR は作らなくてかまいません。
