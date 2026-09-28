@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Button, { Label } from '@smui/button';
+	import { enhance } from '$app/forms';
 	import { onMount } from 'svelte';
 
 	interface ImportSummary {
@@ -93,7 +94,16 @@
 	{/if}
 
 	{#if payload}
-		<form method="POST">
+		<!-- 画面を切り替えずに送る。POST で開いたページが履歴に残ると、iPhone の Safari では、そこから移った画面の再読み込みで、同じ POST をその画面に送り直して 405 になる -->
+		<form
+			method="POST"
+			use:enhance={() =>
+				async ({ update }) => {
+					// 取り込んだら (読めなかったときも) ボタンを消す。同じ内容を 2 回送らないため
+					payload = '';
+					await update();
+				}}
+		>
 			<input type="hidden" name="payload" value={payload} />
 			<p>ポータルの時間割を読み取りました。取り込むと、履修科目として登録します。</p>
 			<Button type="submit" variant="unelevated"><Label>取り込む</Label></Button>
