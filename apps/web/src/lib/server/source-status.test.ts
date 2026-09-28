@@ -47,6 +47,16 @@ describe('sourceStatuses', () => {
 				lastError: null,
 				state: 'never',
 			},
+			{
+				source: 'academic-calendar',
+				label: '学年暦 (大学サイトの PDF)',
+				lastSuccessAt: null,
+				lastAttemptAt: null,
+				nextAttemptAt: null,
+				consecutiveFailures: 0,
+				lastError: null,
+				state: 'never',
+			},
 		]);
 	});
 
@@ -66,6 +76,7 @@ describe('sourceStatuses', () => {
 			['portal', 'unhealthy'],
 			['syllabus', 'failing'],
 			['holidays', 'never'],
+			['academic-calendar', 'never'],
 			['hope', 'never'],
 		]);
 		expect(rows[0]?.lastError).toBe('タイムアウト');
@@ -90,6 +101,7 @@ describe('formatSourcesReport', () => {
 			'学生ポータル (休講など) [portal]: 失敗あり。最終成功 2026-10-05 11:00、最終試行 2026-10-05 11:30、連続の失敗 1 回。直近の失敗: タイムアウト',
 			'公開シラバス [syllabus]: まだ動いていません',
 			'内閣府の祝日 [holidays]: まだ動いていません',
+			'学年暦 (大学サイトの PDF) [academic-calendar]: まだ動いていません',
 		]);
 	});
 });

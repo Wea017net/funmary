@@ -24,3 +24,9 @@ export {
 	createImportHolidaysJob,
 	type ImportHolidaysDeps,
 } from './import-holidays.ts';
+export {
+	ACADEMIC_CALENDAR_SOURCE,
+	createImportAcademicCalendarJob,
+	type AcademicCalendarImportOutcome,
+	type ImportAcademicCalendarDeps,
+} from './import-academic-calendar.ts';
