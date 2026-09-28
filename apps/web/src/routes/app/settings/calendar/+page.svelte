@@ -2,6 +2,7 @@
 	import Button, { Label } from '@smui/button';
 	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
+	import { confirmSubmit } from '$lib/actions/confirm-submit.ts';
 	import SettingsBreadcrumb from '$lib/components/SettingsBreadcrumb.svelte';
 
 	let {
@@ -144,7 +145,12 @@
 				>
 					<Button type="submit" variant="unelevated"><Label>再発行する</Label></Button>
 				</form>
-				<form method="POST" action="?/revoke" use:enhance>
+				<form
+					method="POST"
+					action="?/revoke"
+					use:confirmSubmit={'この購読の URL を無効にします。登録したカレンダーアプリで、予定が見えなくなります。よろしいですか?'}
+					use:enhance
+				>
 					<Button type="submit" variant="outlined"><Label>無効にする</Label></Button>
 				</form>
 			</div>

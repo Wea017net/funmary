@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Button, { Label } from '@smui/button';
 	import { enhance } from '$app/forms';
+	import { confirmSubmit } from '$lib/actions/confirm-submit.ts';
 	import type { InviteCodeView } from '$lib/server/invites.ts';
 
 	// まだ使える招待コードの一覧。発行の画面 (自分のコード) と管理画面 (全員のコード) で使う。
@@ -21,7 +22,12 @@
 					{code.createdAt}
 					{#if showIssuer}、発行者 {code.createdByEmail ?? '(管理用コマンド)'}{/if}
 				</p>
-				<form method="POST" action="?/revoke" use:enhance>
+				<form
+					method="POST"
+					action="?/revoke"
+					use:confirmSubmit={'この招待コードを取り消します。よろしいですか?'}
+					use:enhance
+				>
 					<input type="hidden" name="id" value={code.id} />
 					<Button type="submit" variant="outlined">
 						<Label>取り消す<span class="visually-hidden">: {code.note ?? '(メモなし)'}</span></Label

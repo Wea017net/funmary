@@ -2,6 +2,7 @@
 	import Button, { Label } from '@smui/button';
 	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
+	import { confirmSubmit } from '$lib/actions/confirm-submit.ts';
 	import EventForm from '$lib/components/EventForm.svelte';
 	import type { EventFormValues } from '$lib/event-form.ts';
 
@@ -59,7 +60,12 @@
 	<section class="danger" aria-labelledby="delete-heading">
 		<h2 id="delete-heading">予定を消す</h2>
 		<p>消した予定は、元に戻せません。繰り返しの予定は、すべての回が消えます。</p>
-		<form method="POST" action="?/delete" use:enhance>
+		<form
+			method="POST"
+			action="?/delete"
+			use:confirmSubmit={'この予定を消します。元に戻せません。よろしいですか?'}
+			use:enhance
+		>
 			<Button type="submit" variant="outlined"><Label>この予定を消す</Label></Button>
 		</form>
 	</section>
