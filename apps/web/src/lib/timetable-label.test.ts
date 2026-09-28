@@ -1,10 +1,27 @@
 import { describe, expect, it } from 'vitest';
-import { formatDate, formatDayNote, formatFetchedAt, STATUS_LABELS } from './timetable-label.ts';
+import {
+	formatDate,
+	formatDayNote,
+	formatFetchedAt,
+	formatMonthDay,
+	formatWeekday,
+	STATUS_LABELS,
+} from './timetable-label.ts';
 
 describe('formatDate', () => {
 	it('月と日と曜日で出す', () => {
 		expect(formatDate('2026-10-05')).toBe('10/5 (月)');
 		expect(formatDate('2027-01-10')).toBe('1/10 (日)');
+	});
+});
+
+describe('formatMonthDay と formatWeekday', () => {
+	it('月日と、括弧付きの曜日を、別々に返す (狭い画面で、曜日を必ず 2 行目に置くため)', () => {
+		expect(formatMonthDay('2026-10-05')).toBe('10/5');
+		expect(formatWeekday('2026-10-05')).toBe('(月)');
+		expect(`${formatMonthDay('2027-01-10')} ${formatWeekday('2027-01-10')}`).toBe(
+			formatDate('2027-01-10'),
+		);
 	});
 });
 

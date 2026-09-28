@@ -10,7 +10,12 @@
 	import StatusBadge from '$lib/components/StatusBadge.svelte';
 	import type { LessonView } from '$lib/server/lesson-view.ts';
 	import type { DayNote } from '$lib/server/user-timetable.ts';
-	import { formatDate, formatDayNote } from '$lib/timetable-label.ts';
+	import {
+		formatDate,
+		formatDayNote,
+		formatMonthDay,
+		formatWeekday,
+	} from '$lib/timetable-label.ts';
 	import { WEEK_VIEW_COOKIE, WEEK_VIEWS, type WeekView } from '$lib/week-view.ts';
 
 	interface Row {
@@ -171,7 +176,10 @@
 					<th scope="col"><span class="visually-hidden">時限</span></th>
 					{#each data.days as day (day.date)}
 						<th scope="col" class={{ today: day.date === data.today, off: isDayOff(day.note) }}>
-							<span class="date">{formatDate(day.date)}</span>
+							<span class="date"
+								>{formatMonthDay(day.date)}
+								<span class="weekday">{formatWeekday(day.date)}</span></span
+							>
 							{#if day.note}
 								{@const badge = NOTE_BADGES[day.note.kind]}
 								<span class={['day-badge', day.note.kind]}>
@@ -189,7 +197,9 @@
 						<th scope="row">
 							{row.period} 限
 							{#if row.start && row.end}
-								<span class="time">{row.start}-{row.end}</span>
+								<span class="time"
+									><span class="start">{row.start}-</span><span class="end">{row.end}</span></span
+								>
 							{/if}
 						</th>
 						{#each row.cells as cell (cell.date)}
@@ -311,7 +321,7 @@
 			scroll-snap-align: end;
 		}
 	}
-	/* 1 週間を並べるときは、幅を等分する。狭い画面では、余白と文字を詰めて時刻を隠す */
+	/* 1 週間を並べるときは、幅を等分する。狭い画面では、余白と文字を詰める */
 	@mixin narrow-week {
 		th,
 		td {
@@ -321,11 +331,11 @@
 		}
 		thead th:first-child,
 		tbody th {
-			width: 2.5rem;
+			width: 3.25rem;
 			white-space: normal;
 		}
 		.time {
-			display: none;
+			font-size: 0.6875rem;
 		}
 	}
 	.scroll {
@@ -375,6 +385,14 @@
 	}
 	.date {
 		display: block;
+	}
+	/* 幅が狭いときは、曜日を必ず 2 行目に、時刻を「開始-」と「終了」の 2 行に、すべての列でそろえる */
+	@include breakpoints.narrow {
+		.weekday,
+		.start,
+		.end {
+			display: block;
+		}
 	}
 	.day-badge {
 		display: inline-flex;

@@ -614,6 +614,31 @@ test.describe('今日と週の時間割', () => {
 		await expect(page.getByText('休講情報をまだ取得していません')).toBeVisible();
 	});
 
+	test('幅が狭いときの週の時間割は、曜日を必ず 2 行目に置き、時限の時刻を 2 行にそろえる', async ({
+		page,
+	}) => {
+		await loginAs(page);
+		registerSubject();
+		await page.setViewportSize({ width: 390, height: 800 });
+		await page.goto('/app/week?date=2026-10-07');
+		await page.getByRole('button', { name: '週', exact: true }).click();
+
+		const top = async (locator: import('@playwright/test').Locator) =>
+			(await locator.boundingBox())?.y ?? Number.NaN;
+		const dates = page.locator('thead .date');
+		const weekdays = page.locator('thead .weekday');
+		await expect(weekdays).toHaveCount(5);
+		for (let i = 0; i < 5; i++) {
+			expect(await top(weekdays.nth(i))).toBeGreaterThan((await top(dates.nth(i))) + 8);
+		}
+		// 各限に時刻が出て、「開始-」と「終了」が別の行になる
+		const time = page.locator('tbody .time').first();
+		await expect(time).toBeVisible();
+		expect(await top(time.locator('.end'))).toBeGreaterThan(
+			(await top(time.locator('.start'))) + 8,
+		);
+	});
+
 	test('週の時間割に、教室変更と補講を文字で出し、補講の仮の教室を示す', async ({ page }) => {
 		await loginAs(page);
 		registerSubject();
@@ -1055,7 +1080,7 @@ test.describe('招待コード', () => {
 		).toHaveCount(0);
 		await page.goto('/app/settings');
 		await page.getByRole('link', { name: /^招待 友だち/ }).click();
-		await expect(page).toHaveURL('/app/invites');
+		await expect(page).toHaveURL('/app/settings/invites');
 		await expect(page.getByRole('navigation', { name: 'パンくず' })).toContainText('設定');
 		await page.getByLabel('使用回数').fill('2');
 		await page.getByLabel(/^メモ/).fill('E2E の研究室');
@@ -1089,7 +1114,7 @@ test.describe('招待コード', () => {
 		await loginAs(memberPage, member);
 		await memberPage.goto('/app/settings');
 		await expect(memberPage.getByRole('link', { name: /^招待 友だち/ })).toHaveCount(0);
-		await memberPage.goto('/app/invites');
+		await memberPage.goto('/app/settings/invites');
 		await expect(memberPage.getByRole('button', { name: '招待コードを発行する' })).toHaveCount(0);
 
 		const adminPage = await (await browser.newContext()).newPage();
@@ -1113,7 +1138,7 @@ test.describe('招待コード', () => {
 		await memberRow.getByRole('button', { name: /^許可する/ }).click();
 		await expect(memberRow.getByRole('button', { name: /^許可を外す/ })).toBeVisible();
 
-		await memberPage.goto('/app/invites');
+		await memberPage.goto('/app/settings/invites');
 		// 管理者でない人は、回数と期限を決められない
 		await expect(memberPage.getByLabel('使用回数')).toHaveCount(0);
 		await expect(memberPage.getByText('今月はあと 5')).toBeVisible();

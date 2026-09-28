@@ -1,4 +1,4 @@
-// 招待コードの画面 (/app/invites、/app/admin/invites) のフォームの値の検査。ブラウザから来る値は信用しない。
+// 招待コードの画面 (/app/settings/invites、/app/admin/invites) のフォームの値の検査。ブラウザから来る値は信用しない。
 import {
 	INVITE_ISSUERS,
 	MEMBER_INVITE_DAYS,

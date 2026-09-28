@@ -49,7 +49,7 @@
 <div class="page">
 	<SettingsBreadcrumb current="招待コードの管理" />
 	<h1>招待コードの管理</h1>
-	<p>招待コードの発行は、<a href={resolve('/app/invites')}>招待</a> の画面で行います。</p>
+	<p>招待コードの発行は、<a href={resolve('/app/settings/invites')}>招待</a> の画面で行います。</p>
 	{#if data.registration !== 'invite'}
 		<p class="muted">
 			いまの登録の方式 (REGISTRATION) は {data.registration} なので、招待コードは登録に使われません。

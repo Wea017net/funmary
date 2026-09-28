@@ -25,7 +25,7 @@
 	} = $props();
 
 	// PC では左のメニュー、スマホでは下のタブに同じ項目を出す (設計書 12.4)。
-	// 招待と管理は設定の中にあるので、それらの画面を開いているときも設定を選んだ状態にする
+	// 管理は設定の中にあるので、管理の画面を開いているときも設定を選んだ状態にする
 	const items = $derived([
 		{
 			href: resolve('/app'),
@@ -52,9 +52,7 @@
 			label: '設定',
 			icon: IconSettings,
 			current:
-				page.url.pathname.startsWith('/app/settings') ||
-				page.url.pathname.startsWith('/app/admin') ||
-				page.url.pathname.startsWith('/app/invites'),
+				page.url.pathname.startsWith('/app/settings') || page.url.pathname.startsWith('/app/admin'),
 		},
 	]);
 </script>
