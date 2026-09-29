@@ -73,3 +73,56 @@ export function fillSecrets(text: string, generate: () => Secrets): FillResult {
 	}
 	return { text: replaced.join(newline), filled };
 }
+
+const ENV_LINE = /^([A-Z_]+)\s*=(.*)$/;
+
+export interface AlignResult {
+	readonly text: string;
+	/** template にはあるが、current になかった鍵 (空のまま足した) */
+	readonly added: readonly string[];
+	/** current にはあるが、template にない鍵 (値を保ち、末尾にまとめて残した) */
+	readonly extra: readonly string[];
+}
+
+/**
+ * current の並びを、template (.env.example) の並びに合わせる。値のある行の値は変えない。
+ * template にあって current にない鍵は、template の位置に空のまま足す。
+ * current にあって template にない鍵は、値を保ったまま末尾にまとめる (消さない)。
+ * コメントと見出し、空行、改行の形は template のものを使う。
+ */
+export function alignEnvFile(current: string, template: string): AlignResult {
+	const newline = template.includes('\r\n') ? '\r\n' : '\n';
+	const currentLines = current.split(/\r\n|\n/);
+
+	// 同じ鍵が 2 回あれば、あとの行を使う (env_value と同じ考え方)
+	const values = new Map<string, string>();
+	for (const line of currentLines) {
+		const match = ENV_LINE.exec(line);
+		if (match?.[1]) values.set(match[1], match[2] ?? '');
+	}
+
+	const added: string[] = [];
+	const templateKeys = new Set<string>();
+	const aligned = template.split(/\r\n|\n/).map((line) => {
+		const match = ENV_LINE.exec(line);
+		if (!match?.[1]) return line;
+		const name = match[1];
+		templateKeys.add(name);
+		if (!values.has(name)) {
+			added.push(name);
+			return line;
+		}
+		const value = values.get(name);
+		if (value === '' || value === undefined) return line;
+		return `${name}=${value}`;
+	});
+
+	const extraKeys = [...values.keys()].filter((name) => !templateKeys.has(name));
+	if (extraKeys.length > 0) {
+		if (aligned.at(-1) === '') aligned.pop();
+		aligned.push('', '# ---- ほかの変数 (テンプレートにない。手で見直してください) ----', '');
+		for (const name of extraKeys) aligned.push(`${name}=${values.get(name) ?? ''}`);
+		aligned.push('');
+	}
+	return { text: aligned.join(newline), added, extra: extraKeys };
+}

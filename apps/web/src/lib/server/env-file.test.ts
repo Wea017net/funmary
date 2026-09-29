@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { parseConfig } from './config.ts';
-import { fillSecrets, generateSecrets } from './env-file.ts';
+import { alignEnvFile, fillSecrets, generateSecrets } from './env-file.ts';
 
 /** 毎回同じ値を返す、テスト用の鍵の作り方 */
 const fixedSecrets = () => ({
@@ -71,6 +71,71 @@ describe('fillSecrets', () => {
 			text: 'SESSION_SECRET=session\r\nENCRYPTION_KEY=encryption\r\nVAPID_PUBLIC_KEY=x\r\nVAPID_PRIVATE_KEY=y\r\n',
 			filled: ['SESSION_SECRET', 'ENCRYPTION_KEY'],
 		});
+	});
+});
+
+describe('alignEnvFile', () => {
+	const template = [
+		'# ---- サーバー ----',
+		'',
+		'ORIGIN=',
+		'HOST=',
+		'',
+		'# ---- 通知 ----',
+		'',
+		'DISCORD_BOT_TOKEN=',
+		'DISCORD_CLIENT_ID=',
+		'',
+	].join('\n');
+
+	it('template の並びに合わせ、値のある行の値は保つ', () => {
+		const current = ['HOST=127.0.0.1', 'ORIGIN=https://funmary.example.com', ''].join('\n');
+		const result = alignEnvFile(current, template);
+		expect(result.text).toBe(
+			[
+				'# ---- サーバー ----',
+				'',
+				'ORIGIN=https://funmary.example.com',
+				'HOST=127.0.0.1',
+				'',
+				'# ---- 通知 ----',
+				'',
+				'DISCORD_BOT_TOKEN=',
+				'DISCORD_CLIENT_ID=',
+				'',
+			].join('\n'),
+		);
+	});
+
+	it('template にあって current にない鍵は、template の位置に空のまま足す', () => {
+		const current = 'ORIGIN=https://funmary.example.com\n';
+		const result = alignEnvFile(current, template);
+		expect(result.added).toEqual(['HOST', 'DISCORD_BOT_TOKEN', 'DISCORD_CLIENT_ID']);
+		expect(result.text).toContain('DISCORD_CLIENT_ID=\n');
+	});
+
+	it('current にあって template にない鍵は、値を保ったまま末尾にまとめる (消さない)', () => {
+		const current = ['ORIGIN=https://funmary.example.com', 'OLD_KEY=keep-me', ''].join('\n');
+		const result = alignEnvFile(current, template);
+		expect(result.extra).toEqual(['OLD_KEY']);
+		expect(result.text).toContain('OLD_KEY=keep-me');
+		expect(result.text).toContain('ほかの変数');
+	});
+
+	it('変える必要がなければ、template と同じ形のまま返す', () => {
+		const current = template;
+		const result = alignEnvFile(current, template);
+		expect(result.text).toBe(template);
+		expect(result.added).toEqual([]);
+		expect(result.extra).toEqual([]);
+	});
+
+	it('Windows の改行 (CRLF) は template に合わせる', () => {
+		const crlfTemplate = template.replaceAll('\n', '\r\n');
+		const current = 'ORIGIN=https://funmary.example.com\n';
+		const result = alignEnvFile(current, crlfTemplate);
+		expect(result.text).toContain('\r\n');
+		expect(result.text).not.toMatch(/[^\r]\n/);
 	});
 });
 

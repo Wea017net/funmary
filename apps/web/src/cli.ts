@@ -29,7 +29,7 @@ import { importAcademicCalendar } from './lib/server/academic-calendar-import.ts
 import { formatCalendarImportReport, formatCalendarReport } from './lib/server/calendar-report.ts';
 import { formatSourcesReport, sourceStatuses } from './lib/server/source-status.ts';
 import { parseConfig, type Config } from './lib/server/config.ts';
-import { fillSecrets, generateSecrets } from './lib/server/env-file.ts';
+import { alignEnvFile, fillSecrets, generateSecrets } from './lib/server/env-file.ts';
 import { findMigrationsFolder } from './lib/server/migrations-path.ts';
 import { importTimetable, type TimetableImportReport } from './lib/server/timetable-import.ts';
 
@@ -81,6 +81,49 @@ const init = defineCommand({
 		writeFileSync(args.file, result.text, exists ? {} : { mode: 0o600 });
 		console.log(`${args.file} に次の鍵を書きました: ${result.filled.join(', ')}`);
 		console.log('Google の値は、自分で書いてください。');
+	},
+});
+
+const alignEnv = defineCommand({
+	meta: {
+		name: 'align-env',
+		description:
+			'環境変数ファイルの並びを .env.example に合わせる。値のある行の値は変えない (足りない鍵を足し、並び替えるだけ)',
+	},
+	args: {
+		file: { type: 'string', description: '並びを揃える環境変数ファイル', default: '.env' },
+		template: { type: 'string', description: '並びのお手本', default: '.env.example' },
+	},
+	run({ args }) {
+		if (!existsSync(args.file)) {
+			console.error(`${args.file} がありません。先に funmary-admin init で作ってください。`);
+			process.exit(1);
+		}
+		if (!existsSync(args.template)) {
+			console.error(`${args.template} がありません。`);
+			process.exit(1);
+		}
+		const current = readFileSync(args.file, 'utf8');
+		const template = readFileSync(args.template, 'utf8');
+		const result = alignEnvFile(current, template);
+		if (result.text === current) {
+			console.log(`${args.file} は、すでに ${args.template} と同じ並びです。何も変えていません。`);
+			return;
+		}
+		const backupPath = `${args.file}.bak.${new Date().toISOString().replaceAll(/[:.]/g, '-')}`;
+		writeFileSync(backupPath, current);
+		writeFileSync(args.file, result.text);
+		console.log(
+			`${args.file} の並びを ${args.template} に合わせました (${backupPath} に元の内容を残しました)`,
+		);
+		if (result.added.length > 0) {
+			console.log(`空のまま足した鍵: ${result.added.join(', ')}`);
+		}
+		if (result.extra.length > 0) {
+			console.log(
+				`${args.template} にない鍵を末尾に残しました (値はそのまま): ${result.extra.join(', ')}`,
+			);
+		}
 	},
 });
 
@@ -527,7 +570,18 @@ const notify = defineCommand({
 
 const main = defineCommand({
 	meta: { name: 'funmary-admin', description: 'Funmary の管理用コマンド' },
-	subCommands: { init, migrate, backup, restore, timetable, calendar, invite, sources, notify },
+	subCommands: {
+		init,
+		'align-env': alignEnv,
+		migrate,
+		backup,
+		restore,
+		timetable,
+		calendar,
+		invite,
+		sources,
+		notify,
+	},
 });
 
 await runMain(main);

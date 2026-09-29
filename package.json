@@ -18,6 +18,7 @@
 		"preview": "pnpm --filter @funmary/web preview",
 		"package-release": "pnpm --filter @funmary/web bundle-cli && node scripts/package-release.js",
 		"funmary-admin": "node apps/web/src/cli.ts",
+		"update:env": "node apps/web/src/cli.ts align-env",
 		"lint": "eslint .",
 		"format": "prettier --write .",
 		"format:check": "prettier --check .",
