@@ -46,12 +46,13 @@ function fakeBot(initial: { channels?: DiscordChannel[]; roles?: DiscordRole[] }
 }
 
 describe('ensureLayout', () => {
-	it('何もなければ、ロール 2 つ、カテゴリ 1 つ、チャンネル 6 本を作る', async () => {
+	it('何もなければ、ロール 3 つ、カテゴリ 1 つ、チャンネル 6 本を作る', async () => {
 		const { bot, created } = fakeBot();
 		const { layout } = await ensureLayout(bot, EMPTY_LAYOUT);
 		expect(created).toEqual([
 			'role:funmary-deploy',
 			'role:funmary-errors',
+			'role:funmary-subjects',
 			'category:Funmary',
 			...ADMIN_CHANNELS.map((name) => `text:${name}`),
 		]);

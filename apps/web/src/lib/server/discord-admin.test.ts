@@ -68,7 +68,7 @@ describe('useBot と toDiscordView', () => {
 		});
 	});
 
-	it('画面用に、6 本のチャンネルと 2 つのロールを、ID と手動かどうかとあわせて並べる', () => {
+	it('画面用に、6 本のチャンネルと 3 つのロールを、ID と手動かどうかとあわせて並べる', () => {
 		const view = toDiscordView(bot, layout);
 		expect(view.botConfigured).toBe(true);
 		expect(view.channels.map((c) => c.name)).toEqual([
@@ -81,7 +81,7 @@ describe('useBot と toDiscordView', () => {
 		]);
 		expect(view.channels[1]).toMatchObject({ id: '55555', managed: false });
 		expect(view.channels[2]).toMatchObject({ id: null, managed: true });
-		expect(view.roles).toHaveLength(2);
+		expect(view.roles).toHaveLength(3);
 		expect(toDiscordView(null, layout).botConfigured).toBe(false);
 	});
 });

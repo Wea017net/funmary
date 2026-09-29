@@ -64,6 +64,13 @@
       "when": 1790641793613,
       "tag": "0008_audit_log",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1790644608604,
+      "tag": "0009_personal_slots_and_submissions",
+      "breakpoints": true
     }
   ]
 }

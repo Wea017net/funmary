@@ -27,6 +27,12 @@
 		withdrawn: boolean;
 	}
 
+	interface Slot {
+		weekday: number;
+		period: number;
+		room: string | null;
+	}
+
 	let {
 		data,
 		form,
@@ -35,7 +41,9 @@
 		data: {
 			canEdit: boolean;
 			subject: SubjectView;
-			slots: { weekday: number; period: number; room: string | null }[];
+			slots: Slot[];
+			personalSlots: Slot[];
+			slotSharingMode: 'open' | 'moderated' | 'closed';
 			registered: boolean;
 			hopeCourseUrl: string | null;
 			changes: ChangeView[];
@@ -85,9 +93,67 @@
 		</dd>
 	</dl>
 
+	{#if data.personalSlots.length > 0}
+		<section aria-labelledby="personal-slots-heading">
+			<h2 id="personal-slots-heading">自分だけの曜日と時限</h2>
+			<p class="note">ほかの利用者には見えず、自分の時間割にだけ使われます。</p>
+			<ul>
+				{#each data.personalSlots as slot (`${slot.weekday}-${slot.period}`)}
+					<li>
+						{formatSlot(slot)}、{slot.room ?? '教室は未登録'}
+						<form method="POST" action="?/removePersonalSlot" use:enhance class="inline">
+							<input type="hidden" name="weekday" value={slot.weekday} />
+							<input type="hidden" name="period" value={slot.period} />
+							<Button type="submit" variant="outlined"
+								><Label>消す<span class="visually-hidden">: {formatSlot(slot)}</span></Label
+								></Button
+							>
+						</form>
+					</li>
+				{/each}
+			</ul>
+		</section>
+	{/if}
+
+	{#if data.slotSharingMode !== 'closed'}
+		<details>
+			<summary>曜日と時限を足す</summary>
+			<form method="POST" action="?/addSlot" use:enhance class="edit">
+				<label>
+					曜日
+					<select name="weekday" required>
+						{#each WEEKDAY_LABELS as day (day.weekday)}
+							<option value={day.weekday}>{day.label}曜</option>
+						{/each}
+					</select>
+				</label>
+				<label>
+					時限
+					<select name="period" required>
+						{#each DEFAULT_PERIODS as period (period.number)}
+							<option value={period.number}>{period.number} 限</option>
+						{/each}
+					</select>
+				</label>
+				<label>
+					教室 (分からなければ空のまま)
+					<input name="room" maxlength="100" autocomplete="off" />
+				</label>
+				<Button type="submit" variant="unelevated"><Label>登録する</Label></Button>
+			</form>
+			<p class="note">
+				{#if data.slotSharingMode === 'moderated'}
+					曜日、時限、教室は、大学から自動では取得できないため、利用者どうしで登録しています。履修科目に登録していなくても足せます。モデレーターか管理者が確かめてから登録され、この科目を履修しているほかの利用者の時間割にも使われます。
+				{:else}
+					曜日、時限、教室は、大学から自動では取得できないため、利用者どうしで登録しています。履修科目に登録していなくても足せ、登録した内容は、この科目を履修しているほかの利用者の時間割にも使われます。
+				{/if}
+			</p>
+		</details>
+	{/if}
+
 	<details>
-		<summary>曜日と時限を足す</summary>
-		<form method="POST" action="?/addSlot" use:enhance class="edit">
+		<summary>自分だけに使う曜日と時限を足す</summary>
+		<form method="POST" action="?/addPersonalSlot" use:enhance class="edit">
 			<label>
 				曜日
 				<select name="weekday" required>
@@ -111,7 +177,7 @@
 			<Button type="submit" variant="unelevated"><Label>登録する</Label></Button>
 		</form>
 		<p class="note">
-			曜日、時限、教室は、大学から自動では取得できないため、利用者どうしで登録しています。履修科目に登録していなくても足せ、登録した内容は、この科目を履修しているほかの利用者の時間割にも使われます。
+			ほかの利用者には見えず、自分の時間割にだけ使われます。共有の登録が確認待ちや、できない設定のときにも使えます。
 		</p>
 	</details>
 
@@ -238,6 +304,11 @@
 
 	.error {
 		color: var(--fm-error);
+	}
+
+	.inline {
+		display: inline;
+		margin-left: 0.5rem;
 	}
 
 	.edit {

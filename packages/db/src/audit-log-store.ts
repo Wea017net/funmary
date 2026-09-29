@@ -13,7 +13,8 @@ export type AuditAction =
 	| 'lesson.resolve'
 	| 'lesson.unresolve'
 	| 'lesson.ignore'
-	| 'lesson.restore';
+	| 'lesson.restore'
+	| 'slot.approve';
 
 export interface AuditLogEntry {
 	readonly id: number;

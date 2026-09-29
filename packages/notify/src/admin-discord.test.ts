@@ -26,12 +26,14 @@ function setup(current: DiscordLayout = layout, fail = false) {
 }
 
 describe('rolesToMention と defaultChannel', () => {
-	it('errors は error のとき、deploy は失敗と警告のときだけ、ロールにメンションする', () => {
+	it('errors は error のとき、deploy と subjects は失敗と警告のときだけ、ロールにメンションする', () => {
 		expect(rolesToMention('errors', 'error')).toEqual(['errors']);
 		expect(rolesToMention('errors', 'warn')).toEqual([]);
 		expect(rolesToMention('deploy', 'warn')).toEqual(['deploy']);
 		expect(rolesToMention('deploy', 'error')).toEqual(['deploy']);
 		expect(rolesToMention('deploy', 'info')).toEqual([]);
+		expect(rolesToMention('subjects', 'warn')).toEqual(['subjects']);
+		expect(rolesToMention('subjects', 'info')).toEqual([]);
 		expect(rolesToMention('users', 'error')).toEqual([]);
 	});
 

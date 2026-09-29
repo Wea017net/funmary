@@ -4,7 +4,8 @@ import { error, fail, redirect, type Actions, type ServerLoad } from '@sveltejs/
 import { describeClassChange } from '$lib/class-change-label.ts';
 import { parseSlotFields } from '$lib/server/course-form.ts';
 import { getServices } from '$lib/server/services.ts';
-import { alertSlotConflicts } from '$lib/server/slot-conflicts.ts';
+import { alertSlotConflicts, alertSlotSubmission } from '$lib/server/slot-conflicts.ts';
+import { readSlotSharingMode } from '$lib/server/slot-permission.ts';
 import { canEditSubject, findSameName, parseUserSubjectForm } from '$lib/server/user-subject.ts';
 import { parseSubjectPath } from '$lib/subject-path.ts';
 
@@ -28,7 +29,7 @@ function findSubject(params: Partial<Record<string, string>>) {
 
 export const load: ServerLoad = ({ locals, params }) => {
 	if (!locals.user) redirect(303, '/login');
-	const { courses, classChanges } = getServices();
+	const { courses, classChanges, personalSlots, settings } = getServices();
 	const subject = findSubject(params);
 
 	const registration = courses
@@ -51,6 +52,8 @@ export const load: ServerLoad = ({ locals, params }) => {
 		slots: courses
 			.slotsOf(subject.id)
 			.map(({ weekday, period, room }) => ({ weekday, period, room })),
+		personalSlots: personalSlots.listForSubject(locals.user.id, subject.id),
+		slotSharingMode: readSlotSharingMode(settings),
 		registered: registration !== undefined,
 		hopeCourseUrl: httpsOnly(registration?.hopeCourseUrl ?? null),
 		changes: classChanges.listBySubject(subject.id).map((change, index) => ({
@@ -77,6 +80,24 @@ export const actions: Actions = {
 		const parsed = parseSlotFields(await request.formData());
 		if (!parsed.ok) return fail(400, { error: parsed.error });
 		const services = getServices();
+		const mode = readSlotSharingMode(services.settings);
+		if (mode === 'closed') {
+			return fail(403, {
+				error:
+					'今は共有の枠を登録できません。下の「自分だけに使う曜日と時限」から登録してください。',
+			});
+		}
+		if (mode === 'moderated') {
+			services.slotSubmissions.submit(
+				{ subjectId: subject.id, ...parsed.value },
+				locals.user.id,
+				new Date(),
+			);
+			await alertSlotSubmission(services, subject.name);
+			return {
+				message: '曜日と時限を提出しました。モデレーターか管理者が確かめてから登録されます。',
+			};
+		}
 		const result = services.courses.addSharedSlots(
 			[{ subjectId: subject.id, ...parsed.value }],
 			{ source: 'manual', createdBy: locals.user.id },
@@ -92,6 +113,30 @@ export const actions: Actions = {
 			return { message: 'この曜日と時限は、既に登録されています。' };
 		}
 		return { message: '曜日と時限を登録しました。' };
+	},
+
+	/** 自分だけに使う曜日と時限を登録する。共有の登録の設定に関わらず、いつでも使える */
+	addPersonalSlot: async ({ request, locals, params }) => {
+		if (!locals.user) redirect(303, '/login');
+		const subject = findSubject(params);
+		const parsed = parseSlotFields(await request.formData());
+		if (!parsed.ok) return fail(400, { error: parsed.error });
+		getServices().personalSlots.set(locals.user.id, subject.id, parsed.value, new Date());
+		return { message: '自分だけに使う曜日と時限を登録しました。' };
+	},
+
+	/** 自分だけの曜日と時限を消す */
+	removePersonalSlot: async ({ request, locals, params }) => {
+		if (!locals.user) redirect(303, '/login');
+		const subject = findSubject(params);
+		const form = await request.formData();
+		const weekday = Number(form.get('weekday'));
+		const period = Number(form.get('period'));
+		if (!Number.isInteger(weekday) || !Number.isInteger(period)) {
+			return fail(400, { error: '曜日と時限が正しくありません。' });
+		}
+		getServices().personalSlots.remove(locals.user.id, subject.id, weekday, period);
+		return { message: '自分だけの曜日と時限を消しました。' };
 	},
 
 	/** シラバスにない授業の名前、学期、教員を直す (足した人と管理者だけ) */

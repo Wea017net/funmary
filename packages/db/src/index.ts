@@ -54,6 +54,7 @@ export {
 	type InviteCodeSummary,
 	type NewUser,
 	type RegisterResult,
+	type UserRole,
 	type UserSummary,
 } from './auth-store.ts';
 export {
@@ -74,6 +75,16 @@ export {
 	type SlotSource,
 	type StoredSlot,
 } from './course-store.ts';
+export {
+	createPersonalSlotStore,
+	type PersonalSlot,
+	type PersonalSlotStore,
+} from './personal-slot-store.ts';
+export {
+	createSlotSubmissionStore,
+	type SlotSubmission,
+	type SlotSubmissionStore,
+} from './slot-submission-store.ts';
 export {
 	createUserEventStore,
 	type EventVisibility,

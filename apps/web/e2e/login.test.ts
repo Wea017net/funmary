@@ -342,11 +342,12 @@ test.describe('履修科目の登録', () => {
 			.filter({ hasText: '架空の演習Ⅱ1-AB' });
 		await expect(registered).toContainText('曜日と時限が、まだ登録されていません');
 
-		await registered.getByText('曜日と時限を登録する').click();
-		await registered.getByLabel('曜日').selectOption('火曜');
-		await registered.getByLabel('時限').selectOption('3 限');
-		await registered.getByLabel('教室').fill(' 363 ');
-		await registered.getByRole('button', { name: '登録する' }).click();
+		await registered.getByText('曜日と時限を登録する', { exact: true }).click();
+		const addSlot = registered.locator('details[open]');
+		await addSlot.getByLabel('曜日').selectOption('火曜');
+		await addSlot.getByLabel('時限').selectOption('3 限');
+		await addSlot.getByLabel('教室').fill(' 363 ');
+		await addSlot.getByRole('button', { name: '登録する' }).click();
 		await expect(page.getByRole('status')).toHaveText('曜日と時限を登録しました。');
 		await expect(registered).toContainText('火曜 3 限、363');
 
@@ -414,10 +415,11 @@ test.describe('履修科目の登録', () => {
 		await expect(other.getByRole('region', { name: 'この授業を直す' })).toHaveCount(0);
 
 		// 直せなくても、履修登録していなくても、曜日と時限は足せる
-		await other.getByText('曜日と時限を足す').click();
-		await other.getByLabel('曜日').selectOption('水曜');
-		await other.getByLabel('時限').selectOption('2 限');
-		await other.getByRole('button', { name: '登録する' }).click();
+		await other.getByText('曜日と時限を足す', { exact: true }).click();
+		const addSlot = other.locator('details[open]');
+		await addSlot.getByLabel('曜日').selectOption('水曜');
+		await addSlot.getByLabel('時限').selectOption('2 限');
+		await addSlot.getByRole('button', { name: '登録する' }).click();
 		await expect(other.getByRole('status')).toHaveText('曜日と時限を登録しました。');
 		await expect(other.getByText('水曜 2 限')).toBeVisible();
 
@@ -536,11 +538,11 @@ test.describe('管理画面', () => {
 		await expect(page.getByRole('heading', { name: 'Discord設定', level: 1 })).toBeVisible();
 		await expect(page.getByText('Bot が設定されていません')).toBeVisible();
 		await expect(page.getByRole('navigation', { name: 'パンくず' })).toContainText('設定');
-		// チャンネル 6 本とロール 2 つが、まだ決まっていない状態で並ぶ
+		// チャンネル 6 本とロール 3 つが、まだ決まっていない状態で並ぶ
 		await expect(
 			page.getByRole('region', { name: 'チャンネル' }).getByRole('listitem'),
 		).toHaveCount(6);
-		await expect(page.getByRole('region', { name: 'ロール' }).getByRole('listitem')).toHaveCount(2);
+		await expect(page.getByRole('region', { name: 'ロール' }).getByRole('listitem')).toHaveCount(3);
 		// Bot がないときは、整えるボタンを出さない
 		await expect(page.getByRole('button', { name: 'チャンネルとロールを整える' })).toHaveCount(0);
 	});
@@ -620,6 +622,105 @@ test.describe('管理画面', () => {
 		await expect(entries.filter({ hasText: '架空の演習Ⅱ (再) の紐付けを外した' })).not.toHaveCount(
 			0,
 		);
+	});
+});
+
+test.describe('曜日と時限の確認', () => {
+	const loginAs = async (page: import('@playwright/test').Page, email: string) => {
+		oidc.setIdentity({ sub: email, email, email_verified: true, hd: 'fun.ac.jp' });
+		await page.goto('/auth/google');
+		await expect(page).toHaveURL('/app');
+	};
+
+	/** ログイン済みの利用者を、直接 DB でモデレーターにする (昇格の画面はまだない、#15) */
+	function promoteToModerator(email: string) {
+		const database = openDatabase(join(E2E_DATA_DIR, 'funmary.db'), {
+			backupDir: join(E2E_DATA_DIR, 'backups'),
+		});
+		try {
+			database.sqlite.prepare(`UPDATE users SET role = 'moderator' WHERE email = ?`).run(email);
+		} finally {
+			database.close();
+		}
+	}
+
+	test('確認して登録する設定にすると提出になり、モデレーターが承認すると共有の枠に入って記録に残る。だれも登録できない設定では、個人用だけ使える', async ({
+		page,
+		browser,
+	}) => {
+		const name = `E2E の確認演習${Date.now()}`;
+		const moderatorEmail = `e2e-slot-moderator-${Date.now()}@fun.ac.jp`;
+
+		// 管理者が、確認してから登録する設定にする
+		await loginAs(page, 'e2e-admin@fun.ac.jp');
+		await page.goto('/app/admin/slot-review');
+		await page.getByRole('radio', { name: 'モデレーターか管理者が確認してから登録する' }).check();
+		await page.getByRole('button', { name: '保存する' }).click();
+		await expect(page.getByRole('status')).toHaveText('設定を保存しました。');
+
+		// 利用者が、シラバスにない授業を足して、曜日と時限を提出する
+		const otherPage = await (await browser.newContext()).newPage();
+		await loginAs(otherPage, `e2e-slot-user-${Date.now()}@fun.ac.jp`);
+		await otherPage.goto('/app/courses');
+		await otherPage.getByText('公開シラバスに載っていない授業を、科目として足す').click();
+		await otherPage.getByLabel(/授業の名前/).fill(name);
+		await otherPage.getByLabel('学期').selectOption('後期');
+		await otherPage.getByRole('button', { name: '足して登録する' }).click();
+		await otherPage.getByRole('tab', { name: '登録した科目' }).click();
+		const registered = otherPage
+			.getByRole('tabpanel', { name: '登録した科目' })
+			.getByRole('listitem')
+			.filter({ hasText: name });
+		await registered.getByText('曜日と時限を登録する', { exact: true }).click();
+		const submitForm = registered.locator('details[open]');
+		await submitForm.getByLabel('曜日').selectOption('木曜');
+		await submitForm.getByLabel('時限').selectOption('4 限');
+		await submitForm.getByRole('button', { name: '登録する' }).click();
+		await expect(otherPage.getByRole('status')).toContainText('確かめてから登録されます');
+		await expect(registered).toContainText('曜日と時限が、まだ登録されていません');
+
+		// モデレーターが承認する (このリポジトリには、まだ昇格の画面がないので、直接 DB でモデレーターにする)
+		await loginAs(page, moderatorEmail);
+		promoteToModerator(moderatorEmail);
+		await page.goto('/app/admin/slot-review');
+		const pending = page
+			.getByRole('region', { name: '確認待ち' })
+			.getByRole('listitem')
+			.filter({ hasText: name });
+		await expect(pending).toContainText('木曜 4 限');
+		await expect(page.getByRole('radio', { name: /確認してから登録する/ })).toHaveCount(0);
+		await pending.getByRole('button', { name: '承認する' }).click();
+		await expect(page.getByRole('status')).toHaveText('承認し、共有の枠に登録しました。');
+
+		// 共有の枠に入り、操作の記録にも残る
+		await registered.getByRole('link', { name }).click();
+		await expect(otherPage.getByText('木曜 4 限')).toBeVisible();
+		await page.goto('/app/admin/audit-log');
+		await expect(
+			page.getByRole('row').filter({ hasText: `${name} の曜日と時限の提出を承認した` }),
+		).not.toHaveCount(0);
+
+		// だれも登録できない設定にすると、共有の登録の欄は出ず、個人用だけ使える
+		await loginAs(page, 'e2e-admin@fun.ac.jp');
+		await page.goto('/app/admin/slot-review');
+		await page.getByRole('radio', { name: 'だれも登録できない' }).check();
+		await page.getByRole('button', { name: '保存する' }).click();
+		await otherPage.goto('/app/courses');
+		await otherPage.getByRole('tab', { name: '登録した科目' }).click();
+		await expect(registered.getByText('曜日と時限を登録する', { exact: true })).toHaveCount(0);
+		await registered.getByText('自分だけに使う曜日と時限を登録する').click();
+		const personalForm = registered.locator('details[open]');
+		await personalForm.getByLabel('曜日').selectOption('金曜');
+		await personalForm.getByLabel('時限').selectOption('1 限');
+		await personalForm.getByRole('button', { name: '登録する' }).click();
+		await expect(otherPage.getByRole('status')).toHaveText(
+			'自分だけに使う曜日と時限を登録しました。',
+		);
+		await expect(registered).toContainText('金曜 1 限');
+
+		// 元の設定 (だれでも登録できる) に戻す
+		await page.getByRole('radio', { name: 'だれでも登録できる' }).check();
+		await page.getByRole('button', { name: '保存する' }).click();
 	});
 });
 

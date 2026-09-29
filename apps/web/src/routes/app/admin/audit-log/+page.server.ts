@@ -1,7 +1,7 @@
 // 利用者が全体に影響する操作をしたときの記録 (設計書、監査ログ)。見るだけの画面で、ここから何も変えない。
 import type { ServerLoad } from '@sveltejs/kit';
 import { jstDateTime } from '@funmary/core';
-import { requireAdmin } from '$lib/server/admin.ts';
+import { requireModerator } from '$lib/server/admin.ts';
 import { getServices } from '$lib/server/services.ts';
 import { subjectPathParams, type SubjectPathParams } from '$lib/subject-path.ts';
 
@@ -16,10 +16,12 @@ const ACTION_LABELS: Record<string, string> = {
 	'lesson.unresolve': '授業名の紐付けを外した',
 	'lesson.ignore': '授業名を科目にしないことにした',
 	'lesson.restore': '授業名を一覧に戻した',
+	'slot.approve': '曜日と時限の提出を承認した',
 };
 
+// この画面は、モデレーターと管理者の両方が見られる (監査や確認は、モデレーターにも任せるため)
 export const load: ServerLoad = ({ locals }) => {
-	requireAdmin(locals);
+	requireModerator(locals);
 	return {
 		entries: getServices()
 			.auditLog.recent(ENTRIES)

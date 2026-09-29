@@ -37,6 +37,7 @@ export const CHANNEL_LABELS: Record<AdminChannel, string> = {
 export const ROLE_LABELS: Record<AdminRole, string> = {
 	deploy: 'デプロイの失敗を知らせる',
 	errors: 'エラーを知らせる',
+	subjects: '曜日と時限の確認待ちを知らせる',
 };
 
 export interface DiscordRow {

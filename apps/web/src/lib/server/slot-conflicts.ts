@@ -22,3 +22,19 @@ export async function alertSlotConflicts(
 		key: `slot-conflict:${conflicts.map((c) => `${c.subjectId}-${c.weekday}-${c.period}`).join(',')}`,
 	});
 }
+
+/**
+ * 「モデレーターが確認してから登録する」設定のときに、確認待ちの提出があることをモデレーターに知らせる。
+ * subjects チャンネルに送り、warn にして subjects ロールにもメンションする
+ */
+export async function alertSlotSubmission(
+	services: Pick<Services, 'alertAdmin'>,
+	subjectName: string,
+): Promise<void> {
+	await services.alertAdmin({
+		severity: 'warn',
+		category: 'subjects',
+		title: '曜日と時限の確認待ちがあります',
+		message: `${subjectName} の曜日と時限が提出されました。管理画面の「曜日と時限の確認」から確かめてください。`,
+	});
+}

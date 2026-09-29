@@ -12,6 +12,7 @@
 	import IconLink from '~icons/material-symbols/link';
 	import IconLogout from '~icons/material-symbols/logout';
 	import IconSchool from '~icons/material-symbols/event-note-outline';
+	import IconSlotReview from '~icons/material-symbols/task-outline';
 	import IconUpload from '~icons/material-symbols/upload-file-outline';
 
 	let {
@@ -19,6 +20,7 @@
 	}: {
 		data: {
 			admin: AdminSummary | null;
+			moderator: boolean;
 			canInvite: boolean;
 			documents: { title: string; url: string }[];
 		};
@@ -106,6 +108,30 @@
 				title: '操作の記録',
 				description: 'シラバスにない授業の公開、情報の変更、削除、授業名の紐づけの記録',
 			},
+			{
+				href: resolve('/app/admin/slot-review'),
+				icon: IconSlotReview,
+				title: '曜日と時限の確認',
+				description: 'だれが共有の枠を登録できるかの設定と、確認待ちの一覧',
+			},
+		];
+	});
+
+	const moderatorItems = $derived.by((): Item[] => {
+		if (!data.moderator) return [];
+		return [
+			{
+				href: resolve('/app/admin/audit-log'),
+				icon: IconAuditLog,
+				title: '操作の記録',
+				description: 'シラバスにない授業の公開、情報の変更、削除、授業名の紐づけの記録',
+			},
+			{
+				href: resolve('/app/admin/slot-review'),
+				icon: IconSlotReview,
+				title: '曜日と時限の確認',
+				description: '確認待ちの提出を承認、または却下する',
+			},
 		];
 	});
 </script>
@@ -162,6 +188,12 @@
 			<h2 id="admin-heading">管理</h2>
 			<p class="muted">管理者にだけ出ています。</p>
 			{@render links(adminItems)}
+		</section>
+	{:else if data.moderator}
+		<section id="moderator" aria-labelledby="moderator-heading">
+			<h2 id="moderator-heading">モデレーター</h2>
+			<p class="muted">モデレーターにだけ出ています。</p>
+			{@render links(moderatorItems)}
 		</section>
 	{/if}
 

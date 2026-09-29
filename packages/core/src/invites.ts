@@ -23,7 +23,7 @@ export const MEMBER_INVITE_MAX_USES = 1;
 export const MEMBER_INVITE_DAYS = 30;
 
 export interface InviteIssuer {
-	readonly role: 'user' | 'admin';
+	readonly role: 'user' | 'moderator' | 'admin';
 	readonly permissions: readonly Permission[];
 }
 
