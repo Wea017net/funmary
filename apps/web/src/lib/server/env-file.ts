@@ -126,3 +126,28 @@ export function alignEnvFile(current: string, template: string): AlignResult {
 	}
 	return { text: aligned.join(newline), added, extra: extraKeys };
 }
+
+/** `KEY=値` の行を、鍵の名前と値の入れ物にする。同じ鍵が 2 回あれば、あとの行を使う */
+export function parseEnvValues(text: string): Map<string, string> {
+	const values = new Map<string, string>();
+	for (const line of text.split(/\r\n|\n/)) {
+		const match = ENV_LINE.exec(line);
+		if (match?.[1]) values.set(match[1], match[2] ?? '');
+	}
+	return values;
+}
+
+/**
+ * 指定した鍵の値だけを書き換える。行のない鍵は無視する (このファイルの構成を変えないため。
+ * 先に alignEnvFile で行を用意してから使う)。コメント、並び順、改行の形は変えない
+ */
+export function setEnvValues(text: string, overrides: ReadonlyMap<string, string>): string {
+	const newline = text.includes('\r\n') ? '\r\n' : '\n';
+	const lines = text.split(/\r\n|\n/).map((line) => {
+		const match = ENV_LINE.exec(line);
+		const name = match?.[1];
+		if (!name || !overrides.has(name)) return line;
+		return `${name}=${overrides.get(name)}`;
+	});
+	return lines.join(newline);
+}

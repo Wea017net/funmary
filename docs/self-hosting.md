@@ -190,13 +190,22 @@ sudo -u funmary-deploy chmod 600 /home/funmary-deploy/.ssh/authorized_keys
 
 `ssh-ed25519 AAAA...` の部分は、GitHub Actions 用に新しく作った鍵ペアの公開鍵に置き換えます。`funmary-deploy` が `sudo` で `funmary-update` を無入力で実行できるよう、`visudo` で `funmary-deploy ALL=(root) NOPASSWD: /usr/local/bin/funmary-update` も設定します。あとは、フォークしたリポジトリの Settings から `production` という Environment を作り、secret に `DEPLOY_HOST` (VPS のホスト名)、`DEPLOY_SSH_KEY` (秘密鍵)、`DEPLOY_KNOWN_HOSTS` (`ssh-keyscan` で得たホスト鍵) を設定すれば、`Release` ワークフローの完了後に自動で反映されます。使わないなら、この設定は不要です。
 
-**新しい環境変数が増えたとき** — 更新のたびに `.env.example` を見比べる代わりに、`funmary-admin align-env` で環境変数ファイルの並びを `.env.example` に合わせられます。値のある行の値は変えず、足りない鍵を `.env.example` の位置に空のまま足し、`.env.example` にない鍵は末尾にまとめて残します (消しません)。書き換える前に、元の内容を `<ファイル>.bak.<日時>` として残します。
+**新しい環境変数が増えたとき** — 更新のたびに `.env.example` を見比べる代わりに、次のどちらかで環境変数ファイルの並びを `.env.example` に合わせられます。どちらも、値のある行の値は変えず、足りない鍵を `.env.example` の位置に空のまま足し、`.env.example` にない鍵は末尾にまとめて残します (消しません)。書き換える前に、元の内容を `<ファイル>.bak.<日時>` として残します。
+
+VPS にログインしているなら、`funmary-admin` を直接使います。
 
 ```sh
 sudo /usr/local/bin/funmary-admin align-env --file=/etc/funmary/funmary.env
 ```
 
-足りない鍵が分かるので、それぞれに値を書いてから `systemctl restart funmary` します。
+リポジトリの手元の環境からは、`pnpm env:upload` で、SSH で入るだけで済ませられます (並びを揃えたあと、手元の `.env` にあってリモートと値が違う、またはリモートにない鍵があれば、1 つずつ上書きするか確認されます)。
+
+```sh
+pnpm env:upload <SSH の宛先> [リモートの環境変数ファイル (既定: /etc/funmary/funmary.env)]
+# 例: pnpm env:upload root@funmary.example.com
+```
+
+反映専用の制限された鍵 (`funmary-deploy`) は使わず、自分の SSH 鍵と `sudo` を使います。書き換えたら、それぞれ `systemctl restart funmary` で反映します。
 
 ### 4.2 バックアップと復元
 

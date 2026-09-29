@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { parseConfig } from './config.ts';
-import { alignEnvFile, fillSecrets, generateSecrets } from './env-file.ts';
+import {
+	alignEnvFile,
+	fillSecrets,
+	generateSecrets,
+	parseEnvValues,
+	setEnvValues,
+} from './env-file.ts';
 
 /** 毎回同じ値を返す、テスト用の鍵の作り方 */
 const fixedSecrets = () => ({
@@ -136,6 +142,43 @@ describe('alignEnvFile', () => {
 		const result = alignEnvFile(current, crlfTemplate);
 		expect(result.text).toContain('\r\n');
 		expect(result.text).not.toMatch(/[^\r]\n/);
+	});
+});
+
+describe('parseEnvValues', () => {
+	it('KEY=値 の行を読み、コメントと空行は無視する', () => {
+		const text = ['# コメント', 'ORIGIN=https://funmary.example.com', '', 'HOST='].join('\n');
+		expect(parseEnvValues(text)).toEqual(
+			new Map([
+				['ORIGIN', 'https://funmary.example.com'],
+				['HOST', ''],
+			]),
+		);
+	});
+
+	it('同じ鍵が 2 回あれば、あとの行の値を使う', () => {
+		const text = ['ORIGIN=first', 'ORIGIN=second'].join('\n');
+		expect(parseEnvValues(text).get('ORIGIN')).toBe('second');
+	});
+});
+
+describe('setEnvValues', () => {
+	it('指定した鍵の値だけを書き換える', () => {
+		const text = ['ORIGIN=old', 'HOST=127.0.0.1', ''].join('\n');
+		const result = setEnvValues(text, new Map([['ORIGIN', 'new']]));
+		expect(result).toBe(['ORIGIN=new', 'HOST=127.0.0.1', ''].join('\n'));
+	});
+
+	it('行のない鍵は無視する (構成は変えない)', () => {
+		const text = 'ORIGIN=old\n';
+		const result = setEnvValues(text, new Map([['NOT_THERE', 'x']]));
+		expect(result).toBe(text);
+	});
+
+	it('Windows の改行 (CRLF) を保つ', () => {
+		const text = 'ORIGIN=old\r\nHOST=127.0.0.1\r\n';
+		const result = setEnvValues(text, new Map([['ORIGIN', 'new']]));
+		expect(result).toBe('ORIGIN=new\r\nHOST=127.0.0.1\r\n');
 	});
 });
 
