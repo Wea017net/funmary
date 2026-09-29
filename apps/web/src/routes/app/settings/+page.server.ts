@@ -16,5 +16,7 @@ export const load: ServerLoad = ({ locals }) => {
 		admin: locals.user.role === 'admin' ? loadAdminSummary(services, new Date()) : null,
 		// 管理者は「管理」の節に、監査と確認の入口も持つので、ここは moderator だけに出す
 		moderator: locals.user.role === 'moderator',
+		// OAuth の Client ID と Secret が設定されているときだけ入口を出す (設計書 14.9、#163)
+		discordLinkAvailable: services.discord.link.configured,
 	};
 };

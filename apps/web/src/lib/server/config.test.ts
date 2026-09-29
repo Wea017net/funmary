@@ -87,6 +87,33 @@ describe('parseConfig', () => {
 		});
 	});
 
+	it('利用者の Discord 連携の OAuth は、Client ID と Secret がそろったときだけ使う (#163)', () => {
+		expect(parseConfig(developmentEnv())).toMatchObject({
+			ok: true,
+			config: { discordOAuth: undefined },
+		});
+		expect(
+			parseConfig({
+				...developmentEnv(),
+				DISCORD_CLIENT_ID: '1234567890',
+				DISCORD_CLIENT_SECRET: 'dummy-client-secret',
+			}),
+		).toMatchObject({
+			ok: true,
+			config: { discordOAuth: { clientId: '1234567890', clientSecret: 'dummy-client-secret' } },
+		});
+		expect(parseConfig({ ...developmentEnv(), DISCORD_CLIENT_ID: '1234567890' })).toMatchObject({
+			ok: false,
+			issues: [{ name: 'DISCORD_CLIENT_SECRET' }],
+		});
+		expect(
+			parseConfig({ ...developmentEnv(), DISCORD_CLIENT_SECRET: 'dummy-client-secret' }),
+		).toMatchObject({
+			ok: false,
+			issues: [{ name: 'DISCORD_CLIENT_ID' }],
+		});
+	});
+
 	it('セルフホストの運営者の情報は、名前と URL がそろったときだけ使う (Issue #109)', () => {
 		expect(parseConfig(developmentEnv())).toMatchObject({
 			ok: true,

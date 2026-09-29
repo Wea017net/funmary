@@ -39,6 +39,11 @@ export interface Config {
 	readonly adminDiscordWebhookUrl: string | undefined;
 	/** 管理用の Discord の Bot (設計書 14.9)。トークンとギルドの ID の両方があるときだけある */
 	readonly discordBot: { readonly token: string; readonly guildId: string } | undefined;
+	/**
+	 * 利用者の Discord 連携 (設計書 14.9、#163) の OAuth。Bot と同じ Discord Application の
+	 * OAuth2 タブにある Client ID と Client Secret。両方あるときだけある
+	 */
+	readonly discordOAuth: { readonly clientId: string; readonly clientSecret: string } | undefined;
 	readonly notifyDryRun: boolean;
 	readonly heartbeatUrl: string | undefined;
 	readonly logLevel: 'debug' | 'info' | 'warn' | 'error';
@@ -221,6 +226,15 @@ function envSchema(mode: Mode) {
 				v.regex(/^\d{5,25}$/, 'ギルド (サーバー) の ID を、数字だけで書いてください'),
 			),
 		),
+		DISCORD_CLIENT_ID: v.optional(
+			v.pipe(
+				v.string(),
+				v.regex(/^\d{5,25}$/, 'Discord の Client ID を、数字だけで書いてください'),
+			),
+		),
+		DISCORD_CLIENT_SECRET: v.optional(
+			v.pipe(v.string(), v.minLength(10, 'Discord の Client Secret を、そのまま書いてください')),
+		),
 		NOTIFY_DRY_RUN: v.optional(
 			v.pipe(
 				v.picklist(['true', 'false'], 'true か false を書いてください'),
@@ -291,6 +305,19 @@ export function parseConfig(env: Readonly<Record<string, string | undefined>>): 
 				message: 'DISCORD_GUILD_ID を書いたときは、Bot のトークンも書いてください',
 			});
 		}
+		const { DISCORD_CLIENT_ID: clientId, DISCORD_CLIENT_SECRET: clientSecret } = result.output;
+		if (clientId !== undefined && clientSecret === undefined) {
+			issues.push({
+				name: 'DISCORD_CLIENT_SECRET',
+				message: 'DISCORD_CLIENT_ID を書いたときは、Client Secret も書いてください',
+			});
+		}
+		if (clientSecret !== undefined && clientId === undefined) {
+			issues.push({
+				name: 'DISCORD_CLIENT_ID',
+				message: 'DISCORD_CLIENT_SECRET を書いたときは、Client ID も書いてください',
+			});
+		}
 	}
 	if (!result.success || issues.length > 0) return { ok: false, issues };
 
@@ -333,6 +360,10 @@ export function parseConfig(env: Readonly<Record<string, string | undefined>>): 
 			discordBot:
 				e.DISCORD_BOT_TOKEN !== undefined && e.DISCORD_GUILD_ID !== undefined
 					? { token: e.DISCORD_BOT_TOKEN, guildId: e.DISCORD_GUILD_ID }
+					: undefined,
+			discordOAuth:
+				e.DISCORD_CLIENT_ID !== undefined && e.DISCORD_CLIENT_SECRET !== undefined
+					? { clientId: e.DISCORD_CLIENT_ID, clientSecret: e.DISCORD_CLIENT_SECRET }
 					: undefined,
 			notifyDryRun: e.NOTIFY_DRY_RUN ?? mode === 'development',
 			heartbeatUrl: e.HEARTBEAT_URL,

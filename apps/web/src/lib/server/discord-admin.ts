@@ -25,12 +25,22 @@ export function readPresenceEnabled(value: unknown): boolean {
 	);
 }
 
+/** 利用者の Discord 連携 (設計書 14.9、#163) を、管理者が有効にしたかを保存する設定の名前。値は { enabled: boolean }。なければ、無効 (新しい機能なので既定はオフ) */
+export const DISCORD_LINKING_KEY = 'discord-linking';
+
+export function readLinkingEnabled(value: unknown): boolean {
+	return (
+		typeof value === 'object' && value !== null && (value as { enabled?: unknown }).enabled === true
+	);
+}
+
 export const CHANNEL_LABELS: Record<AdminChannel, string> = {
 	deploy: 'ビルドとデプロイの結果',
 	errors: '予期しないエラー、取得元の不調',
 	sources: '定期処理と取り込みの結果',
 	users: '新規登録、招待、退会、権限の変更',
 	subjects: '科目の登録 (シラバスにない授業)',
+	support: '利用者ごとの非公開スレッド (Discord 連携)',
 	other: 'そのほか',
 };
 
