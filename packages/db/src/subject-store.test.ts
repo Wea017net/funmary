@@ -177,4 +177,28 @@ describe('シラバスにない授業', () => {
 		const id = store.upsert(subject(), T0);
 		expect(store.findById(id)).toMatchObject({ source: 'syllabus', createdBy: null });
 	});
+
+	it('足した科目の公開範囲は、既定で public', () => {
+		const store = createSubjectStore(database);
+		const id = store.createUserSubject(
+			{ academicYear: 2026, name: 'キャリアガイダンス', term: 'fall', teacher: null },
+			null,
+			T0,
+		);
+		expect(store.findById(id)?.visibility).toBe('public');
+	});
+
+	it('公開範囲を変えられるのは、足した科目だけ', () => {
+		const store = createSubjectStore(database);
+		const syllabusId = store.upsert(subject(), T0);
+		const id = store.createUserSubject(
+			{ academicYear: 2026, name: '高度ICT演習', term: 'spring', teacher: null },
+			null,
+			T0,
+		);
+		expect(store.setVisibility(id, 'private')).toBe(true);
+		expect(store.findById(id)?.visibility).toBe('private');
+		expect(store.setVisibility(syllabusId, 'private')).toBe(false);
+		expect(store.findById(syllabusId)?.visibility).toBe('public');
+	});
 });
