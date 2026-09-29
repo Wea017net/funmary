@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Button, { Label } from '@smui/button';
 	import IconCalendar from '~icons/material-symbols/calendar-view-week-outline';
+	import IconCalendarSync from '~icons/material-symbols/calendar-add-on-outline';
 	import IconDetail from '~icons/material-symbols/menu-book-outline';
 	import IconImport from '~icons/material-symbols/bookmark-add-outline';
 	import IconNotice from '~icons/material-symbols/swap-horiz';
@@ -41,13 +42,19 @@
 			title: '履修科目は、ポータルの時間割から取り込める',
 			text: 'ブックマークを 1 回押すと、学生ポータルの時間割から履修科目を取り込めます。科目を探して 1 つずつ登録することもできます。',
 		},
+		{
+			icon: IconCalendarSync,
+			title: 'ふだん使っているカレンダーにも反映',
+			text: 'Google カレンダーや iPhone のカレンダーに、履修科目の授業と、休講、補講、教室変更を反映します。',
+		},
 	];
 </script>
 
 <div class="landing">
 	<section class="hero" aria-labelledby="hero-heading">
 		<div class="hero-text">
-			<h1 id="hero-heading">次の授業と教室が、<br />開いてすぐ分かる。</h1>
+			<h1 id="hero-heading">大学の「知りたい」を、すべて。</h1>
+			<p class="subcatch">履修の取り込みから、休講、教室変更、カレンダー連携、AI 連携まで。</p>
 			<p class="lead">
 				Funmary
 				は、公立はこだて未来大学の学生のための時間割アプリです。学生ポータルの休講、補講、教室変更を、あなたの時間割にまとめて出します。
@@ -139,7 +146,7 @@
 				</li>
 			{/each}
 		</ul>
-		<p class="soon">準備中: Google カレンダーなどへの予定の配信、Discord への休講などの通知。</p>
+		<p class="soon">準備中: Discord への休講などの通知、AI から使える公開 API と MCP サーバー。</p>
 	</section>
 
 	<section aria-labelledby="trust-heading">
@@ -189,6 +196,14 @@
 		@include breakpoints.wide {
 			font-size: 2.75rem;
 		}
+	}
+
+	.subcatch {
+		margin: 0 0 1rem;
+		color: var(--fm-primary);
+		font-size: 1.0625rem;
+		font-weight: 700;
+		max-width: 34em;
 	}
 
 	.lead {

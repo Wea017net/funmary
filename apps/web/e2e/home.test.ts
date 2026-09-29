@@ -4,7 +4,7 @@ import { expect, test } from '@playwright/test';
 test('ログインしていなければ、アプリの紹介と、はじめる入口を出す', async ({ page }) => {
 	await page.goto('/');
 	await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-		'次の授業と教室が、開いてすぐ分かる。',
+		'大学の「知りたい」を、すべて。',
 	);
 	await expect(page.getByRole('link', { name: '大学のアカウントではじめる' })).toHaveAttribute(
 		'href',
@@ -13,7 +13,7 @@ test('ログインしていなければ、アプリの紹介と、はじめる�
 	// 招待コードの欄は、招待制のときだけ出す
 	await expect(page.getByLabel('はじめての方は、招待コードで登録します')).toHaveCount(0);
 	await expect(page.getByRole('region', { name: 'できること' }).getByRole('listitem')).toHaveCount(
-		5,
+		6,
 	);
 	await expect(page.getByText('準備中:')).toBeVisible();
 	await expect(page.getByText('公式のアプリではありません').first()).toBeVisible();
