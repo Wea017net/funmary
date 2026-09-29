@@ -371,9 +371,10 @@
 	}
 	.scroll {
 		overflow-x: auto;
-		/* overflow-x を auto にすると、overflow-y も既定で auto になり、縦のスクロールがこの中に閉じ込められて、
-		   見出しの行を画面に貼り付けられなくなる。縦は閉じ込めず、ページのスクロールに任せる */
-		overflow-y: visible;
+		/* overflow-x を auto にすると、overflow-y は visible を指定しても既定で auto になり (CSS Overflow の仕様)、
+		   縦のスクロールがこの中に閉じ込められて、見出しの行を画面に貼り付けられなくなることがある。
+		   auto への読み替えの対象外の clip を指定し、縦はページのスクロールに任せる */
+		overflow-y: clip;
 	}
 	.scroll[data-view='day'] {
 		@include one-day;
