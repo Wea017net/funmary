@@ -1670,3 +1670,70 @@ test.describe('カレンダーの購読', () => {
 		await expect(page.getByRole('button', { name: '購読の URL を発行する' })).toBeVisible();
 	});
 });
+
+test.describe('このアプリについて', () => {
+	const loginAs = async (page: import('@playwright/test').Page) => {
+		const email = `e2e-about-${Date.now()}@fun.ac.jp`;
+		oidc.setIdentity({ sub: email, email, email_verified: true, hd: 'fun.ac.jp' });
+		await page.goto('/auth/google');
+		await expect(page).toHaveURL('/app');
+	};
+
+	test('設定の「アカウント」のすぐ上に、4 つの項目が並ぶ', async ({ page }) => {
+		await loginAs(page);
+		await page.goto('/app/settings');
+
+		const headings = page.getByRole('heading', { level: 2 });
+		const titles = await headings.allTextContents();
+		const accountIndex = titles.indexOf('アカウント');
+		expect(titles[accountIndex - 1]).toBe('このアプリについて');
+
+		const section = page.locator('section', {
+			has: page.getByRole('heading', { name: 'このアプリについて' }),
+		});
+		for (const path of [
+			'/app/settings/about',
+			'/app/settings/license',
+			'/app/settings/third-party-licenses',
+			'/app/settings/contributors',
+		]) {
+			await expect(section.locator(`a[href="${path}"]`)).toBeVisible();
+		}
+	});
+
+	test('リポジトリと作者の画面に、GitHub とコントリビューターへのリンクが出る', async ({
+		page,
+	}) => {
+		await loginAs(page);
+		await page.goto('/app/settings/about');
+
+		const repo = page.locator('a[href="https://github.com/oto-lab/funmary"]').first();
+		await expect(repo).toHaveAttribute('target', '_blank');
+		await expect(repo).toHaveAttribute('rel', 'noopener noreferrer');
+
+		// Contributors の画面は GitHub から取得するので、ここでは開かない
+		await expect(
+			page.getByRole('link', { name: 'コードを書いてくれた人たち', exact: true }),
+		).toHaveAttribute('href', '/app/settings/contributors');
+	});
+
+	test('ライセンスの画面に、BSD-3-Clause と Apache-2.0 の本文が出る', async ({ page }) => {
+		await loginAs(page);
+		await page.goto('/app/settings/license');
+
+		await page.getByText('BSD-3-Clause', { exact: true }).click();
+		await expect(page.getByText('Redistribution and use')).toBeVisible();
+
+		await page.getByText('Apache-2.0', { exact: true }).click();
+		await expect(page.getByText('Apache License')).toBeVisible();
+	});
+
+	test('サードパーティライセンスの画面に、依存の一覧が出る', async ({ page }) => {
+		await loginAs(page);
+		await page.goto('/app/settings/third-party-licenses');
+
+		await expect(
+			page.getByText('Funmary が使っているオープンソースのソフトウェアのライセンスです。'),
+		).toBeVisible();
+	});
+});
