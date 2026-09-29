@@ -104,3 +104,10 @@ export {
 	type FeedTokenKind,
 	type FeedTokenStore,
 } from './feed-token-store.ts';
+export {
+	createDiscordLinkStore,
+	type DiscordDestination,
+	type DiscordLink,
+	type DiscordLinkInput,
+	type DiscordLinkStore,
+} from './discord-link-store.ts';

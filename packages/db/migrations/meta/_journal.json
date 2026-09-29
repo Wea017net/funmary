@@ -71,6 +71,13 @@
       "when": 1790644608604,
       "tag": "0009_personal_slots_and_submissions",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1790670155196,
+      "tag": "0010_discord_links",
+      "breakpoints": true
     }
   ]
 }
