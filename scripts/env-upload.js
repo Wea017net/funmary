@@ -12,7 +12,12 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { createInterface } from 'node:readline/promises';
-import { alignEnvFile, parseEnvValues, setEnvValues } from '../apps/web/src/lib/server/env-file.ts';
+import {
+	alignEnvFile,
+	parseEnvValues,
+	SECRET_NAMES,
+	setEnvValues,
+} from '../apps/web/src/lib/server/env-file.ts';
 
 if (!existsSync('.env.ssh')) {
 	console.error(
@@ -60,11 +65,23 @@ const localValues = parseEnvValues(localText);
 const remoteValues = parseEnvValues(structured.text);
 /** @type {{ key: string, local: string, remote: string }[]} */
 const changed = [];
+/** @type {string[]} */
+const skippedSecrets = [];
 for (const [key, local] of localValues) {
 	if (local === '') continue; // 手元でも空なら、上書きの提案はしない
 	const remote = remoteValues.get(key) ?? '';
 	if (local === remote) continue;
+	// 鍵は環境ごとに別であるべきもの。上書きすると暗号化したデータが読めなくなるなど、事故につながるので候補にも出さない
+	if (/** @type {readonly string[]} */ (SECRET_NAMES).includes(key)) {
+		skippedSecrets.push(key);
+		continue;
+	}
 	changed.push({ key, local, remote });
+}
+if (skippedSecrets.length > 0) {
+	console.log(
+		`\n手元と VPS で値が違いますが、上書きの対象外なのでスキップしました (環境ごとに別であるべき鍵): ${skippedSecrets.join(', ')}`,
+	);
 }
 
 /** @type {Map<string, string>} */
