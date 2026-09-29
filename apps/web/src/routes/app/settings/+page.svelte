@@ -3,16 +3,20 @@
 	import { resolve } from '$app/paths';
 	import { confirmSubmit } from '$lib/actions/confirm-submit.ts';
 	import type { AdminSummary } from '$lib/server/admin-summary.ts';
+	import IconAbout from '~icons/material-symbols/info-outline';
 	import IconAuditLog from '~icons/material-symbols/fact-check-outline';
 	import IconCalendar from '~icons/material-symbols/calendar-add-on-outline';
 	import IconChevron from '~icons/material-symbols/chevron-right';
+	import IconContributors from '~icons/material-symbols/groups-outline';
 	import IconDiscord from '~icons/material-symbols/forum-outline';
 	import IconHistory from '~icons/material-symbols/monitor-heart-outline';
 	import IconInvite from '~icons/material-symbols/person-add-outline';
+	import IconLicense from '~icons/material-symbols/policy-outline';
 	import IconLink from '~icons/material-symbols/link';
 	import IconLogout from '~icons/material-symbols/logout';
 	import IconSchool from '~icons/material-symbols/event-note-outline';
 	import IconSlotReview from '~icons/material-symbols/task-outline';
+	import IconThirdParty from '~icons/material-symbols/inventory-2-outline';
 	import IconUpload from '~icons/material-symbols/upload-file-outline';
 
 	let {
@@ -117,6 +121,33 @@
 		];
 	});
 
+	const aboutItems: Item[] = [
+		{
+			href: resolve('/app/settings/about'),
+			icon: IconAbout,
+			title: 'リポジトリと作者',
+			description: 'ソースコードと、Funmary を作った人へのリンク',
+		},
+		{
+			href: resolve('/app/settings/license'),
+			icon: IconLicense,
+			title: 'ライセンス',
+			description: 'Funmary 自身のライセンス (BSD-3-Clause または Apache-2.0)',
+		},
+		{
+			href: resolve('/app/settings/third-party-licenses'),
+			icon: IconThirdParty,
+			title: 'サードパーティライセンス',
+			description: '使っているオープンソースのソフトウェアの一覧',
+		},
+		{
+			href: resolve('/app/settings/contributors'),
+			icon: IconContributors,
+			title: 'Contributors',
+			description: 'コードを書いてくれた人たち',
+		},
+	];
+
 	const moderatorItems = $derived.by((): Item[] => {
 		if (!data.moderator) return [];
 		return [
@@ -196,6 +227,11 @@
 			{@render links(moderatorItems)}
 		</section>
 	{/if}
+
+	<section aria-labelledby="about-heading">
+		<h2 id="about-heading">このアプリについて</h2>
+		{@render links(aboutItems)}
+	</section>
 
 	<section aria-labelledby="account-heading">
 		<h2 id="account-heading">アカウント</h2>

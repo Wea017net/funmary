@@ -18,6 +18,7 @@ import type {
 } from '@funmary/db';
 import type { AdminChannel, DiscordBot, DiscordLayout } from '@funmary/notify';
 import type { BuildInfo } from './build-info.ts';
+import type { LegalInfo } from './legal.ts';
 import type { TimetableSources } from './user-timetable.ts';
 
 export interface Services {
@@ -56,6 +57,8 @@ export interface Services {
 	readonly estimateHolidays: TimetableSources['estimateHolidays'];
 	/** 動いているアプリの版。手元の開発では null */
 	readonly build: BuildInfo | null;
+	/** LICENSE の本文と、依存のライセンス一覧。手元の開発では null */
+	readonly legal: LegalInfo | null;
 	/** カレンダー購読の URL のトークン */
 	readonly feedTokens: FeedTokenStore;
 	/** 新規登録の方式 (設計書 8.2)。紹介の画面の案内に使う */

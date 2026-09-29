@@ -6,7 +6,7 @@
 	"license": "(BSD-3-Clause OR Apache-2.0)",
 	"scripts": {
 		"dev": "node scripts/build-theme.js && vite dev",
-		"build": "node scripts/build-theme.js && vite build && node scripts/copy-migrations.js",
+		"build": "node scripts/build-theme.js && vite build && node scripts/copy-migrations.js && node scripts/copy-legal.js",
 		"theme": "node scripts/build-theme.js",
 		"build:icons": "node scripts/build-icons.js",
 		"bundle-cli": "tsdown",

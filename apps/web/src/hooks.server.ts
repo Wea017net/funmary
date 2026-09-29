@@ -58,6 +58,7 @@ import { parseConfig } from '$lib/server/config.ts';
 import { importAcademicCalendarPdf } from '$lib/server/academic-calendar-import.ts';
 import { findBuildInfo } from '$lib/server/build-info.ts';
 import { loadCalendarFeed } from '$lib/server/calendar-feed.ts';
+import { findLegalInfo } from '$lib/server/legal.ts';
 import {
 	DISCORD_LAYOUT_KEY,
 	DISCORD_PRESENCE_KEY,
@@ -315,6 +316,8 @@ export const init: ServerInit = () => {
 		feedTokens: createFeedTokenStore(database),
 		// リリースでは、tar.gz に同梱した build-info.json を、上の階層へたどって探す
 		build: findBuildInfo(dirname(fileURLToPath(import.meta.url))),
+		// ビルドでは、scripts/copy-legal.js が写した legal/ を、上の階層へたどって探す
+		legal: findLegalInfo(dirname(fileURLToPath(import.meta.url))),
 	};
 	setServices(services);
 	const authService: AuthService = createAuthService({

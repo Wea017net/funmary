@@ -1,7 +1,6 @@
 <script lang="ts">
 	// フッターの、ソースコードのリポジトリと、セルフホストの運営者へのリンク (Issue #109)。
-	// リポジトリの移管 (#114) のときは、REPOSITORY_URL もあわせて書き換える
-	const REPOSITORY_URL = 'https://github.com/oto-lab/funmary';
+	import { REPOSITORY_URL } from '$lib/repository.ts';
 
 	let { operator }: { operator: { name: string; url: string } | null } = $props();
 </script>
