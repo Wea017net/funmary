@@ -403,6 +403,14 @@ test.describe('履修科目の登録', () => {
 		await expect(other.getByText('公開シラバスにない授業です。')).toBeVisible();
 		await expect(other.getByRole('region', { name: 'この授業を直す' })).toHaveCount(0);
 
+		// 直せなくても、履修登録していなくても、曜日と時限は足せる
+		await other.getByText('曜日と時限を足す').click();
+		await other.getByLabel('曜日').selectOption('水曜');
+		await other.getByLabel('時限').selectOption('2 限');
+		await other.getByRole('button', { name: '登録する' }).click();
+		await expect(other.getByRole('status')).toHaveText('曜日と時限を登録しました。');
+		await expect(other.getByText('水曜 2 限')).toBeVisible();
+
 		// 足した人は直せる
 		await registered.getByRole('link', { name }).click();
 		const edit = page.getByRole('region', { name: 'この授業を直す' });

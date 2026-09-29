@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseSlotForm, parseSubjectId } from './course-form.ts';
+import { parseSlotFields, parseSlotForm, parseSubjectId } from './course-form.ts';
 
 function form(values: Record<string, string>): FormData {
 	const data = new FormData();
@@ -46,5 +46,19 @@ describe('parseSlotForm', () => {
 	it('長すぎる教室名と、改行を含む教室名は受け付けない', () => {
 		expect(parseSlotForm(form({ ...valid, room: 'あ'.repeat(101) })).ok).toBe(false);
 		expect(parseSlotForm(form({ ...valid, room: '363\n364' })).ok).toBe(false);
+	});
+});
+
+describe('parseSlotFields', () => {
+	it('科目の ID を含めず、曜日、時限、教室だけを読む', () => {
+		expect(parseSlotFields(form({ weekday: '2', period: '4', room: ' 363 ' }))).toEqual({
+			ok: true,
+			value: { weekday: 2, period: 4, room: '363' },
+		});
+	});
+
+	it('曜日と時限の範囲は、parseSlotForm と同じ検査をする', () => {
+		expect(parseSlotFields(form({ weekday: '0', period: '4', room: '' })).ok).toBe(false);
+		expect(parseSlotFields(form({ weekday: '2', period: '7', room: '' })).ok).toBe(false);
 	});
 });
