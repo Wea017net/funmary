@@ -1,5 +1,11 @@
 export { backupDatabase, restoreDatabase, type BackupOptions } from './backup.ts';
 export {
+	createAuditLogStore,
+	type AuditAction,
+	type AuditLogEntry,
+	type AuditLogStore,
+} from './audit-log-store.ts';
+export {
 	checkHealth,
 	DatabaseCorruptedError,
 	MigrationFailedError,

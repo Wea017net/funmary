@@ -93,13 +93,23 @@ export const actions: Actions = {
 				error: `同じ名前の科目「${same.name}」があります。候補から選んで紐付けてください。`,
 			});
 		}
-		const id = subjects.createUserSubject({ academicYear, ...parsed.value }, admin.id, new Date());
+		const now = new Date();
+		const id = subjects.createUserSubject({ academicYear, ...parsed.value }, admin.id, now);
 		if (!unmatchedLessons.resolve(academicYear, lessonName, id)) {
 			subjects.deleteUserSubject(id);
 			return fail(400, { error: NOT_RECORDED });
 		}
 		classChanges.unassignSubject(lessonName);
 		const assigned = classChanges.assignSubject(lessonName, id);
+		getServices().auditLog.record(
+			{
+				actorId: admin.id,
+				action: 'subject.create',
+				subjectId: id,
+				summary: `${parsed.value.name} を科目として作り、${lessonName} を紐付けた`,
+			},
+			now,
+		);
 		return {
 			message:
 				`${parsed.value.name} を科目として作り、${lessonName} を紐付けました (休講などの ${assigned} 件に科目を入れました)。` +
@@ -108,7 +118,7 @@ export const actions: Actions = {
 	},
 	/** 既存の科目に紐付ける。紐付け済みの名前なら、付け替える */
 	resolve: async ({ request, locals }) => {
-		requireAdmin(locals);
+		const admin = requireAdmin(locals);
 		const form = await request.formData();
 		const lessonName = form.get('lessonName');
 		const subjectIdText = form.get('subjectId');
@@ -141,13 +151,22 @@ export const actions: Actions = {
 		// 付け替えのときは、前の科目に入れた休講などを外してから入れ直す
 		classChanges.unassignSubject(lessonName);
 		const assigned = classChanges.assignSubject(lessonName, subject.id);
+		getServices().auditLog.record(
+			{
+				actorId: admin.id,
+				action: 'lesson.resolve',
+				subjectId: subject.id,
+				summary: `${lessonName} を ${subject.name} に紐付けた`,
+			},
+			new Date(),
+		);
 		return {
 			message: `${lessonName} を ${subject.name} に紐付けました (休講などの ${assigned} 件に科目を入れました)。`,
 		};
 	},
 	/** 紐付けを外し、未解決に戻す。休講などに入れた科目も外す */
 	unresolve: async ({ request, locals }) => {
-		requireAdmin(locals);
+		const admin = requireAdmin(locals);
 		const lessonName = await readLessonName(request);
 		if (lessonName === null) return fail(400, { error: NO_NAME });
 		const { subjects, unmatchedLessons, classChanges } = getServices();
@@ -157,13 +176,17 @@ export const actions: Actions = {
 			return fail(400, { error: NOT_RECORDED });
 		}
 		const removed = classChanges.unassignSubject(lessonName);
+		getServices().auditLog.record(
+			{ actorId: admin.id, action: 'lesson.unresolve', summary: `${lessonName} の紐付けを外した` },
+			new Date(),
+		);
 		return {
 			message: `${lessonName} の紐付けを外しました (休講などの ${removed} 件から科目を外しました)。`,
 		};
 	},
 	/** 科目にしないと決め、一覧から外す。紐付けていれば外す */
 	ignore: async ({ request, locals }) => {
-		requireAdmin(locals);
+		const admin = requireAdmin(locals);
 		const lessonName = await readLessonName(request);
 		if (lessonName === null) return fail(400, { error: NO_NAME });
 		const { subjects, unmatchedLessons, classChanges } = getServices();
@@ -173,11 +196,19 @@ export const actions: Actions = {
 			return fail(400, { error: NOT_RECORDED });
 		}
 		classChanges.unassignSubject(lessonName);
+		getServices().auditLog.record(
+			{
+				actorId: admin.id,
+				action: 'lesson.ignore',
+				summary: `${lessonName} を科目にしないことにした`,
+			},
+			new Date(),
+		);
 		return { message: `${lessonName} を科目にしないことにしました。あとで一覧に戻せます。` };
 	},
 	/** 科目にしない決定を解き、未解決に戻す */
 	restore: async ({ request, locals }) => {
-		requireAdmin(locals);
+		const admin = requireAdmin(locals);
 		const lessonName = await readLessonName(request);
 		if (lessonName === null) return fail(400, { error: NO_NAME });
 		const { subjects, unmatchedLessons } = getServices();
@@ -186,6 +217,14 @@ export const actions: Actions = {
 		if (!unmatchedLessons.restore(academicYear, lessonName)) {
 			return fail(400, { error: NOT_RECORDED });
 		}
+		getServices().auditLog.record(
+			{
+				actorId: admin.id,
+				action: 'lesson.restore',
+				summary: `${lessonName} を、照合できなかった授業名の一覧に戻した`,
+			},
+			new Date(),
+		);
 		return { message: `${lessonName} を、照合できなかった授業名の一覧に戻しました。` };
 	},
 };

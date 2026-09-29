@@ -96,6 +96,15 @@ export const actions: Actions = {
 		const now = new Date();
 		const id = subjects.createUserSubject({ academicYear, ...parsed.value }, locals.user.id, now);
 		courses.register(locals.user.id, id, now);
+		getServices().auditLog.record(
+			{
+				actorId: locals.user.id,
+				action: 'subject.create',
+				subjectId: id,
+				summary: `${parsed.value.name} を、シラバスにない授業として足した`,
+			},
+			now,
+		);
 		return {
 			message: `${parsed.value.name} を足して、履修科目に登録しました。曜日と時限を登録してください。`,
 		};
