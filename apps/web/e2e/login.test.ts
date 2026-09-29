@@ -123,7 +123,7 @@ test('大学のアカウントでログインでき、ログアウトできる',
 	// 紹介の画面は、ログインしていても見られ、アプリへの入口を出す
 	await page.goto('/');
 	await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-		'次の授業と教室が、開いてすぐ分かる。',
+		'大学の「知りたい」を、すべて。',
 	);
 	await page.getByRole('link', { name: 'アプリを開く' }).click();
 	await expect(page).toHaveURL('/app');
