@@ -78,6 +78,13 @@
       "when": 1790670155196,
       "tag": "0010_discord_links",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1790675237418,
+      "tag": "0011_subject_visibility",
+      "breakpoints": true
     }
   ]
 }

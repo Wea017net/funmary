@@ -20,12 +20,16 @@ export interface SubjectInput {
 	readonly syllabusUrl: string | null;
 }
 
+export type SubjectVisibility = 'public' | 'link' | 'private';
+
 export interface StoredSubject extends SubjectInput {
 	readonly id: number;
 	readonly updatedAt: Date;
 	readonly source: 'syllabus' | 'user';
 	/** 足した人 (source が user のとき。退会したら null) */
 	readonly createdBy: string | null;
+	/** 公開範囲 (source が user のときだけ意味を持つ。syllabus は常に public) */
+	readonly visibility: SubjectVisibility;
 }
 
 /** シラバスにない授業として足す科目 */
@@ -57,6 +61,8 @@ export interface SubjectStore {
 	updateUserSubject(id: number, input: Omit<UserSubjectInput, 'academicYear'>, now: Date): boolean;
 	/** 足した科目を消す (履修登録と時間割の枠も消える)。シラバスから取り込んだ科目なら false */
 	deleteUserSubject(id: number): boolean;
+	/** 公開範囲を変える。シラバスから取り込んだ科目なら false */
+	setVisibility(id: number, visibility: SubjectVisibility): boolean;
 }
 
 type Row = typeof subjects.$inferSelect;
@@ -76,6 +82,7 @@ function toStored(row: Row): StoredSubject {
 		updatedAt: row.updatedAt,
 		source: row.source,
 		createdBy: row.createdBy,
+		visibility: row.visibility,
 	};
 }
 
@@ -174,6 +181,15 @@ export function createSubjectStore(database: Database): SubjectStore {
 			return (
 				db
 					.delete(subjects)
+					.where(and(eq(subjects.id, id), eq(subjects.source, 'user')))
+					.run().changes > 0
+			);
+		},
+		setVisibility(id, visibility) {
+			return (
+				db
+					.update(subjects)
+					.set({ visibility })
 					.where(and(eq(subjects.id, id), eq(subjects.source, 'user')))
 					.run().changes > 0
 			);

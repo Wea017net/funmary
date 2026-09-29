@@ -10,6 +10,7 @@ export type AuditAction =
 	| 'subject.create'
 	| 'subject.update'
 	| 'subject.delete'
+	| 'subject.visibility'
 	| 'lesson.resolve'
 	| 'lesson.unresolve'
 	| 'lesson.ignore'

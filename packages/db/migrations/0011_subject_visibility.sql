@@ -1,0 +1,1 @@
+ALTER TABLE `subjects` ADD `visibility` text DEFAULT 'public' NOT NULL;

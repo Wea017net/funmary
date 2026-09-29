@@ -122,6 +122,13 @@ export const subjects = sqliteTable(
 		createdBy: text('created_by').references((): AnySQLiteColumn => users.id, {
 			onDelete: 'set null',
 		}),
+		/**
+		 * 公開範囲 (source が user のときだけ意味を持つ。syllabus は常に public)。設計書 14.9、Issue #164。
+		 * public は誰でも探せる、link は URL を知っていれば開ける、private は足した人と管理者だけ
+		 */
+		visibility: text('visibility', { enum: ['public', 'link', 'private'] })
+			.notNull()
+			.default('public'),
 	},
 	(table) => [uniqueIndex('subjects_year_syllabus').on(table.academicYear, table.syllabusId)],
 );

@@ -12,6 +12,7 @@ const ACTION_LABELS: Record<string, string> = {
 	'subject.create': '科目を足した',
 	'subject.update': '科目の情報を直した',
 	'subject.delete': '科目を消した',
+	'subject.visibility': '科目の公開範囲を変えた',
 	'lesson.resolve': '授業名を紐付けた',
 	'lesson.unresolve': '授業名の紐付けを外した',
 	'lesson.ignore': '授業名を科目にしないことにした',

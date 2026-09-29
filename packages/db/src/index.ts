@@ -62,6 +62,7 @@ export {
 	type StoredSubject,
 	type SubjectInput,
 	type SubjectStore,
+	type SubjectVisibility,
 	type UserSubjectInput,
 } from './subject-store.ts';
 export {

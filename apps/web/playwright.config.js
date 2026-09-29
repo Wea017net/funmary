@@ -24,6 +24,8 @@ const serverEnv = {
 	DISCORD_BOT_TOKEN: '',
 	DISCORD_GUILD_ID: '',
 	ADMIN_DISCORD_WEBHOOK_URL: '',
+	DISCORD_CLIENT_ID: '',
+	DISCORD_CLIENT_SECRET: '',
 };
 
 export default defineConfig({

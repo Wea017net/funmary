@@ -439,6 +439,56 @@ test.describe('履修科目の登録', () => {
 		await expect(page.getByRole('link', { name })).toHaveCount(0);
 	});
 
+	test('シラバスにない授業の公開範囲を変えられる。非公開は足した人と管理者だけ、限定公開は URL を知っていれば見られる', async ({
+		page,
+		browser,
+	}) => {
+		const name = `E2E の公開範囲演習${Date.now()}`;
+		await loginAs(page);
+		await page.goto('/app/courses');
+		const create = page.getByRole('region', { name: 'シラバスにない授業を足す' });
+		await create.getByText('公開シラバスに載っていない授業を、科目として足す').click();
+		await create.getByLabel(/授業の名前/).fill(name);
+		await create.getByLabel('学期').selectOption('後期');
+		await create.getByRole('button', { name: '足して登録する' }).click();
+		await expect(page.getByRole('status')).toContainText(`${name} を足して`);
+
+		const registered = page
+			.getByRole('tabpanel', { name: '登録した科目' })
+			.getByRole('listitem')
+			.filter({ hasText: name });
+		await registered.getByRole('link', { name }).click();
+		const visibility = page.getByRole('group', { name: '公開範囲' });
+		await expect(visibility).toBeVisible();
+		const subjectUrl = page.url();
+
+		const other = await (await browser.newContext()).newPage();
+		const otherEmail = `e2e-visibility-${Date.now()}@fun.ac.jp`;
+		oidc.setIdentity({ sub: otherEmail, email: otherEmail, email_verified: true, hd: 'fun.ac.jp' });
+		await other.goto('/auth/google');
+
+		// 既定 (全体公開) では、ほかの利用者も探して見つけられる
+		await other.goto(`/app/courses?q=${encodeURIComponent(name)}`);
+		await expect(other.getByRole('link', { name })).toBeVisible();
+
+		// 非公開にすると、ほかの利用者は探しても見つからず、直接開いても見つからないと出る
+		await visibility.getByLabel(/非公開/).check();
+		await page.getByRole('button', { name: '公開範囲を変える' }).click();
+		await expect(page.getByRole('status')).toHaveText('公開範囲を 非公開 に変えました。');
+		await other.goto(`/app/courses?q=${encodeURIComponent(name)}`);
+		await expect(other.getByRole('link', { name })).toHaveCount(0);
+		expect((await other.goto(subjectUrl))?.status()).toBe(404);
+
+		// 限定公開にすると、探しては見つからないが、URL を知っていれば直接開ける
+		await page.goto(subjectUrl);
+		await visibility.getByLabel(/限定公開/).check();
+		await page.getByRole('button', { name: '公開範囲を変える' }).click();
+		await expect(page.getByRole('status')).toHaveText('公開範囲を 限定公開 に変えました。');
+		await other.goto(`/app/courses?q=${encodeURIComponent(name)}`);
+		await expect(other.getByRole('link', { name })).toHaveCount(0);
+		expect((await other.goto(subjectUrl))?.status()).toBe(200);
+	});
+
 	test('ない科目の詳細は、見つからないと出す', async ({ page }) => {
 		await loginAs(page);
 		// 授業の URL は /app/subjects/<年度>/<シラバスの番号>。前の形 (DB の ID) は転送しない
