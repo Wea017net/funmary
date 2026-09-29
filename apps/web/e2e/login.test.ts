@@ -538,10 +538,10 @@ test.describe('管理画面', () => {
 		await expect(page.getByRole('heading', { name: 'Discord設定', level: 1 })).toBeVisible();
 		await expect(page.getByText('Bot が設定されていません')).toBeVisible();
 		await expect(page.getByRole('navigation', { name: 'パンくず' })).toContainText('設定');
-		// チャンネル 6 本とロール 3 つが、まだ決まっていない状態で並ぶ
+		// チャンネル 7 本とロール 3 つが、まだ決まっていない状態で並ぶ
 		await expect(
 			page.getByRole('region', { name: 'チャンネル' }).getByRole('listitem'),
-		).toHaveCount(6);
+		).toHaveCount(7);
 		await expect(page.getByRole('region', { name: 'ロール' }).getByRole('listitem')).toHaveCount(3);
 		// Bot がないときは、整えるボタンを出さない
 		await expect(page.getByRole('button', { name: 'チャンネルとロールを整える' })).toHaveCount(0);
@@ -1735,5 +1735,18 @@ test.describe('このアプリについて', () => {
 		await expect(
 			page.getByText('Funmary が使っているオープンソースのソフトウェアのライセンスです。'),
 		).toBeVisible();
+	});
+
+	// E2E のサーバーは DISCORD_CLIENT_ID/SECRET を設定していないので、常にこの状態になる (#163)
+	test('Discord 連携の OAuth が設定されていなければ、設定に入口を出さず、直接開いても使えないと出す', async ({
+		page,
+	}) => {
+		await loginAs(page);
+		await page.goto('/app/settings');
+		await expect(page.getByRole('link', { name: 'Discord連携' })).toHaveCount(0);
+
+		await page.goto('/app/settings/discord');
+		await expect(page.getByRole('heading', { name: 'Discord連携', level: 1 })).toBeVisible();
+		await expect(page.getByText('いまは Discord 連携を使えません。')).toBeVisible();
 	});
 });

@@ -41,12 +41,17 @@ function fakeBot(initial: { channels?: DiscordChannel[]; roles?: DiscordRole[] }
 		addMemberRole: () => Promise.resolve(),
 		removeMemberRole: () => Promise.resolve(),
 		postMessage: () => Promise.resolve(),
+		createDm: () => Promise.resolve('dm-channel'),
+		createPrivateThread: () => Promise.resolve('thread'),
+		addThreadMember: () => Promise.resolve(),
+		archiveThread: () => Promise.resolve(),
+		addGuildMember: () => Promise.resolve(),
 	};
 	return { bot, created };
 }
 
 describe('ensureLayout', () => {
-	it('何もなければ、ロール 3 つ、カテゴリ 1 つ、チャンネル 6 本を作る', async () => {
+	it('何もなければ、ロール 3 つ、カテゴリ 1 つ、チャンネル 7 本を作る', async () => {
 		const { bot, created } = fakeBot();
 		const { layout } = await ensureLayout(bot, EMPTY_LAYOUT);
 		expect(created).toEqual([
@@ -76,7 +81,7 @@ describe('ensureLayout', () => {
 		created.length = 0;
 		const { layout, actions } = await ensureLayout(bot, EMPTY_LAYOUT);
 		expect(created).toEqual([]);
-		expect(Object.keys(layout.channels)).toHaveLength(6);
+		expect(Object.keys(layout.channels)).toHaveLength(ADMIN_CHANNELS.length);
 		expect(actions.length).toBeGreaterThan(0);
 	});
 

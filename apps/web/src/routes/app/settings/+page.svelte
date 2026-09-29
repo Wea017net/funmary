@@ -27,6 +27,7 @@
 			moderator: boolean;
 			canInvite: boolean;
 			documents: { title: string; url: string }[];
+			discordLinkAvailable: boolean;
 		};
 	} = $props();
 
@@ -46,6 +47,16 @@
 			title: 'カレンダーの購読',
 			description: '授業の予定を、Google カレンダーや iPhone のカレンダーに入れる',
 		},
+		...(data.discordLinkAvailable
+			? [
+					{
+						href: resolve('/app/settings/discord'),
+						icon: IconDiscord,
+						title: 'Discord連携',
+						description: '休講などの通知を、Discord の非公開スレッドか DM で受け取る',
+					},
+				]
+			: []),
 		...(data.canInvite
 			? [
 					{

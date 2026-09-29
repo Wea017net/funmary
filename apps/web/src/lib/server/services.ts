@@ -5,9 +5,11 @@ import type {
 	AuthStore,
 	ClassChangeStore,
 	CourseStore,
+	DiscordLinkStore,
 	FeedTokenStore,
 	HolidayStore,
 	PersonalSlotStore,
+	SecretBox,
 	SettingsStore,
 	SlotSubmissionStore,
 	StoredJobRunStore,
@@ -16,7 +18,7 @@ import type {
 	UnmatchedLessonStore,
 	UserEventStore,
 } from '@funmary/db';
-import type { AdminChannel, DiscordBot, DiscordLayout } from '@funmary/notify';
+import type { AdminChannel, DiscordBot, DiscordLayout, DiscordOAuthClient } from '@funmary/notify';
 import type { BuildInfo } from './build-info.ts';
 import type { LegalInfo } from './legal.ts';
 import type { TimetableSources } from './user-timetable.ts';
@@ -36,6 +38,20 @@ export interface Services {
 			readonly available: boolean;
 			enabled(): boolean;
 			setEnabled(enabled: boolean): void;
+		};
+		/** 利用者の Discord 連携 (設計書 14.9、#163) */
+		readonly link: {
+			/** OAuth の Client ID と Secret が設定されているか。false なら連携の入口を出さない */
+			readonly configured: boolean;
+			readonly oauth: DiscordOAuthClient | null;
+			readonly store: DiscordLinkStore;
+			/** 連携の途中経過 (state) を封じる。ENCRYPTION_KEY から作った、この起動のもの */
+			readonly stateBox: SecretBox;
+			/** 管理者が機能全体を有効にしているか (既定は無効) */
+			enabled(): boolean;
+			setEnabled(enabled: boolean): void;
+			/** サポートサーバーの support チャンネルの ID。まだ整えていなければ null */
+			supportChannelId(): string | null;
 		};
 	};
 	readonly courses: CourseStore;

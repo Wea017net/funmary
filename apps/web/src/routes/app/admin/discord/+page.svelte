@@ -8,7 +8,7 @@
 		data,
 		form,
 	}: {
-		data: { view: DiscordAdminView };
+		data: { view: DiscordAdminView; link: { configured: boolean; enabled: boolean } };
 		form: { error?: string; message?: string } | null;
 	} = $props();
 </script>
@@ -119,6 +119,31 @@
 					>
 				</Button>
 			</form>
+		</section>
+	{/if}
+
+	{#if data.view.botConfigured}
+		<section aria-labelledby="linking-heading">
+			<h2 id="linking-heading">利用者の Discord 連携</h2>
+			<p>
+				利用者が自分の Discord
+				アカウントを紐付け、休講などの通知を、サポートサーバーの本人だけの非公開スレッドか DM
+				で受け取れるようにします。設定の「Discord連携」に入口が出ます。
+			</p>
+			{#if !data.link.configured}
+				<p class="meta">
+					環境変数 <code>DISCORD_CLIENT_ID</code> と <code>DISCORD_CLIENT_SECRET</code>
+					が設定されていないので、有効にできません (Bot と同じ Discord Application の OAuth2 タブにあります)。
+				</p>
+			{:else}
+				<p class="meta">いまの状態: {data.link.enabled ? '有効' : '無効'}</p>
+				<form method="POST" action="?/linking" use:enhance>
+					<input type="hidden" name="enabled" value={String(!data.link.enabled)} />
+					<Button type="submit" variant="outlined">
+						<Label>{data.link.enabled ? '連携を無効にする' : '連携を有効にする'}</Label>
+					</Button>
+				</form>
+			{/if}
 		</section>
 	{/if}
 

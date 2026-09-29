@@ -14,8 +14,14 @@ function setup(results: Record<string, unknown> = {}, fail?: () => never) {
 			return Promise.resolve(results[name]);
 		};
 	const api = {
-		users: { getCurrent: op('users.getCurrent') },
-		channels: { get: op('channels.get'), createMessage: op('channels.createMessage') },
+		users: { getCurrent: op('users.getCurrent'), createDM: op('users.createDM') },
+		channels: {
+			get: op('channels.get'),
+			createMessage: op('channels.createMessage'),
+			createThread: op('channels.createThread'),
+			edit: op('channels.edit'),
+		},
+		threads: { addMember: op('threads.addMember') },
 		guilds: {
 			getChannels: op('guilds.getChannels'),
 			getRoles: op('guilds.getRoles'),
@@ -23,6 +29,7 @@ function setup(results: Record<string, unknown> = {}, fail?: () => never) {
 			createRole: op('guilds.createRole'),
 			addRoleToMember: op('guilds.addRoleToMember'),
 			removeRoleFromMember: op('guilds.removeRoleFromMember'),
+			addMember: op('guilds.addMember'),
 		},
 	} as unknown as API;
 	return { bot: createDiscordBot({ token: 'secret-token', guildId: '111', api }), calls };
@@ -124,5 +131,51 @@ describe('createDiscordBot', () => {
 			throw new TypeError('network');
 		});
 		await expect(bot.me()).rejects.toThrow(TypeError);
+	});
+
+	it('DM チャンネルを開き、チャンネルの ID を返す', async () => {
+		const { bot, calls } = setup({ 'users.createDM': { id: '8' } });
+		await expect(bot.createDm('222')).resolves.toBe('8');
+		expect(calls[0]).toEqual(['users.createDM', '222']);
+	});
+
+	it('本人だけの非公開スレッドを、invitable を false にして作る', async () => {
+		const { bot, calls } = setup({ 'channels.createThread': { id: '9' } });
+		await expect(bot.createPrivateThread('5', 'link-abc')).resolves.toBe('9');
+		expect(calls[0]).toEqual([
+			'channels.createThread',
+			'5',
+			{ name: 'link-abc', type: 12, invitable: false, auto_archive_duration: 10080 },
+		]);
+	});
+
+	it('スレッドに利用者を加える', async () => {
+		const { bot, calls } = setup();
+		await bot.addThreadMember('9', '222');
+		expect(calls[0]).toEqual(['threads.addMember', '9', '222']);
+	});
+
+	it('スレッドをアーカイブし、ロックする', async () => {
+		const { bot, calls } = setup();
+		await bot.archiveThread('9');
+		expect(calls[0]).toEqual(['channels.edit', '9', { archived: true, locked: true }]);
+	});
+
+	it('スレッドのアーカイブが失敗しても、例外を投げない', async () => {
+		const { bot } = setup({}, () => {
+			throw discordError(404, 'Unknown Channel');
+		});
+		await expect(bot.archiveThread('9')).resolves.toBeUndefined();
+	});
+
+	it('アクセストークンを使って、利用者をギルドに参加させる', async () => {
+		const { bot, calls } = setup();
+		await bot.addGuildMember('222', 'user-access-token');
+		expect(calls[0]).toEqual([
+			'guilds.addMember',
+			'111',
+			'222',
+			{ access_token: 'user-access-token' },
+		]);
 	});
 });

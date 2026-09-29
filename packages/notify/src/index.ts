@@ -26,6 +26,15 @@ export {
 	type DiscordPresenceOptions,
 } from './discord-presence.ts';
 export {
+	createDiscordOAuthClient,
+	DISCORD_OAUTH_SCOPE,
+	DiscordOAuthError,
+	type DiscordOAuthClient,
+	type DiscordOAuthOptions,
+	type DiscordOAuthTokens,
+	type DiscordOAuthUser,
+} from './discord-oauth.ts';
+export {
 	ADMIN_CHANNELS,
 	ADMIN_ROLES,
 	checkChannel,

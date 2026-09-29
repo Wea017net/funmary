@@ -28,6 +28,10 @@ export const load: ServerLoad = ({ locals }) => {
 			available: discord.presence.available,
 			enabled: discord.presence.enabled(),
 		}),
+		link: {
+			configured: discord.link.configured,
+			enabled: discord.link.enabled(),
+		},
 	};
 };
 
@@ -112,6 +116,18 @@ export const actions: Actions = {
 		discord.presence.setEnabled(enabled);
 		return {
 			message: enabled ? 'オンライン表示を入れました。' : 'オンライン表示を切りました。',
+		};
+	},
+	/** 利用者の Discord 連携 (#163) を、入れる、切る */
+	linking: async ({ request, locals }) => {
+		requireAdmin(locals);
+		const { discord } = getServices();
+		const enabled = (await request.formData()).get('enabled') === 'true';
+		discord.link.setEnabled(enabled);
+		return {
+			message: enabled
+				? '利用者の Discord 連携を有効にしました。'
+				: '利用者の Discord 連携を無効にしました。',
 		};
 	},
 	/** チャンネルに、テストのメッセージを送る */

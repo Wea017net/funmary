@@ -13,6 +13,8 @@ import {
 	createAcademicCalendarStore,
 	createAuditLogStore,
 	createAuthStore,
+	createDiscordLinkStore,
+	createSecretBox,
 	createSettingsStore,
 	createUserEventStore,
 	createClassChangeStore,
@@ -49,6 +51,7 @@ import {
 	createAdminAlerter,
 	createAdminDiscordSink,
 	createDiscordBot,
+	createDiscordOAuthClient,
 	createDiscordPresence,
 	parseLayout,
 	type DiscordLayout,
@@ -61,7 +64,9 @@ import { loadCalendarFeed } from '$lib/server/calendar-feed.ts';
 import { findLegalInfo } from '$lib/server/legal.ts';
 import {
 	DISCORD_LAYOUT_KEY,
+	DISCORD_LINKING_KEY,
 	DISCORD_PRESENCE_KEY,
+	readLinkingEnabled,
 	readPresenceEnabled,
 } from '$lib/server/discord-admin.ts';
 import { OFFICIAL_CALENDAR_KEY } from '$lib/server/official-documents.ts';
@@ -132,6 +137,9 @@ export const init: ServerInit = () => {
 			})
 		: null;
 	const readDiscordLayout = () => parseLayout(settingsStore.get(DISCORD_LAYOUT_KEY));
+	const discordSecretBox = createSecretBox(result.config.encryptionKey);
+	const discordLinkStore = createDiscordLinkStore(database, discordSecretBox);
+	const linkingEnabled = () => readLinkingEnabled(settingsStore.get(DISCORD_LINKING_KEY));
 	// Bot のオンライン表示は、見た目のためだけに Gateway につなぐ。本番で、送信を止めていないときだけ動かす
 	// (手元の開発で、同じトークンをつなぎ、本番と取り合わないため)。管理画面で切り替えられる
 	const presence = result.config.discordBot
@@ -277,6 +285,13 @@ export const init: ServerInit = () => {
 	});
 
 	publicOrigin = result.config.origin ?? DEV_ORIGIN;
+	const discordOAuthClient = result.config.discordOAuth
+		? createDiscordOAuthClient({
+				clientId: result.config.discordOAuth.clientId,
+				clientSecret: result.config.discordOAuth.clientSecret,
+				redirectUri: `${publicOrigin}/app/settings/discord`,
+			})
+		: null;
 	const store = createAuthStore(database);
 	authStore = store;
 	const services = {
@@ -295,6 +310,16 @@ export const init: ServerInit = () => {
 			},
 			saveLayout: (layout: DiscordLayout) =>
 				settingsStore.set(DISCORD_LAYOUT_KEY, layout, new Date()),
+			link: {
+				configured: discordOAuthClient !== null,
+				oauth: discordOAuthClient,
+				store: discordLinkStore,
+				stateBox: discordSecretBox,
+				enabled: linkingEnabled,
+				setEnabled: (enabled: boolean) =>
+					settingsStore.set(DISCORD_LINKING_KEY, { enabled }, new Date()),
+				supportChannelId: () => readDiscordLayout().channels.support?.id ?? null,
+			},
 		},
 		courses: createCourseStore(database),
 		personalSlots: createPersonalSlotStore(database),

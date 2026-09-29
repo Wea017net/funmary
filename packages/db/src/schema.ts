@@ -464,6 +464,29 @@ export const hopeEvents = sqliteTable(
 );
 
 // ---------------------------------------------------------------------------
+// 利用者の Discord 連携 (設計書 14.9)
+
+/**
+ * 利用者の Discord アカウントと Funmary のアカウントの紐付け。1 人につき 1 行。
+ * トークンは暗号化して保存する。解除すると行ごと消す (再連携できるようにするため)
+ */
+export const discordLinks = sqliteTable('discord_links', {
+	userId: text('user_id')
+		.primaryKey()
+		.references(() => users.id, { onDelete: 'cascade' }),
+	/** Discord のユーザー ID。1 つの Discord アカウントは 1 人にしか紐付けられない */
+	discordUserId: text('discord_user_id').notNull().unique(),
+	accessTokenEncrypted: text('access_token_encrypted').notNull(),
+	refreshTokenEncrypted: text('refresh_token_encrypted').notNull(),
+	tokenExpiresAt: integer('token_expires_at', { mode: 'timestamp_ms' }).notNull(),
+	/** 通知の送り先。非公開スレッドか DM か */
+	destination: text('destination', { enum: ['thread', 'dm'] }).notNull(),
+	/** destination が thread のときの、本人だけのスレッドの ID。dm のときは DM チャンネルの ID */
+	channelId: text('channel_id').notNull(),
+	createdAt: createdAt(),
+});
+
+// ---------------------------------------------------------------------------
 // 通知
 
 export const notifications = sqliteTable(
