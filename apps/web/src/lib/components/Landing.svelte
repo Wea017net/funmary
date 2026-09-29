@@ -125,7 +125,7 @@
 					<li>
 						<span class="when">5 限</span>
 						<span class="what">物理 <StatusBadge status="makeup" /></span>
-						<span class="room"><LessonRoom room="495" tentative={true} /></span>
+						<span class="room"><LessonRoom room="495" tentative={false} /></span>
 					</li>
 				</ul>
 			</div>
