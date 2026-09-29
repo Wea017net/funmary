@@ -12,6 +12,8 @@ html {
 	background: var(--fm-background);
 	color: var(--fm-text);
 	-webkit-text-size-adjust: 100%;
+	// 日本語の禁則処理を、最も厳密なものにする。「ー」(長音符) や小さい仮名が、行の先頭に来ないようにする
+	line-break: strict;
 }
 
 body {
