@@ -1,13 +1,20 @@
 // 授業の詳細 (設計書 12.2)。シラバスの内容は取り込み時に保存したものを出し、画面を開くたびに大学のサイトへは取りに行かない。
 // シラバスにない授業として足した科目は、足した人と管理者が直したり消したりできる。
 import { error, fail, redirect, type Actions, type ServerLoad } from '@sveltejs/kit';
+import type { SubjectVisibility } from '@funmary/db';
 import { describeClassChange } from '$lib/class-change-label.ts';
 import { parseSlotFields } from '$lib/server/course-form.ts';
 import { getServices } from '$lib/server/services.ts';
 import { alertSlotConflicts, alertSlotSubmission } from '$lib/server/slot-conflicts.ts';
 import { readSlotSharingMode } from '$lib/server/slot-permission.ts';
-import { canEditSubject, findSameName, parseUserSubjectForm } from '$lib/server/user-subject.ts';
-import { parseSubjectPath } from '$lib/subject-path.ts';
+import { alertSubjectDeleted, alertSubjectVisibilityChanged } from '$lib/server/subject-notify.ts';
+import {
+	canEditSubject,
+	canViewSubject,
+	findSameName,
+	parseUserSubjectForm,
+} from '$lib/server/user-subject.ts';
+import { parseSubjectPath, subjectPathParams } from '$lib/subject-path.ts';
 
 /** 休講などの種類を、時間割の画面と同じ表示 (StatusBadge) にそろえる */
 const CHANGE_STATUS = {
@@ -19,18 +26,23 @@ const CHANGE_STATUS = {
 /** 画面に出すリンクは https のものだけにする (javascript: などを href に入れないため) */
 const httpsOnly = (url: string | null) => (url?.startsWith('https://') ? url : null);
 
-/** URL (/app/subjects/<年度>/<シラバスの番号>) の科目。なければ 404 */
-function findSubject(params: Partial<Record<string, string>>) {
+const VISIBILITIES: readonly SubjectVisibility[] = ['public', 'link', 'private'];
+
+/** URL (/app/subjects/<年度>/<シラバスの番号>) の科目。なければ、見えなければ 404 */
+function findSubject(
+	params: Partial<Record<string, string>>,
+	user: { readonly id: string; readonly role: 'user' | 'moderator' | 'admin' },
+) {
 	const key = parseSubjectPath(params);
 	const subject = key && getServices().subjects.findBySyllabus(key.academicYear, key.syllabusId);
-	if (!subject) error(404, '科目が見つかりません');
+	if (!subject || !canViewSubject(subject, user)) error(404, '科目が見つかりません');
 	return subject;
 }
 
 export const load: ServerLoad = ({ locals, params }) => {
 	if (!locals.user) redirect(303, '/login');
 	const { courses, classChanges, personalSlots, settings } = getServices();
-	const subject = findSubject(params);
+	const subject = findSubject(params, locals.user);
 
 	const registration = courses
 		.listRegistrations(locals.user.id)
@@ -47,6 +59,7 @@ export const load: ServerLoad = ({ locals, params }) => {
 			syllabus: Object.entries(subject.syllabus),
 			syllabusUrl: httpsOnly(subject.syllabusUrl),
 			userAdded: subject.source === 'user',
+			visibility: subject.visibility,
 		},
 		canEdit: canEditSubject(subject, locals.user),
 		slots: courses
@@ -76,7 +89,7 @@ export const actions: Actions = {
 	 */
 	addSlot: async ({ request, locals, params }) => {
 		if (!locals.user) redirect(303, '/login');
-		const subject = findSubject(params);
+		const subject = findSubject(params, locals.user);
 		const parsed = parseSlotFields(await request.formData());
 		if (!parsed.ok) return fail(400, { error: parsed.error });
 		const services = getServices();
@@ -118,7 +131,7 @@ export const actions: Actions = {
 	/** 自分だけに使う曜日と時限を登録する。共有の登録の設定に関わらず、いつでも使える */
 	addPersonalSlot: async ({ request, locals, params }) => {
 		if (!locals.user) redirect(303, '/login');
-		const subject = findSubject(params);
+		const subject = findSubject(params, locals.user);
 		const parsed = parseSlotFields(await request.formData());
 		if (!parsed.ok) return fail(400, { error: parsed.error });
 		getServices().personalSlots.set(locals.user.id, subject.id, parsed.value, new Date());
@@ -128,7 +141,7 @@ export const actions: Actions = {
 	/** 自分だけの曜日と時限を消す */
 	removePersonalSlot: async ({ request, locals, params }) => {
 		if (!locals.user) redirect(303, '/login');
-		const subject = findSubject(params);
+		const subject = findSubject(params, locals.user);
 		const form = await request.formData();
 		const weekday = Number(form.get('weekday'));
 		const period = Number(form.get('period'));
@@ -142,7 +155,7 @@ export const actions: Actions = {
 	/** シラバスにない授業の名前、学期、教員を直す (足した人と管理者だけ) */
 	updateSubject: async ({ request, locals, params }) => {
 		if (!locals.user) redirect(303, '/login');
-		const subject = findSubject(params);
+		const subject = findSubject(params, locals.user);
 		if (!canEditSubject(subject, locals.user)) {
 			return fail(403, { error: 'この科目は直せません。' });
 		}
@@ -167,10 +180,43 @@ export const actions: Actions = {
 		);
 		return { message: '授業を直しました。' };
 	},
+	/** シラバスにない授業の公開範囲を変える (足した人と管理者だけ)。#164 */
+	setVisibility: async ({ request, locals, params }) => {
+		if (!locals.user) redirect(303, '/login');
+		const subject = findSubject(params, locals.user);
+		if (!canEditSubject(subject, locals.user)) {
+			return fail(403, { error: 'この科目の公開範囲は変えられません。' });
+		}
+		const value = (await request.formData()).get('visibility');
+		const visibility = VISIBILITIES.find((candidate) => candidate === value);
+		if (!visibility) return fail(400, { error: '公開範囲を選んでください。' });
+		const services = getServices();
+		if (!services.subjects.setVisibility(subject.id, visibility)) {
+			return fail(400, { error: '公開範囲を変えられませんでした。' });
+		}
+		const now = new Date();
+		const label = { public: '全体公開', link: '限定公開', private: '非公開' }[visibility];
+		services.auditLog.record(
+			{
+				actorId: locals.user.id,
+				action: 'subject.visibility',
+				subjectId: subject.id,
+				summary: `${subject.name} の公開範囲を ${label} に変えた`,
+			},
+			now,
+		);
+		await alertSubjectVisibilityChanged(
+			services,
+			subject.name,
+			subjectPathParams(subject),
+			visibility,
+		);
+		return { message: `公開範囲を ${label} に変えました。` };
+	},
 	/** シラバスにない授業を消す。履修登録と時間割の枠も消える */
 	deleteSubject: async ({ request, locals, params }) => {
 		if (!locals.user) redirect(303, '/login');
-		const subject = findSubject(params);
+		const subject = findSubject(params, locals.user);
 		if (!canEditSubject(subject, locals.user)) {
 			return fail(403, { error: 'この科目は消せません。' });
 		}
@@ -187,6 +233,7 @@ export const actions: Actions = {
 			},
 			new Date(),
 		);
+		await alertSubjectDeleted(services, subject.name);
 		services.subjects.deleteUserSubject(subject.id);
 		redirect(303, '/app/courses');
 	},

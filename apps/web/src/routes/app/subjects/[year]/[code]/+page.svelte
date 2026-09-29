@@ -16,6 +16,7 @@
 		syllabus: [string, string][];
 		syllabusUrl: string | null;
 		userAdded: boolean;
+		visibility: 'public' | 'link' | 'private';
 	}
 	interface ChangeView {
 		key: string;
@@ -52,6 +53,12 @@
 
 	/** これより長い項目は、折りたたんで出す */
 	const LONG_SECTION = 200;
+
+	const VISIBILITY_LABELS = {
+		public: '全体公開 (誰でも「科目を探す」から見つけられます)',
+		link: '限定公開 (この URL を知っている人だけが見られます)',
+		private: '非公開 (足した人と管理者だけが見られます)',
+	} as const;
 </script>
 
 <svelte:head>
@@ -63,7 +70,10 @@
 	<p><a href={resolve('/app/courses')}>科目</a></p>
 	<h1>{data.subject.name}</h1>
 	{#if data.subject.userAdded}
-		<p class="note">公開シラバスにない授業です。利用者が足しました。</p>
+		<p class="note">
+			公開シラバスにない授業です。利用者が足しました。{#if data.subject.visibility !== 'public'}
+				{VISIBILITY_LABELS[data.subject.visibility]}になっています。{/if}
+		</p>
 	{/if}
 
 	{#if form?.error}
@@ -226,6 +236,23 @@
 				</label>
 				<Button type="submit" variant="unelevated"><Label>直す</Label></Button>
 			</form>
+			<form method="POST" action="?/setVisibility" use:enhance class="edit visibility">
+				<fieldset>
+					<legend>公開範囲</legend>
+					{#each Object.entries(VISIBILITY_LABELS) as [value, label] (value)}
+						<label class="radio">
+							<input
+								type="radio"
+								name="visibility"
+								{value}
+								checked={data.subject.visibility === value}
+							/>
+							{label}
+						</label>
+					{/each}
+				</fieldset>
+				<Button type="submit" variant="outlined"><Label>公開範囲を変える</Label></Button>
+			</form>
 			<details>
 				<summary>この授業を消す</summary>
 				<form method="POST" action="?/deleteSubject" use:enhance class="edit">
@@ -329,6 +356,34 @@
 		}
 
 		.confirm {
+			flex-direction: row;
+			align-items: center;
+			gap: 0.5rem;
+			min-height: 44px;
+		}
+	}
+
+	.visibility {
+		flex-direction: column;
+		align-items: flex-start;
+
+		fieldset {
+			display: flex;
+			flex-direction: column;
+			gap: 0.25rem;
+			width: 100%;
+			margin: 0;
+			padding: 0;
+			border: none;
+		}
+
+		legend {
+			padding: 0;
+			font-size: 0.875rem;
+			color: var(--fm-text-muted);
+		}
+
+		.radio {
 			flex-direction: row;
 			align-items: center;
 			gap: 0.5rem;

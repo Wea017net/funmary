@@ -6,7 +6,12 @@ import { parseSlotForm, parseSubjectId } from '$lib/server/course-form.ts';
 import { getServices } from '$lib/server/services.ts';
 import { alertSlotConflicts, alertSlotSubmission } from '$lib/server/slot-conflicts.ts';
 import { readSlotSharingMode } from '$lib/server/slot-permission.ts';
-import { findSameName, parseUserSubjectForm } from '$lib/server/user-subject.ts';
+import { alertSubjectPublished } from '$lib/server/subject-notify.ts';
+import {
+	findSameName,
+	isSubjectSearchable,
+	parseUserSubjectForm,
+} from '$lib/server/user-subject.ts';
 import { subjectPathParams } from '$lib/subject-path.ts';
 import { searchSubjects } from '$lib/subject-search.ts';
 
@@ -63,7 +68,9 @@ export const load: ServerLoad = ({ locals, url }) => {
 	const query = (url.searchParams.get('q') ?? '').slice(0, 100);
 	const registeredIds = new Set(registered.map((subject) => subject.id));
 	const results = searchSubjects(
-		subjects.list(academicYear).filter((subject) => !registeredIds.has(subject.id)),
+		subjects
+			.list(academicYear)
+			.filter((subject) => !registeredIds.has(subject.id) && isSubjectSearchable(subject)),
 		query,
 	).map((subject) => ({
 		id: subject.id,
@@ -107,7 +114,8 @@ export const actions: Actions = {
 		const now = new Date();
 		const id = subjects.createUserSubject({ academicYear, ...parsed.value }, locals.user.id, now);
 		courses.register(locals.user.id, id, now);
-		getServices().auditLog.record(
+		const services = getServices();
+		services.auditLog.record(
 			{
 				actorId: locals.user.id,
 				action: 'subject.create',
@@ -116,6 +124,9 @@ export const actions: Actions = {
 			},
 			now,
 		);
+		// 足したばかりの科目は、既定で公開範囲が public (全体公開) になる
+		const created = subjects.findById(id);
+		if (created) await alertSubjectPublished(services, created.name, subjectPathParams(created));
 		return {
 			message: `${parsed.value.name} を足して、履修科目に登録しました。曜日と時限を登録してください。`,
 		};
