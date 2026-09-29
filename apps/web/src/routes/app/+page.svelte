@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
+	import InstallGuide from '$lib/components/InstallGuide.svelte';
 	import LessonRoom from '$lib/components/LessonRoom.svelte';
 	import StatusBadge from '$lib/components/StatusBadge.svelte';
 	import type { EventView } from '$lib/server/event-view.ts';
@@ -34,11 +35,11 @@
 </script>
 
 <svelte:head>
-	<title>今日 - Funmary</title>
+	<title>ホーム - Funmary</title>
 </svelte:head>
 
 <div class="page">
-	<h1>今日 <time datetime={today.date}>{formatDate(today.date)}</time></h1>
+	<h1>ホーム</h1>
 	{#if today.note}
 		<p class="note"><IconInfo aria-hidden="true" class="icon" />{formatDayNote(today.note)}</p>
 	{/if}
@@ -66,7 +67,9 @@
 	</section>
 
 	<section aria-labelledby="today-heading">
-		<h2 id="today-heading">今日の授業</h2>
+		<h2 id="today-heading">
+			今日の授業 <time datetime={today.date}>{formatDate(today.date)}</time>
+		</h2>
 		{#if today.lessons.length > 0}
 			<ul class="lessons">
 				{#each today.lessons as lesson (lesson.key)}
@@ -151,11 +154,19 @@
 			学期の期間は、大学の学年暦がまだ入っていないため、推定した日付で出しています。
 		</p>
 	{/if}
+
+	<div class="install">
+		<InstallGuide />
+	</div>
 </div>
 
 <style lang="scss">
 	.page {
 		max-width: 44rem;
+	}
+
+	.install {
+		margin-top: 1.5rem;
 	}
 
 	.suggest {
@@ -186,10 +197,11 @@
 		font-weight: 700;
 	}
 
-	h1 time {
+	#today-heading time {
 		margin-left: 0.25rem;
 		color: var(--fm-text-muted);
 		font-weight: 400;
+		font-size: 0.875rem;
 	}
 
 	.note {

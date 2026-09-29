@@ -2,7 +2,6 @@
 	import type { Component } from 'svelte';
 	import { resolve } from '$app/paths';
 	import { confirmSubmit } from '$lib/actions/confirm-submit.ts';
-	import InstallGuide from '$lib/components/InstallGuide.svelte';
 	import type { AdminSummary } from '$lib/server/admin-summary.ts';
 	import IconCalendar from '~icons/material-symbols/calendar-add-on-outline';
 	import IconChevron from '~icons/material-symbols/chevron-right';
@@ -150,8 +149,6 @@
 			</ul>
 		</section>
 	{/if}
-
-	<InstallGuide />
 
 	{#if data.admin}
 		<section id="admin" aria-labelledby="admin-heading">
