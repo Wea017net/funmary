@@ -11,6 +11,7 @@ import { createAuthService, createGoogleOidcClient, type AuthService } from '@fu
 import {
 	checkHealth,
 	createAcademicCalendarStore,
+	createAccessGrantStore,
 	createAuditLogStore,
 	createAuthStore,
 	createDiscordLinkStore,
@@ -325,6 +326,7 @@ export const init: ServerInit = () => {
 		personalSlots: createPersonalSlotStore(database),
 		slotSubmissions: createSlotSubmissionStore(database),
 		userEvents: createUserEventStore(database),
+		accessGrants: createAccessGrantStore(database),
 		subjects: subjectStore,
 		classChanges: changeStore,
 		unmatchedLessons: unmatchedStore,

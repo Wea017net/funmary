@@ -106,6 +106,12 @@ export {
 	type FeedTokenStore,
 } from './feed-token-store.ts';
 export {
+	createAccessGrantStore,
+	type AccessGrant,
+	type AccessGrantStore,
+	type GrantResourceType,
+} from './access-grant-store.ts';
+export {
 	createDiscordLinkStore,
 	type DiscordDestination,
 	type DiscordLink,

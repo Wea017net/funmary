@@ -13,6 +13,7 @@ const LOOK_AHEAD_DAYS = 400;
 
 const parseId = (value: string | undefined) =>
 	value && /^[1-9]\d{0,9}$/.test(value) ? Number(value) : null;
+const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
 export const load: ServerLoad = ({ locals, params, url }) => {
 	if (!locals.user) redirect(303, '/login');
@@ -38,6 +39,13 @@ export const load: ServerLoad = ({ locals, params, url }) => {
 		keptExclusions: event.excludedDates.filter((date) => !shown.has(date)),
 		// 限定公開のときの、共有のリンク
 		shareUrl: event.shareToken ? `${url.origin}/app/events/shared/${event.shareToken}` : null,
+		// 非公開のときだけ、メールアドレスで招待した人の一覧を出す (#215)
+		grantedEmails:
+			event.visibility === 'private'
+				? getServices()
+						.accessGrants.list('event', event.id)
+						.map((grant) => grant.granteeEmail)
+				: [],
 	};
 };
 
@@ -75,6 +83,33 @@ export const actions: Actions = {
 		if (id === null || !getServices().userEvents.delete(id, locals.user.id)) {
 			error(404, '予定が見つかりません');
 		}
+		getServices().accessGrants.revokeAll('event', id);
 		redirect(303, '/app/events?saved=deleted');
+	},
+	/** メールアドレスで、非公開の予定を招待する (#215) */
+	grantAccess: async ({ request, locals, params }) => {
+		if (!locals.user) redirect(303, '/login');
+		const id = parseId(params['id']);
+		const services = getServices();
+		if (id === null || !services.userEvents.get(id, locals.user.id)) {
+			error(404, '予定が見つかりません');
+		}
+		const value = (await request.formData()).get('email');
+		const email = typeof value === 'string' ? value.trim() : '';
+		if (!EMAIL.test(email)) return fail(400, { error: 'メールアドレスを入れてください。' });
+		services.accessGrants.grant('event', id, email, new Date());
+		return { message: `${email} を招待しました。` };
+	},
+	revokeAccess: async ({ request, locals, params }) => {
+		if (!locals.user) redirect(303, '/login');
+		const id = parseId(params['id']);
+		const services = getServices();
+		if (id === null || !services.userEvents.get(id, locals.user.id)) {
+			error(404, '予定が見つかりません');
+		}
+		const value = (await request.formData()).get('email');
+		if (typeof value !== 'string') return fail(400, { error: '入力が足りません。' });
+		services.accessGrants.revoke('event', id, value);
+		return { message: `${value} の招待を外しました。` };
 	},
 };

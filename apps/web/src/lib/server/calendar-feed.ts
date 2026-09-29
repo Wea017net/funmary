@@ -1,7 +1,7 @@
 // カレンダー購読の ICS に載せる予定 (設計書 13 章)。トークンの持ち主の時間割を、Hono の ICS の組み立てに渡す形にする。
 import type { CalendarFeed, CalendarUserEvent } from '@funmary/api';
 import { addDays, findPeriod, jstDateTime, type UserEvent } from '@funmary/core';
-import type { FeedTokenStore, UserEventStore } from '@funmary/db';
+import type { AuthStore, FeedTokenStore, UserEventStore } from '@funmary/db';
 import { formatDayNote } from '$lib/timetable-label.ts';
 import { toLessonView } from './lesson-view.ts';
 import { buildUserTimetable, type TimetableSources } from './user-timetable.ts';
@@ -14,6 +14,8 @@ export interface CalendarFeedSources extends TimetableSources {
 	readonly feedTokens: Pick<FeedTokenStore, 'findOwner' | 'markUsed'>;
 	/** 利用者が足した予定 */
 	readonly userEvents: Pick<UserEventStore, 'listByOwner' | 'listSubscribed'>;
+	/** 招待 (#215) の確認に使う、持ち主のメールアドレスを調べるため */
+	readonly auth: Pick<AuthStore, 'findUserById'>;
 	/** 公開 URL の origin。授業の詳細画面の URL に使う */
 	readonly origin: string;
 }
@@ -29,6 +31,8 @@ export function loadCalendarFeed(
 	const owner = sources.feedTokens.findOwner('calendar', token);
 	if (!owner) return null;
 	sources.feedTokens.markUsed(owner.id, now);
+	// トークンの発行の時点で使えていたはずのアカウントなので、通常はあるが、念のため空文字列にしておく
+	const ownerEmail = sources.auth.findUserById(owner.userId)?.email ?? '';
 
 	const today = jstDateTime(now).date;
 	const timetable = buildUserTimetable(sources, owner.userId, {
@@ -68,7 +72,7 @@ export function loadCalendarFeed(
 		.listByOwner(owner.userId)
 		.map((event) => ({ event, added: false }));
 	const added = sources.userEvents
-		.listSubscribed(owner.userId)
+		.listSubscribed({ id: owner.userId, email: ownerEmail })
 		.map((event) => ({ event, added: true }));
 	const events = [...own, ...added]
 		// 繰り返しは、いつ始まっていても入れる (カレンダーアプリが、自分で展開する)。単発は、載せる期間に掛かるものだけ

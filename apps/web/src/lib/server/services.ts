@@ -1,6 +1,7 @@
 // 画面のサーバー側の処理 (load、action) が使う部品。起動時に hooks.server.ts の init が 1 回だけ入れる。
 import type {
 	AcademicCalendarStore,
+	AccessGrantStore,
 	AuditLogStore,
 	AuthStore,
 	ClassChangeStore,
@@ -62,6 +63,8 @@ export interface Services {
 	/** 利用者が自分の時間割に足した予定 (持ち主だけが読み書きできる) */
 	readonly userEvents: UserEventStore;
 	readonly subjects: SubjectStore;
+	/** 予定や科目を、特定のメールアドレスの人にだけ見せる招待 (限定公開、Issue #215) */
+	readonly accessGrants: AccessGrantStore;
 	readonly classChanges: ClassChangeStore;
 	readonly unmatchedLessons: UnmatchedLessonStore;
 	readonly academicCalendar: AcademicCalendarStore;

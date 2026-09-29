@@ -28,21 +28,33 @@ const httpsOnly = (url: string | null) => (url?.startsWith('https://') ? url : n
 
 const VISIBILITIES: readonly SubjectVisibility[] = ['public', 'link', 'private'];
 
+const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+
 /** URL (/app/subjects/<年度>/<シラバスの番号>) の科目。なければ、見えなければ 404 */
 function findSubject(
 	params: Partial<Record<string, string>>,
-	user: { readonly id: string; readonly role: 'user' | 'moderator' | 'admin' },
+	user: {
+		readonly id: string;
+		readonly email: string;
+		readonly role: 'user' | 'moderator' | 'admin';
+	},
 ) {
 	const key = parseSubjectPath(params);
 	const subject = key && getServices().subjects.findBySyllabus(key.academicYear, key.syllabusId);
-	if (!subject || !canViewSubject(subject, user)) error(404, '科目が見つかりません');
+	if (!subject) error(404, '科目が見つかりません');
+	const granted =
+		subject.source === 'user' &&
+		subject.visibility === 'private' &&
+		getServices().accessGrants.isGranted('subject', subject.id, user.email);
+	if (!canViewSubject(subject, user, granted)) error(404, '科目が見つかりません');
 	return subject;
 }
 
 export const load: ServerLoad = ({ locals, params }) => {
 	if (!locals.user) redirect(303, '/login');
-	const { courses, classChanges, personalSlots, settings } = getServices();
+	const { courses, classChanges, personalSlots, settings, accessGrants } = getServices();
 	const subject = findSubject(params, locals.user);
+	const canEdit = canEditSubject(subject, locals.user);
 
 	const registration = courses
 		.listRegistrations(locals.user.id)
@@ -61,7 +73,11 @@ export const load: ServerLoad = ({ locals, params }) => {
 			userAdded: subject.source === 'user',
 			visibility: subject.visibility,
 		},
-		canEdit: canEditSubject(subject, locals.user),
+		canEdit,
+		// 招待した人の一覧は、直せる人にだけ見せる
+		grantedEmails: canEdit
+			? accessGrants.list('subject', subject.id).map((g) => g.granteeEmail)
+			: [],
 		slots: courses
 			.slotsOf(subject.id)
 			.map(({ weekday, period, room }) => ({ weekday, period, room })),
@@ -180,7 +196,7 @@ export const actions: Actions = {
 		);
 		return { message: '授業を直しました。' };
 	},
-	/** シラバスにない授業の公開範囲を変える (足した人と管理者だけ)。#164 */
+	/** シラバスにない授業の公開範囲を変える (足した人と管理者だけ)。#215 */
 	setVisibility: async ({ request, locals, params }) => {
 		if (!locals.user) redirect(303, '/login');
 		const subject = findSubject(params, locals.user);
@@ -213,6 +229,34 @@ export const actions: Actions = {
 		);
 		return { message: `公開範囲を ${label} に変えました。` };
 	},
+	/**
+	 * メールアドレスで、特定の人を招待する (足した人と管理者だけ)。#215
+	 * そのメールアドレスの利用者がいるかどうかは確かめず、常に同じ案内を返す (存在を教えないため)
+	 */
+	grantAccess: async ({ request, locals, params }) => {
+		if (!locals.user) redirect(303, '/login');
+		const subject = findSubject(params, locals.user);
+		if (!canEditSubject(subject, locals.user)) {
+			return fail(403, { error: 'この科目には招待できません。' });
+		}
+		const value = (await request.formData()).get('email');
+		const email = typeof value === 'string' ? value.trim() : '';
+		if (!EMAIL.test(email)) return fail(400, { error: 'メールアドレスを入れてください。' });
+		getServices().accessGrants.grant('subject', subject.id, email, new Date());
+		return { message: `${email} を招待しました。` };
+	},
+	/** 招待を外す */
+	revokeAccess: async ({ request, locals, params }) => {
+		if (!locals.user) redirect(303, '/login');
+		const subject = findSubject(params, locals.user);
+		if (!canEditSubject(subject, locals.user)) {
+			return fail(403, { error: 'この科目の招待は外せません。' });
+		}
+		const value = (await request.formData()).get('email');
+		if (typeof value !== 'string') return fail(400, { error: '入力が足りません。' });
+		getServices().accessGrants.revoke('subject', subject.id, value);
+		return { message: `${value} の招待を外しました。` };
+	},
 	/** シラバスにない授業を消す。履修登録と時間割の枠も消える */
 	deleteSubject: async ({ request, locals, params }) => {
 		if (!locals.user) redirect(303, '/login');
@@ -235,6 +279,7 @@ export const actions: Actions = {
 		);
 		await alertSubjectDeleted(services, subject.name);
 		services.subjects.deleteUserSubject(subject.id);
+		services.accessGrants.revokeAll('subject', subject.id);
 		redirect(303, '/app/courses');
 	},
 };

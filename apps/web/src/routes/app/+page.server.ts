@@ -26,7 +26,7 @@ export const load: ServerLoad = ({ locals }) => {
 
 	// 自分の予定と、ほかの人の予定のうち自分の時間割に加えたもの
 	const userEvents = services.userEvents.listByOwner(locals.user.id);
-	const addedEvents = services.userEvents.listSubscribed(locals.user.id);
+	const addedEvents = services.userEvents.listSubscribed(locals.user);
 
 	return {
 		today: {

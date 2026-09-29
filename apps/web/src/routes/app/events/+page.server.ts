@@ -23,6 +23,6 @@ export const load: ServerLoad = ({ locals, url }) => {
 			visibility: VISIBILITY_LABELS[event.visibility],
 		})),
 		// 加えた予定は、持ち主が非公開にしていれば出ない。開くのは、予定の番号で (公開されているものだけ)
-		subscribed: userEvents.listSubscribed(locals.user.id).map(summarizeEvent),
+		subscribed: userEvents.listSubscribed(locals.user).map(summarizeEvent),
 	};
 };

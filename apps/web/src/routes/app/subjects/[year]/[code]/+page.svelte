@@ -48,6 +48,7 @@
 			registered: boolean;
 			hopeCourseUrl: string | null;
 			changes: ChangeView[];
+			grantedEmails: string[];
 		};
 	} = $props();
 
@@ -253,6 +254,38 @@
 				</fieldset>
 				<Button type="submit" variant="outlined"><Label>公開範囲を変える</Label></Button>
 			</form>
+			{#if data.subject.visibility === 'private'}
+				<div class="edit invite">
+					<h3>特定の人にだけ見せる</h3>
+					<p class="note">
+						メールアドレスで招待した人は、非公開のままでもこの授業を見られます。そのメールアドレスが
+						Funmary
+						に登録されているかどうかにかかわらず、同じ案内を出します。自動では時間割に加わりません。
+					</p>
+					<form method="POST" action="?/grantAccess" use:enhance class="grant-form">
+						<label>
+							メールアドレス
+							<input type="email" name="email" maxlength="200" required autocomplete="off" />
+						</label>
+						<Button type="submit" variant="outlined"><Label>招待する</Label></Button>
+					</form>
+					{#if data.grantedEmails.length > 0}
+						<ul class="grants">
+							{#each data.grantedEmails as email (email)}
+								<li>
+									<span>{email}</span>
+									<form method="POST" action="?/revokeAccess" use:enhance class="inline">
+										<input type="hidden" name="email" value={email} />
+										<Button type="submit" variant="outlined"
+											><Label>外す<span class="visually-hidden">: {email}</span></Label></Button
+										>
+									</form>
+								</li>
+							{/each}
+						</ul>
+					{/if}
+				</div>
+			{/if}
 			<details>
 				<summary>この授業を消す</summary>
 				<form method="POST" action="?/deleteSubject" use:enhance class="edit">
@@ -388,6 +421,54 @@
 			align-items: center;
 			gap: 0.5rem;
 			min-height: 44px;
+		}
+	}
+
+	.invite {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 0.5rem;
+
+		h3 {
+			margin: 0;
+			font-size: 1rem;
+		}
+	}
+
+	.grant-form {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: end;
+		gap: 0.5rem 1rem;
+		width: 100%;
+
+		label {
+			display: flex;
+			flex: 1 1 14rem;
+			flex-direction: column;
+			gap: 0.25rem;
+			font-size: 0.875rem;
+		}
+	}
+
+	.grants {
+		display: grid;
+		gap: 0.25rem;
+		width: 100%;
+		margin: 0;
+		padding: 0;
+		list-style: none;
+
+		li {
+			display: flex;
+			flex-wrap: wrap;
+			align-items: center;
+			justify-content: space-between;
+			gap: 0.5rem;
+			padding: 0.5rem 0.75rem;
+			border-radius: 0.5rem;
+			background: var(--fm-surface);
+			overflow-wrap: anywhere;
 		}
 	}
 

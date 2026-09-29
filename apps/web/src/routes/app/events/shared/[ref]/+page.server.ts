@@ -6,7 +6,7 @@ import { getServices } from '$lib/server/services.ts';
 
 export const load: ServerLoad = ({ locals, params }) => {
 	if (!locals.user) redirect(303, '/login');
-	const shared = getServices().userEvents.findShared(params['ref'] ?? '', locals.user.id);
+	const shared = getServices().userEvents.findShared(params['ref'] ?? '', locals.user);
 	if (!shared) error(404, '予定が見つかりません');
 	return {
 		event: summarizeEvent(shared.event),
@@ -20,16 +20,16 @@ export const actions: Actions = {
 	subscribe: ({ locals, params }) => {
 		if (!locals.user) redirect(303, '/login');
 		const { userEvents } = getServices();
-		const shared = userEvents.findShared(params['ref'] ?? '', locals.user.id);
+		const shared = userEvents.findShared(params['ref'] ?? '', locals.user);
 		if (!shared) error(404, '予定が見つかりません');
 		if (shared.isOwner) return fail(400, { error: '自分の予定は、加えなくても、時間割に出ます。' });
-		userEvents.subscribe(locals.user.id, shared.event.id, new Date());
+		userEvents.subscribe(locals.user, shared.event.id, new Date());
 		return { message: '自分の時間割に加えました。' };
 	},
 	unsubscribe: ({ locals, params }) => {
 		if (!locals.user) redirect(303, '/login');
 		const { userEvents } = getServices();
-		const shared = userEvents.findShared(params['ref'] ?? '', locals.user.id);
+		const shared = userEvents.findShared(params['ref'] ?? '', locals.user);
 		if (!shared) error(404, '予定が見つかりません');
 		userEvents.unsubscribe(locals.user.id, shared.event.id);
 		return { message: '自分の時間割から外しました。' };

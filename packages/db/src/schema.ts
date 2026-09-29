@@ -328,6 +328,31 @@ export const userEvents = sqliteTable(
 	],
 );
 
+/**
+ * 予定や科目を、特定のメールアドレスの人にだけ見せる (限定公開、メールアドレスでの指定)。
+ * メールアドレスは、登録済みの利用者のものかどうかを確かめずに保存する (存在するかしないかを教えないため)。
+ * 見る側は、自分のログインのメールアドレスと照らし合わせたときだけ開ける
+ */
+export const accessGrants = sqliteTable(
+	'access_grants',
+	{
+		id: integer('id').primaryKey({ autoIncrement: true }),
+		resourceType: text('resource_type', { enum: ['event', 'subject'] }).notNull(),
+		resourceId: integer('resource_id').notNull(),
+		/** 小文字にそろえて保存する */
+		granteeEmail: text('grantee_email').notNull(),
+		createdAt: createdAt(),
+	},
+	(table) => [
+		uniqueIndex('access_grants_unique').on(
+			table.resourceType,
+			table.resourceId,
+			table.granteeEmail,
+		),
+		index('access_grants_email').on(table.granteeEmail),
+	],
+);
+
 /** ほかの人の予定を、自分の時間割に加えたもの (Issue #145)。持ち主が直すと、加えた人にも反映される */
 export const eventSubscriptions = sqliteTable(
 	'event_subscriptions',

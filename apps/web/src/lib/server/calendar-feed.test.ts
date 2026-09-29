@@ -35,6 +35,7 @@ const NOW = new Date('2026-10-07T00:00:00+09:00');
 
 function sources(): CalendarFeedSources {
 	return {
+		auth: createAuthStore(database),
 		courses: createCourseStore(database),
 		personalSlots: createPersonalSlotStore(database),
 		subjects: createSubjectStore(database),
@@ -210,7 +211,7 @@ describe('loadCalendarFeed', () => {
 				input({ title: '加える予定', visibility: 'public' }),
 				NOW,
 			);
-			events.subscribe(userId, shared, NOW);
+			events.subscribe({ id: userId, email: 'a@fun.ac.jp' }, shared, NOW);
 			const loaded = loadCalendarFeed(sources(), token, NOW);
 			expect(loaded?.feed.events).toHaveLength(1);
 			expect(loaded?.feed.events?.[0]).toMatchObject({
