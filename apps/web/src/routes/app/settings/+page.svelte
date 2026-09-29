@@ -1,7 +1,7 @@
 <script lang="ts">
-	import Button, { Label } from '@smui/button';
 	import type { Component } from 'svelte';
 	import { resolve } from '$app/paths';
+	import { confirmSubmit } from '$lib/actions/confirm-submit.ts';
 	import InstallGuide from '$lib/components/InstallGuide.svelte';
 	import type { AdminSummary } from '$lib/server/admin-summary.ts';
 	import IconCalendar from '~icons/material-symbols/calendar-add-on-outline';
@@ -10,6 +10,7 @@
 	import IconHistory from '~icons/material-symbols/monitor-heart-outline';
 	import IconInvite from '~icons/material-symbols/person-add-outline';
 	import IconLink from '~icons/material-symbols/link';
+	import IconLogout from '~icons/material-symbols/logout';
 	import IconSchool from '~icons/material-symbols/event-note-outline';
 	import IconUpload from '~icons/material-symbols/upload-file-outline';
 
@@ -162,10 +163,24 @@
 
 	<section aria-labelledby="account-heading">
 		<h2 id="account-heading">アカウント</h2>
-		<!-- /auth は、サーバーが処理する。SvelteKit の form の処理を通さず、通常の送信にする -->
-		<form method="POST" action="/auth/logout" data-sveltekit-reload>
-			<Button type="submit" variant="outlined"><Label>ログアウト</Label></Button>
-		</form>
+		<ul class="links">
+			<li>
+				<!-- /auth は、サーバーが処理する。SvelteKit の form の処理を通さず、通常の送信にする -->
+				<form
+					method="POST"
+					action="/auth/logout"
+					data-sveltekit-reload
+					use:confirmSubmit={'ログアウトします。よろしいですか?'}
+				>
+					<button type="submit">
+						<IconLogout aria-hidden="true" class="icon" />
+						<span class="text">
+							<span class="title">ログアウト</span>
+						</span>
+					</button>
+				</form>
+			</li>
+		</ul>
 	</section>
 </div>
 
@@ -197,19 +212,26 @@
 		padding: 0;
 		list-style: none;
 
-		a {
+		a,
+		button {
 			display: flex;
+			width: 100%;
 			align-items: center;
 			gap: 0.75rem;
 			min-height: 56px;
 			padding: 0.75rem 1rem;
+			border: none;
 			border-radius: 0.75rem;
 			background: var(--fm-surface-muted);
 			color: inherit;
+			font: inherit;
+			text-align: left;
 			text-decoration: none;
+			cursor: pointer;
 		}
 
-		a:hover {
+		a:hover,
+		button:hover {
 			background: var(--fm-primary-soft);
 		}
 

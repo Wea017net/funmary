@@ -2,6 +2,7 @@
 	import Button, { Label } from '@smui/button';
 	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
+	import { confirmSubmit } from '$lib/actions/confirm-submit.ts';
 	import YearCalendar from '$lib/components/YearCalendar.svelte';
 	import { formatTerm, WEEKDAY_LABELS } from '$lib/term-label.ts';
 	import { formatDate } from '$lib/timetable-label.ts';
@@ -234,7 +235,12 @@
 						</td>
 						<td>
 							{#if row.source === 'manual' || row.source === 'auto'}
-								<form method="POST" action="?/deleteTerm" use:enhance>
+								<form
+									method="POST"
+									action="?/deleteTerm"
+									use:confirmSubmit={`${formatTerm(row.term)}の期間を消します。よろしいですか?`}
+									use:enhance
+								>
 									<input type="hidden" name="term" value={row.term} />
 									<Button type="submit" variant="outlined">
 										<Label>消す<span class="visually-hidden">: {formatTerm(row.term)}</span></Label>
@@ -287,7 +293,12 @@
 								day.weekday,
 							)}曜の授業</span
 						>
-						<form method="POST" action="?/deleteSubstituteDay" use:enhance>
+						<form
+							method="POST"
+							action="?/deleteSubstituteDay"
+							use:confirmSubmit={`${formatDate(day.date)}の振替授業日を消します。よろしいですか?`}
+							use:enhance
+						>
 							<input type="hidden" name="date" value={day.date} />
 							<Button type="submit" variant="outlined">
 								<Label>消す<span class="visually-hidden">: {formatDate(day.date)}</span></Label>
@@ -331,7 +342,12 @@
 								? ` (${day.label})`
 								: ''}</span
 						>
-						<form method="POST" action="?/deleteNoClassDay" use:enhance>
+						<form
+							method="POST"
+							action="?/deleteNoClassDay"
+							use:confirmSubmit={`${formatDate(day.date)}の休講日を消します。よろしいですか?`}
+							use:enhance
+						>
 							<input type="hidden" name="date" value={day.date} />
 							<Button type="submit" variant="outlined">
 								<Label>消す<span class="visually-hidden">: {formatDate(day.date)}</span></Label>

@@ -2,6 +2,7 @@
 	import Button, { Label } from '@smui/button';
 	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
+	import { confirmSubmit } from '$lib/actions/confirm-submit.ts';
 	import { DEFAULT_PERIODS, TERMS } from '@funmary/core';
 	import type { SubjectPathParams } from '$lib/subject-path.ts';
 	import { formatSlot, formatTerm, WEEKDAY_LABELS } from '$lib/term-label.ts';
@@ -131,7 +132,12 @@
 								</p>
 							</details>
 
-							<form method="POST" action="?/unregister" use:enhance>
+							<form
+								method="POST"
+								action="?/unregister"
+								use:confirmSubmit={'履修登録を取り消します。よろしいですか?'}
+								use:enhance
+							>
 								<input type="hidden" name="subjectId" value={subject.id} />
 								<Button type="submit" variant="outlined"><Label>登録を取り消す</Label></Button>
 							</form>

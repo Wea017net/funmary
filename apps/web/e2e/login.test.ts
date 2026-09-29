@@ -125,6 +125,7 @@ test('大学のアカウントでログインでき、ログアウトできる',
 	// ログアウトは、メニューではなく、設定の中にある
 	await expect(menu.getByRole('button', { name: 'ログアウト' })).toHaveCount(0);
 	await page.goto('/app/settings');
+	page.once('dialog', (dialog) => dialog.accept());
 	await page.getByRole('button', { name: 'ログアウト' }).click();
 	await expect(page).toHaveURL('/');
 	await expect(page.getByRole('link', { name: '大学のアカウントではじめる' })).toBeVisible();
@@ -359,6 +360,7 @@ test.describe('履修科目の登録', () => {
 			.getByRole('link', { name: '科目', exact: true })
 			.click();
 
+		page.once('dialog', (dialog) => dialog.accept());
 		await registered.getByRole('button', { name: '登録を取り消す' }).click();
 		await expect(page.getByRole('status')).toHaveText('架空の演習Ⅱ1-AB の登録を取り消しました。');
 		await expect(page.getByText('まだ登録していません')).toBeVisible();
@@ -960,11 +962,14 @@ test.describe('学年暦の管理', () => {
 		);
 
 		await page.goto('/app/admin/calendar?year=2026');
+		page.once('dialog', (dialog) => dialog.accept());
 		await noClass.getByRole('button', { name: /^消す/ }).click();
 		await expect(page.getByRole('status')).toHaveText('全学の休講日を消しました。');
 		await expect(noClass.getByText('ありません。')).toBeVisible();
+		page.once('dialog', (dialog) => dialog.accept());
 		await substitute.getByRole('button', { name: /^消す/ }).click();
 		await expect(page.getByRole('status')).toHaveText('振替授業日を消しました。');
+		page.once('dialog', (dialog) => dialog.accept());
 		await terms.getByRole('row', { name: /^後期/ }).getByRole('button', { name: /^消す/ }).click();
 		await expect(page.getByRole('status')).toContainText('学期の期間を消しました。');
 		await expect(terms.getByRole('row', { name: /^後期/ })).toContainText('推定');
@@ -1110,6 +1115,7 @@ test.describe('招待コード', () => {
 		// 取り消したコードは、一覧から消える (E2E の DB は実行をまたいで残るので、数で確かめる)
 		const lab = list.getByRole('listitem').filter({ hasText: 'E2E の研究室' });
 		const before = await lab.count();
+		page.once('dialog', (dialog) => dialog.accept());
 		await lab
 			.first()
 			.getByRole('button', { name: /^取り消す/ })
@@ -1238,6 +1244,7 @@ test.describe('自分の予定', () => {
 		await expect(otherPage.getByText('まだ予定がありません')).toBeVisible();
 
 		// 消す
+		page.once('dialog', (dialog) => dialog.accept());
 		await page.getByRole('button', { name: 'この予定を消す' }).click();
 		await expect(page.getByRole('status')).toHaveText('予定を消しました。');
 		await expect(page.getByText('まだ予定がありません')).toBeVisible();
@@ -1490,6 +1497,7 @@ test.describe('カレンダーの購読', () => {
 		expect((await page.request.get(first)).status()).toBe(404);
 		expect((await page.request.get(second)).status()).toBe(200);
 
+		page.once('dialog', (dialog) => dialog.accept());
 		await page.getByRole('button', { name: '無効にする' }).click();
 		await expect(page.getByRole('status').first()).toHaveText(/購読の URL を無効にしました/);
 		expect((await page.request.get(second)).status()).toBe(404);

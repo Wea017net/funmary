@@ -2,6 +2,7 @@
 	import Button, { Label } from '@smui/button';
 	import { tick } from 'svelte';
 	import { enhance } from '$app/forms';
+	import { confirmSubmit } from '$lib/actions/confirm-submit.ts';
 	import { addDays } from '@funmary/core';
 	import {
 		dayMarks,
@@ -181,7 +182,13 @@
 
 		<h4>振替授業日</h4>
 		{#if marks.substitute}
-			<form method="POST" action="?/deleteSubstituteDay" use:enhance={closeOnSuccess} class="row">
+			<form
+				method="POST"
+				action="?/deleteSubstituteDay"
+				use:confirmSubmit={'振替授業日をやめます。よろしいですか?'}
+				use:enhance={closeOnSuccess}
+				class="row"
+			>
 				<span>{WEEKDAY_NAMES[marks.substitute % 7]}曜の授業を行う日です。</span>
 				<input type="hidden" name="date" value={selected} />
 				<Button type="submit" variant="outlined"><Label>振替授業日をやめる</Label></Button>
@@ -203,7 +210,13 @@
 
 		<h4>全学の休講日</h4>
 		{#if marks.noClass}
-			<form method="POST" action="?/deleteNoClassDay" use:enhance={closeOnSuccess} class="row">
+			<form
+				method="POST"
+				action="?/deleteNoClassDay"
+				use:confirmSubmit={'休講日をやめます。よろしいですか?'}
+				use:enhance={closeOnSuccess}
+				class="row"
+			>
 				<span>全学の休講日です{marks.noClass.label ? ` (${marks.noClass.label})` : ''}。</span>
 				<input type="hidden" name="date" value={selected} />
 				<Button type="submit" variant="outlined"><Label>休講日をやめる</Label></Button>
