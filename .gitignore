@@ -18,6 +18,9 @@ blob-report/
 .env
 .env.*
 !.env.example
+# pnpm env:upload の SSH 接続先
+.env.ssh
+!.env.ssh.example
 
 # 手元のデータ (DB、バックアップ、取得した HTML)
 data/

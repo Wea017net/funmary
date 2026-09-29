@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { parseConfig } from './config.ts';
-import { fillSecrets, generateSecrets } from './env-file.ts';
+import {
+	alignEnvFile,
+	fillSecrets,
+	generateSecrets,
+	parseEnvValues,
+	setEnvValues,
+} from './env-file.ts';
 
 /** 毎回同じ値を返す、テスト用の鍵の作り方 */
 const fixedSecrets = () => ({
@@ -71,6 +77,108 @@ describe('fillSecrets', () => {
 			text: 'SESSION_SECRET=session\r\nENCRYPTION_KEY=encryption\r\nVAPID_PUBLIC_KEY=x\r\nVAPID_PRIVATE_KEY=y\r\n',
 			filled: ['SESSION_SECRET', 'ENCRYPTION_KEY'],
 		});
+	});
+});
+
+describe('alignEnvFile', () => {
+	const template = [
+		'# ---- サーバー ----',
+		'',
+		'ORIGIN=',
+		'HOST=',
+		'',
+		'# ---- 通知 ----',
+		'',
+		'DISCORD_BOT_TOKEN=',
+		'DISCORD_CLIENT_ID=',
+		'',
+	].join('\n');
+
+	it('template の並びに合わせ、値のある行の値は保つ', () => {
+		const current = ['HOST=127.0.0.1', 'ORIGIN=https://funmary.example.com', ''].join('\n');
+		const result = alignEnvFile(current, template);
+		expect(result.text).toBe(
+			[
+				'# ---- サーバー ----',
+				'',
+				'ORIGIN=https://funmary.example.com',
+				'HOST=127.0.0.1',
+				'',
+				'# ---- 通知 ----',
+				'',
+				'DISCORD_BOT_TOKEN=',
+				'DISCORD_CLIENT_ID=',
+				'',
+			].join('\n'),
+		);
+	});
+
+	it('template にあって current にない鍵は、template の位置に空のまま足す', () => {
+		const current = 'ORIGIN=https://funmary.example.com\n';
+		const result = alignEnvFile(current, template);
+		expect(result.added).toEqual(['HOST', 'DISCORD_BOT_TOKEN', 'DISCORD_CLIENT_ID']);
+		expect(result.text).toContain('DISCORD_CLIENT_ID=\n');
+	});
+
+	it('current にあって template にない鍵は、値を保ったまま末尾にまとめる (消さない)', () => {
+		const current = ['ORIGIN=https://funmary.example.com', 'OLD_KEY=keep-me', ''].join('\n');
+		const result = alignEnvFile(current, template);
+		expect(result.extra).toEqual(['OLD_KEY']);
+		expect(result.text).toContain('OLD_KEY=keep-me');
+		expect(result.text).toContain('ほかの変数');
+	});
+
+	it('変える必要がなければ、template と同じ形のまま返す', () => {
+		const current = template;
+		const result = alignEnvFile(current, template);
+		expect(result.text).toBe(template);
+		expect(result.added).toEqual([]);
+		expect(result.extra).toEqual([]);
+	});
+
+	it('Windows の改行 (CRLF) は template に合わせる', () => {
+		const crlfTemplate = template.replaceAll('\n', '\r\n');
+		const current = 'ORIGIN=https://funmary.example.com\n';
+		const result = alignEnvFile(current, crlfTemplate);
+		expect(result.text).toContain('\r\n');
+		expect(result.text).not.toMatch(/[^\r]\n/);
+	});
+});
+
+describe('parseEnvValues', () => {
+	it('KEY=値 の行を読み、コメントと空行は無視する', () => {
+		const text = ['# コメント', 'ORIGIN=https://funmary.example.com', '', 'HOST='].join('\n');
+		expect(parseEnvValues(text)).toEqual(
+			new Map([
+				['ORIGIN', 'https://funmary.example.com'],
+				['HOST', ''],
+			]),
+		);
+	});
+
+	it('同じ鍵が 2 回あれば、あとの行の値を使う', () => {
+		const text = ['ORIGIN=first', 'ORIGIN=second'].join('\n');
+		expect(parseEnvValues(text).get('ORIGIN')).toBe('second');
+	});
+});
+
+describe('setEnvValues', () => {
+	it('指定した鍵の値だけを書き換える', () => {
+		const text = ['ORIGIN=old', 'HOST=127.0.0.1', ''].join('\n');
+		const result = setEnvValues(text, new Map([['ORIGIN', 'new']]));
+		expect(result).toBe(['ORIGIN=new', 'HOST=127.0.0.1', ''].join('\n'));
+	});
+
+	it('行のない鍵は無視する (構成は変えない)', () => {
+		const text = 'ORIGIN=old\n';
+		const result = setEnvValues(text, new Map([['NOT_THERE', 'x']]));
+		expect(result).toBe(text);
+	});
+
+	it('Windows の改行 (CRLF) を保つ', () => {
+		const text = 'ORIGIN=old\r\nHOST=127.0.0.1\r\n';
+		const result = setEnvValues(text, new Map([['ORIGIN', 'new']]));
+		expect(result).toBe('ORIGIN=new\r\nHOST=127.0.0.1\r\n');
 	});
 });
 
