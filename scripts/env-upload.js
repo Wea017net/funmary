@@ -1,6 +1,7 @@
 // 本番の環境変数ファイルを、手元の .env に合わせる (VPS にログインせず、1 つのコマンドで済ませる)。
-// 使い方: pnpm env:upload <SSH の宛先> [リモートの環境変数ファイル (既定: /etc/funmary/funmary.env)]
-// 例:     pnpm env:upload root@funmary.example.com
+// 使い方: pnpm env:upload
+// SSH でつなぐための秘匿情報 (宛先、鍵、ポート) は、コマンドの引数ではなく .env.ssh に書く
+// (シェルの履歴やプロセス一覧に、接続先や鍵の場所を残さないため)。形は .env.ssh.example を見る。
 //
 // 反映専用の制限された鍵 (funmary-deploy、command= で funmary-update だけに絞ったもの) は使わない。
 // 作者自身の SSH 鍵と sudo を使う (自動デプロイの経路とは別)。
@@ -13,22 +14,34 @@ import { existsSync, readFileSync } from 'node:fs';
 import { createInterface } from 'node:readline/promises';
 import { alignEnvFile, parseEnvValues, setEnvValues } from '../apps/web/src/lib/server/env-file.ts';
 
-const [, , host, remoteFile = '/etc/funmary/funmary.env'] = process.argv;
-if (!host) {
+if (!existsSync('.env.ssh')) {
 	console.error(
-		'使い方: pnpm env:upload <SSH の宛先> [リモートの環境変数ファイル (既定: /etc/funmary/funmary.env)]',
+		'.env.ssh がありません。.env.ssh.example を .env.ssh に写し、接続先を書いてください。',
 	);
-	console.error('例:     pnpm env:upload root@funmary.example.com');
 	process.exit(1);
 }
+process.loadEnvFile('.env.ssh');
+
+const host = process.env['SSH_HOST'];
+if (!host) throw new Error('.env.ssh に SSH_HOST を書いてください (例: root@funmary.example.com)');
+const remoteFile = process.env['REMOTE_ENV_FILE'] || '/etc/funmary/funmary.env';
+const sshPort = process.env['SSH_PORT'];
+const sshKey = process.env['SSH_KEY'];
 
 if (!existsSync('.env')) throw new Error('.env がありません (pnpm funmary-admin init で作れます)');
 if (!existsSync('.env.example')) throw new Error('.env.example が見つかりません');
 const localText = readFileSync('.env', 'utf8');
 const templateText = readFileSync('.env.example', 'utf8');
 
+/** @param {string[]} args @returns {string[]} */
+const withConnectionArgs = (args) => [
+	...(sshPort ? ['-p', sshPort] : []),
+	...(sshKey ? ['-i', sshKey] : []),
+	...args,
+];
 /** @param {string[]} args @returns {string} */
-const ssh = (args) => execFileSync('ssh', [host, ...args], { encoding: 'utf8' });
+const ssh = (args) =>
+	execFileSync('ssh', withConnectionArgs([host, ...args]), { encoding: 'utf8' });
 
 console.log(`${host} の ${remoteFile} を読んでいます…`);
 const remoteText = ssh(['sudo', 'cat', remoteFile]);
@@ -87,7 +100,7 @@ const backupPath = `${remoteFile}.bak.${new Date().toISOString().replaceAll(/[:.
 console.log(`\n${host} の ${remoteFile} を ${backupPath} に控えてから書き換えます…`);
 ssh(['sudo', 'cp', '-p', remoteFile, backupPath]);
 // 既存のファイルに上書きするので、所有者と権限 (root:funmary、640) は変わらない
-execFileSync('ssh', [host, 'sudo', 'tee', remoteFile], {
+execFileSync('ssh', withConnectionArgs([host, 'sudo', 'tee', remoteFile]), {
 	input: finalText,
 	stdio: ['pipe', 'ignore', 'inherit'],
 });

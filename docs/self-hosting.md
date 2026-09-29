@@ -198,11 +198,13 @@ VPS にログインしているなら、`funmary-admin` を直接使います。
 sudo /usr/local/bin/funmary-admin align-env --file=/etc/funmary/funmary.env
 ```
 
-リポジトリの手元の環境からは、`pnpm env:upload` で、SSH で入るだけで済ませられます (並びを揃えたあと、手元の `.env` にあってリモートと値が違う、またはリモートにない鍵があれば、1 つずつ上書きするか確認されます)。
+リポジトリの手元の環境からは、`pnpm env:upload` で、SSH で入るだけで済ませられます (並びを揃えたあと、手元の `.env` にあってリモートと値が違う、またはリモートにない鍵があれば、1 つずつ上書きするか確認されます)。接続先は、コマンドの引数ではなく `.env.ssh` に書きます (シェルの履歴に接続先や鍵の場所を残さないため)。
 
 ```sh
-pnpm env:upload <SSH の宛先> [リモートの環境変数ファイル (既定: /etc/funmary/funmary.env)]
-# 例: pnpm env:upload root@funmary.example.com
+cp .env.ssh.example .env.ssh
+# .env.ssh を開き、SSH_HOST (例: root@funmary.example.com) などを書く
+
+pnpm env:upload
 ```
 
 反映専用の制限された鍵 (`funmary-deploy`) は使わず、自分の SSH 鍵と `sudo` を使います。書き換えたら、それぞれ `systemctl restart funmary` で反映します。
