@@ -1704,6 +1704,12 @@ test.describe('スマホの上部バーと、フッターのリンク', () => {
 		await page.waitForFunction(
 			() => parseFloat(getComputedStyle(document.querySelector('thead th')!).top) === 0,
 		);
+		// CSS の宣言だけでなく、実際に描かれた位置でも、見出しの行が 1 限の行に重ならないことを確かめる
+		const headRowBox = await page.locator('thead tr').first().boundingBox();
+		const firstPeriodBox = await page.getByRole('row').filter({ hasText: '1 限' }).boundingBox();
+		expect(firstPeriodBox?.y).toBeGreaterThanOrEqual(
+			(headRowBox?.y ?? 0) + (headRowBox?.height ?? 0) - 1,
+		);
 
 		await page.mouse.wheel(0, -600);
 		await expect(header).toHaveCSS('transform', 'none');
