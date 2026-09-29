@@ -10,3 +10,13 @@ export function requireAdmin(locals: { readonly user: AuthUser | null }): AuthUs
 	if (locals.user.role !== 'admin') error(404, 'Not Found');
 	return locals.user;
 }
+
+/**
+ * moderator と admin の両方に開く画面や操作 (監査ログ、曜日と時限の確認待ちなど) の、load と action の最初に呼ぶ。
+ * admin だけに絞りたいときは requireAdmin を使う
+ */
+export function requireModerator(locals: { readonly user: AuthUser | null }): AuthUser {
+	if (!locals.user) redirect(303, '/login');
+	if (locals.user.role !== 'admin' && locals.user.role !== 'moderator') error(404, 'Not Found');
+	return locals.user;
+}

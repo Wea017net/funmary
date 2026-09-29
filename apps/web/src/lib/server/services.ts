@@ -7,7 +7,9 @@ import type {
 	CourseStore,
 	FeedTokenStore,
 	HolidayStore,
+	PersonalSlotStore,
 	SettingsStore,
+	SlotSubmissionStore,
 	StoredJobRunStore,
 	SourceHealthStore,
 	SubjectStore,
@@ -36,6 +38,10 @@ export interface Services {
 		};
 	};
 	readonly courses: CourseStore;
+	/** 利用者だけに見える、曜日と時限の書き換え */
+	readonly personalSlots: PersonalSlotStore;
+	/** 共有の枠を「モデレーターが確認してから登録する」設定のときの、確認待ちの提出 */
+	readonly slotSubmissions: SlotSubmissionStore;
 	/** 利用者が自分の時間割に足した予定 (持ち主だけが読み書きできる) */
 	readonly userEvents: UserEventStore;
 	readonly subjects: SubjectStore;

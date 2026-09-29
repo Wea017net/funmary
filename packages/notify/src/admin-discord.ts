@@ -8,10 +8,14 @@ export function defaultChannel(severity: AdminAlertSeverity): AdminChannel {
 	return severity === 'error' ? 'errors' : 'sources';
 }
 
-/** メンションするロール。deploy は失敗と警告のとき、errors は error のときだけ */
+/**
+ * メンションするロール。deploy は失敗と警告のとき、errors は error のときだけ。
+ * subjects は、曜日と時限の確認待ちなど、モデレーターに見てほしい警告のときに鳴らす
+ */
 export function rolesToMention(channel: AdminChannel, severity: AdminAlertSeverity): AdminRole[] {
 	if (channel === 'errors' && severity === 'error') return ['errors'];
 	if (channel === 'deploy' && severity !== 'info') return ['deploy'];
+	if (channel === 'subjects' && severity !== 'info') return ['subjects'];
 	return [];
 }
 

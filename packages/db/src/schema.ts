@@ -27,7 +27,7 @@ export const users = sqliteTable('users', {
 	/** Google の ID トークンの sub */
 	googleSub: text('google_sub').notNull().unique(),
 	name: text('name'),
-	role: text('role', { enum: ['user', 'admin'] })
+	role: text('role', { enum: ['user', 'moderator', 'admin'] })
 		.notNull()
 		.default('user'),
 	status: text('status', { enum: ['active', 'suspended'] })
@@ -171,6 +171,64 @@ export const courseRegistrations = sqliteTable(
 		primaryKey({ columns: [table.userId, table.subjectId] }),
 		index('course_registrations_subject').on(table.subjectId),
 	],
+);
+
+/**
+ * 利用者だけに見える、曜日と時限の書き換え。共有の timetable_slots は変えないので、ほかの利用者には影響しない。
+ * 「だれでも共有の枠を登録できる」設定を絞っていても、これは誰でも使える
+ */
+export const personalTimetableSlots = sqliteTable(
+	'personal_timetable_slots',
+	{
+		id: integer('id').primaryKey({ autoIncrement: true }),
+		userId: text('user_id')
+			.notNull()
+			.references(() => users.id, { onDelete: 'cascade' }),
+		subjectId: integer('subject_id')
+			.notNull()
+			.references(() => subjects.id, { onDelete: 'cascade' }),
+		weekday: integer('weekday').notNull(),
+		period: integer('period').notNull(),
+		room: text('room'),
+		updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
+	},
+	(table) => [
+		uniqueIndex('personal_timetable_slots_unique').on(
+			table.userId,
+			table.subjectId,
+			table.weekday,
+			table.period,
+		),
+	],
+);
+
+/**
+ * 共有の枠を「モデレーターが確認してから登録する」設定のときに、確認を待つ提出。
+ * 承認すると timetable_slots に入り、この記録は結果として残る (消さない)
+ */
+export const slotSubmissions = sqliteTable(
+	'slot_submissions',
+	{
+		id: integer('id').primaryKey({ autoIncrement: true }),
+		subjectId: integer('subject_id')
+			.notNull()
+			.references(() => subjects.id, { onDelete: 'cascade' }),
+		weekday: integer('weekday').notNull(),
+		period: integer('period').notNull(),
+		room: text('room'),
+		/** 提出した利用者。退会したら null */
+		submittedBy: text('submitted_by').references(() => users.id, { onDelete: 'set null' }),
+		submittedAt: integer('submitted_at', { mode: 'timestamp_ms' }).notNull(),
+		status: text('status', { enum: ['pending', 'approved', 'rejected'] })
+			.notNull()
+			.default('pending'),
+		/** 承認、却下した人。退会したら null */
+		decidedBy: text('decided_by').references((): AnySQLiteColumn => users.id, {
+			onDelete: 'set null',
+		}),
+		decidedAt: integer('decided_at', { mode: 'timestamp_ms' }),
+	},
+	(table) => [index('slot_submissions_status').on(table.status, table.submittedAt)],
 );
 
 // ---------------------------------------------------------------------------

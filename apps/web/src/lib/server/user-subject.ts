@@ -54,7 +54,7 @@ export function findSameName<T extends SubjectName>(
 /** 足した科目は、足した人と管理者が直したり消したりできる。シラバスの科目は直せない */
 export function canEditSubject(
 	subject: { readonly source: 'syllabus' | 'user'; readonly createdBy: string | null },
-	user: { readonly id: string; readonly role: 'user' | 'admin' },
+	user: { readonly id: string; readonly role: 'user' | 'moderator' | 'admin' },
 ): boolean {
 	return subject.source === 'user' && (user.role === 'admin' || subject.createdBy === user.id);
 }

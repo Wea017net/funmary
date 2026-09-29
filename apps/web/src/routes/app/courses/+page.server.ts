@@ -4,21 +4,31 @@ import { fail, redirect, type Actions, type ServerLoad } from '@sveltejs/kit';
 import { jstDateTime, resolveAcademicTerms } from '@funmary/core';
 import { parseSlotForm, parseSubjectId } from '$lib/server/course-form.ts';
 import { getServices } from '$lib/server/services.ts';
-import { alertSlotConflicts } from '$lib/server/slot-conflicts.ts';
+import { alertSlotConflicts, alertSlotSubmission } from '$lib/server/slot-conflicts.ts';
+import { readSlotSharingMode } from '$lib/server/slot-permission.ts';
 import { findSameName, parseUserSubjectForm } from '$lib/server/user-subject.ts';
 import { subjectPathParams } from '$lib/subject-path.ts';
 import { searchSubjects } from '$lib/subject-search.ts';
 
 export const load: ServerLoad = ({ locals, url }) => {
 	if (!locals.user) redirect(303, '/login');
-	const { courses, subjects } = getServices();
+	const userId = locals.user.id;
+	const { courses, subjects, settings, personalSlots } = getServices();
+	const slotSharingMode = readSlotSharingMode(settings);
 	// 新年度のシラバスがまだなければ、前年度の科目を使い続ける
 	const academicYear = subjects.latestYear();
 	// シラバスにない授業を足すときの学期の既定。4 月から 8 月は前期、それ以外は後期
 	const month = Number(jstDateTime(new Date()).date.slice(5, 7));
 	const defaultTerm = month >= 4 && month <= 8 ? 'spring' : 'fall';
 	if (academicYear === null) {
-		return { academicYear: null, registered: [], query: '', results: [], defaultTerm };
+		return {
+			academicYear: null,
+			registered: [],
+			query: '',
+			results: [],
+			defaultTerm,
+			slotSharingMode,
+		};
 	}
 
 	// 学年暦に期間がない学期 (集中講義など) の科目は、時間割のどの日にも出ない。画面で知らせる
@@ -28,7 +38,7 @@ export const load: ServerLoad = ({ locals, url }) => {
 		),
 	);
 	const registered = courses
-		.listRegistrations(locals.user.id)
+		.listRegistrations(userId)
 		.flatMap(({ subjectId }) => {
 			const subject = subjects.findById(subjectId);
 			if (subject?.academicYear !== academicYear) return [];
@@ -44,6 +54,7 @@ export const load: ServerLoad = ({ locals, url }) => {
 					slots: courses
 						.slotsOf(subject.id)
 						.map(({ weekday, period, room }) => ({ weekday, period, room })),
+					personalSlots: personalSlots.listForSubject(userId, subject.id),
 				},
 			];
 		})
@@ -63,7 +74,7 @@ export const load: ServerLoad = ({ locals, url }) => {
 		path: subjectPathParams(subject),
 	}));
 
-	return { academicYear, registered, query, results, defaultTerm };
+	return { academicYear, registered, query, results, defaultTerm, slotSharingMode };
 };
 
 export const actions: Actions = {
@@ -130,6 +141,21 @@ export const actions: Actions = {
 		if (!services.courses.isRegistered(locals.user.id, parsed.value.subjectId)) {
 			return fail(403, { error: '履修科目に登録した科目だけ、曜日と時限を登録できます。' });
 		}
+		const mode = readSlotSharingMode(services.settings);
+		if (mode === 'closed') {
+			return fail(403, {
+				error:
+					'今は共有の枠を登録できません。科目の詳細画面から、自分だけに使う曜日と時限を登録してください。',
+			});
+		}
+		if (mode === 'moderated') {
+			services.slotSubmissions.submit(parsed.value, locals.user.id, new Date());
+			const subject = services.subjects.findById(parsed.value.subjectId);
+			await alertSlotSubmission(services, subject?.name ?? `科目 ${parsed.value.subjectId}`);
+			return {
+				message: '曜日と時限を提出しました。モデレーターか管理者が確かめてから登録されます。',
+			};
+		}
 		const result = services.courses.addSharedSlots(
 			[parsed.value],
 			{ source: 'manual', createdBy: locals.user.id },
@@ -145,5 +171,29 @@ export const actions: Actions = {
 			return { message: 'この曜日と時限は、既に登録されています。' };
 		}
 		return { message: '曜日と時限を登録しました。' };
+	},
+
+	/** 自分だけに使う曜日と時限を登録する。共有の登録の設定に関わらず、いつでも使える */
+	addPersonalSlot: async ({ request, locals }) => {
+		if (!locals.user) redirect(303, '/login');
+		const parsed = parseSlotForm(await request.formData());
+		if (!parsed.ok) return fail(400, { error: parsed.error });
+		const { subjectId, ...slot } = parsed.value;
+		getServices().personalSlots.set(locals.user.id, subjectId, slot, new Date());
+		return { message: '自分だけに使う曜日と時限を登録しました。' };
+	},
+
+	/** 自分だけの曜日と時限を消す */
+	removePersonalSlot: async ({ request, locals }) => {
+		if (!locals.user) redirect(303, '/login');
+		const form = await request.formData();
+		const subjectId = parseSubjectId(form);
+		const weekday = Number(form.get('weekday'));
+		const period = Number(form.get('period'));
+		if (subjectId === null || !Number.isInteger(weekday) || !Number.isInteger(period)) {
+			return fail(400, { error: '曜日と時限が正しくありません。' });
+		}
+		getServices().personalSlots.remove(locals.user.id, subjectId, weekday, period);
+		return { message: '自分だけの曜日と時限を消しました。' };
 	},
 };

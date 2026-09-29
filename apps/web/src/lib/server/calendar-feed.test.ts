@@ -8,6 +8,7 @@ import {
 	createCourseStore,
 	createFeedTokenStore,
 	createHolidayStore,
+	createPersonalSlotStore,
 	createSubjectStore,
 	createUserEventStore,
 	openDatabase,
@@ -35,6 +36,7 @@ const NOW = new Date('2026-10-07T00:00:00+09:00');
 function sources(): CalendarFeedSources {
 	return {
 		courses: createCourseStore(database),
+		personalSlots: createPersonalSlotStore(database),
 		subjects: createSubjectStore(database),
 		classChanges: createClassChangeStore(database),
 		academicCalendar: createAcademicCalendarStore(database),

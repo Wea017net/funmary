@@ -17,7 +17,7 @@ export interface GoogleClaims {
 export interface ExistingUser {
 	readonly id: string;
 	readonly status: 'active' | 'suspended';
-	readonly role: 'user' | 'admin';
+	readonly role: 'user' | 'moderator' | 'admin';
 }
 
 /** 提示された招待コードの状態 (コードが存在しなければ null を渡す) */
@@ -58,7 +58,7 @@ export type SignInDecision =
 	| { readonly kind: 'sign-in'; readonly userId: string; readonly promoteToAdmin: boolean }
 	| {
 			readonly kind: 'sign-up';
-			readonly role: 'user' | 'admin';
+			readonly role: 'user' | 'moderator' | 'admin';
 			/** 登録に使った招待コード。使わなければ null */
 			readonly inviteCodeId: number | null;
 	  }

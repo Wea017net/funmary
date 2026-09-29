@@ -24,6 +24,8 @@
 		noPeriod: boolean;
 		path: SubjectPathParams;
 		slots: Slot[];
+		/** 自分だけに使っている、共有ではない曜日と時限 */
+		personalSlots: Slot[];
 	}
 	interface FoundSubject {
 		id: number;
@@ -44,6 +46,7 @@
 			query: string;
 			results: FoundSubject[];
 			defaultTerm: string;
+			slotSharingMode: 'open' | 'moderated' | 'closed';
 		};
 		form: { error?: string; message?: string } | null;
 	} = $props();
@@ -161,9 +164,67 @@
 								</ul>
 							{/if}
 
+							{#if subject.personalSlots.length > 0}
+								<p class="note">自分だけに使っている曜日と時限:</p>
+								<ul class="slots">
+									{#each subject.personalSlots as slot (`${slot.weekday}-${slot.period}`)}
+										<li>
+											{formatSlot(slot)}{#if slot.room}、{slot.room}{/if}
+											<form method="POST" action="?/removePersonalSlot" use:enhance class="inline">
+												<input type="hidden" name="subjectId" value={subject.id} />
+												<input type="hidden" name="weekday" value={slot.weekday} />
+												<input type="hidden" name="period" value={slot.period} />
+												<Button type="submit" variant="outlined"
+													><Label
+														>消す<span class="visually-hidden">: {formatSlot(slot)}</span></Label
+													></Button
+												>
+											</form>
+										</li>
+									{/each}
+								</ul>
+							{/if}
+
+							{#if data.slotSharingMode !== 'closed'}
+								<details>
+									<summary>曜日と時限を登録する</summary>
+									<form method="POST" action="?/addSlot" use:enhance class="slot-form">
+										<input type="hidden" name="subjectId" value={subject.id} />
+										<label>
+											曜日
+											<select name="weekday" required>
+												{#each WEEKDAY_LABELS as day (day.weekday)}
+													<option value={day.weekday}>{day.label}曜</option>
+												{/each}
+											</select>
+										</label>
+										<label>
+											時限
+											<select name="period" required>
+												{#each DEFAULT_PERIODS as period (period.number)}
+													<option value={period.number}>{period.number} 限</option>
+												{/each}
+											</select>
+										</label>
+										<label>
+											教室 (分からなければ空のまま)
+											<input name="room" maxlength="100" autocomplete="off" />
+										</label>
+										<Button type="submit" variant="unelevated"><Label>登録する</Label></Button>
+									</form>
+									<p class="note">
+										{#if data.slotSharingMode === 'moderated'}
+											曜日、時限、教室は、大学から自動では取得できないため、利用者どうしで登録しています。モデレーターか管理者が確かめてから登録され、同じ科目を履修しているほかの利用者の時間割にも使われます。
+										{:else}
+											曜日、時限、教室は、大学から自動では取得できないため、利用者どうしで登録しています。登録した内容は、同じ科目を履修しているほかの利用者の時間割にも使われます。
+										{/if}
+									</p>
+								</details>
+							{/if}
+
 							<details>
-								<summary>曜日と時限を登録する</summary>
-								<form method="POST" action="?/addSlot" use:enhance class="slot-form">
+								<summary>自分だけに使う曜日と時限を登録する</summary>
+								<form method="POST" action="?/addPersonalSlot" use:enhance class="slot-form">
 									<input type="hidden" name="subjectId" value={subject.id} />
 									<label>
 										曜日
@@ -188,7 +249,7 @@
 									<Button type="submit" variant="unelevated"><Label>登録する</Label></Button>
 								</form>
 								<p class="note">
-									曜日、時限、教室は、大学から自動では取得できないため、利用者どうしで登録しています。登録した内容は、同じ科目を履修しているほかの利用者の時間割にも使われます。
+									ほかの利用者には見えず、自分の時間割にだけ使われます。共有の登録が確認待ちや、できない設定のときにも使えます。
 								</p>
 							</details>
 
@@ -337,6 +398,10 @@
 		flex-wrap: wrap;
 		gap: 0.5rem 1rem;
 		align-items: end;
+	}
+	.inline {
+		display: inline;
+		margin-left: 0.5rem;
 	}
 	.slot-form label {
 		display: flex;

@@ -17,11 +17,14 @@ import type {
 	ClassChangeStore,
 	CourseStore,
 	HolidayStore,
+	PersonalSlotStore,
 	SubjectStore,
 } from '@funmary/db';
 
 export interface TimetableSources {
 	readonly courses: Pick<CourseStore, 'listRegistrations' | 'slotsOf'>;
+	/** 利用者だけの曜日と時限の書き換え。持っていれば、その科目の共有の枠より優先する */
+	readonly personalSlots: Pick<PersonalSlotStore, 'listForSubject'>;
 	readonly subjects: Pick<SubjectStore, 'findById'>;
 	readonly classChanges: Pick<ClassChangeStore, 'listAssignedBetween'>;
 	readonly academicCalendar: Pick<
@@ -108,17 +111,20 @@ export function buildUserTimetable(
 					yearRange.start <= term.end,
 			),
 		);
-		const registrations: Registration[] = ofYear.map((subject) => ({
-			subjectId: String(subject.id),
-			term: subject.term,
-			slots: sources.courses
-				.slotsOf(subject.id)
-				.flatMap((slot): Slot[] =>
+		const registrations: Registration[] = ofYear.map((subject) => {
+			// 利用者だけの曜日と時限を登録していれば、共有の枠より優先して使う (本人にしか効かない)
+			const personal = sources.personalSlots.listForSubject(userId, subject.id);
+			const shared = personal.length > 0 ? personal : sources.courses.slotsOf(subject.id);
+			return {
+				subjectId: String(subject.id),
+				term: subject.term,
+				slots: shared.flatMap((slot): Slot[] =>
 					isWeekday(slot.weekday)
 						? [{ weekday: slot.weekday, period: slot.period, room: slot.room }]
 						: [],
 				),
-		}));
+			};
+		});
 		const expanded = expandTimetable({
 			range: yearRange,
 			terms,

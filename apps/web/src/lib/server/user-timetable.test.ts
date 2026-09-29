@@ -8,6 +8,7 @@ import {
 	createClassChangeStore,
 	createCourseStore,
 	createHolidayStore,
+	createPersonalSlotStore,
 	createSubjectStore,
 	openDatabase,
 	type Database,
@@ -33,6 +34,7 @@ const NOW = new Date('2026-09-27T00:00:00Z');
 function sources(estimate: TimetableSources['estimateHolidays'] = () => []): TimetableSources {
 	return {
 		courses: createCourseStore(database),
+		personalSlots: createPersonalSlotStore(database),
 		subjects: createSubjectStore(database),
 		classChanges: createClassChangeStore(database),
 		academicCalendar: createAcademicCalendarStore(database),

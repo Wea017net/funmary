@@ -1,4 +1,4 @@
-// 設定の画面。全員が使う項目の下に、管理者にだけ「管理」の節を出す
+// 設定の画面。全員が使う項目の下に、管理者にだけ「管理」の節、モデレーターにだけ「モデレーター」の節を出す
 import { redirect, type ServerLoad } from '@sveltejs/kit';
 import { loadAdminSummary } from '$lib/server/admin-summary.ts';
 import { loadInviteStatus } from '$lib/server/invites.ts';
@@ -14,5 +14,7 @@ export const load: ServerLoad = ({ locals }) => {
 		canInvite: issuance.kind !== 'not-allowed',
 		documents: loadOfficialDocuments(services.settings),
 		admin: locals.user.role === 'admin' ? loadAdminSummary(services, new Date()) : null,
+		// 管理者は「管理」の節に、監査と確認の入口も持つので、ここは moderator だけに出す
+		moderator: locals.user.role === 'moderator',
 	};
 };

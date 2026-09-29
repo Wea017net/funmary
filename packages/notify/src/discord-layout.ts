@@ -13,7 +13,7 @@ export const ADMIN_CHANNELS = [
 export type AdminChannel = (typeof ADMIN_CHANNELS)[number];
 
 /** 通知を鳴らすロール。ほかのチャンネルは、鳴らさない */
-export const ADMIN_ROLES = ['deploy', 'errors'] as const;
+export const ADMIN_ROLES = ['deploy', 'errors', 'subjects'] as const;
 export type AdminRole = (typeof ADMIN_ROLES)[number];
 
 export const CATEGORY_NAME = 'Funmary';

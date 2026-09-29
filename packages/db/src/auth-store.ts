@@ -10,11 +10,17 @@ import { inviteCodes, sessions, userPermissions, users } from './schema.ts';
 /** セッションの有効期限。使うたびに延ばす */
 export const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
+/**
+ * user (何もできない一般の利用者)、moderator (監査ログや、曜日と時限の確認待ちを見られる)、
+ * admin (すべて) の 3 段階。moderator への昇格は、いまは DB を直接書き換えるしかない (#15)
+ */
+export type UserRole = 'user' | 'moderator' | 'admin';
+
 export interface AuthUser {
 	readonly id: string;
 	readonly email: string;
 	readonly name: string | null;
-	readonly role: 'user' | 'admin';
+	readonly role: UserRole;
 	readonly status: 'active' | 'suspended';
 }
 
@@ -22,7 +28,7 @@ export interface NewUser {
 	readonly googleSub: string;
 	readonly email: string;
 	readonly name: string | null;
-	readonly role: 'user' | 'admin';
+	readonly role: UserRole;
 }
 
 export interface InviteCodeRecord {
@@ -45,11 +51,7 @@ export interface AuthStore {
 	createUser(user: NewUser, now: Date): string;
 	/** 利用者の作成と、招待コードの使用を、1 つのトランザクションで行う */
 	registerUser(user: NewUser, invite: { inviteCodeId: number | null }, now: Date): RegisterResult;
-	recordLogin(
-		userId: string,
-		now: Date,
-		update?: { name?: string | null; role?: 'user' | 'admin' },
-	): void;
+	recordLogin(userId: string, now: Date, update?: { name?: string | null; role?: UserRole }): void;
 	/** 停止すると、その利用者のセッションもすべて消す */
 	setStatus(userId: string, status: 'active' | 'suspended'): void;
 
@@ -105,7 +107,7 @@ export interface InviteCodeSummary {
 export interface UserSummary {
 	readonly id: string;
 	readonly email: string;
-	readonly role: 'user' | 'admin';
+	readonly role: UserRole;
 	readonly status: 'active' | 'suspended';
 	readonly permissions: readonly Permission[];
 }
