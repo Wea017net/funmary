@@ -16,6 +16,12 @@ html {
 	line-break: strict;
 }
 
+// アイコン (unplugin-icons が生成する svg、width/height は em 単位の属性) は、Safari (iOS) だと
+// flex の中で意図せず 0 幅に潰れ、見えなくなることがある。すべての svg を、潰れない大きさに固定する
+svg {
+	flex-shrink: 0;
+}
+
 body {
 	margin: 0;
 	font-family: fonts.$system;
