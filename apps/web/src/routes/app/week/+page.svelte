@@ -371,9 +371,10 @@
 	}
 	.scroll {
 		overflow-x: auto;
-		/* overflow-x を auto にすると、overflow-y も既定で auto になり、縦のスクロールがこの中に閉じ込められて、
-		   見出しの行を画面に貼り付けられなくなる。縦は閉じ込めず、ページのスクロールに任せる */
-		overflow-y: visible;
+		/* overflow-x を auto にすると、overflow-y は visible を指定しても既定で auto になり (CSS Overflow の仕様)、
+		   縦のスクロールがこの中に閉じ込められることがある。auto への読み替えの対象外の clip を指定し、
+		   縦はページのスクロールに任せる */
+		overflow-y: clip;
 	}
 	.scroll[data-view='day'] {
 		@include one-day;
@@ -410,11 +411,7 @@
 	thead th:first-child {
 		width: 4.5rem;
 	}
-	/* 見出しの行は、上のバーが出ているときはその下に、隠れているときは画面の上に貼り付く (Issue #109) */
 	thead th {
-		position: sticky;
-		top: var(--app-header-offset, 0px);
-		z-index: 1;
 		background: var(--fm-background);
 	}
 	.today {
