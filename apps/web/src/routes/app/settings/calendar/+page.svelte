@@ -3,6 +3,7 @@
 	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
 	import { confirmSubmit } from '$lib/actions/confirm-submit.ts';
+	import { createCopyState } from '$lib/clipboard.svelte.ts';
 	import SettingsBreadcrumb from '$lib/components/SettingsBreadcrumb.svelte';
 
 	let {
@@ -23,18 +24,13 @@
 		} | null;
 	} = $props();
 
-	let copied = $state(false);
+	const copyState = createCopyState();
 	let urlField: HTMLInputElement | undefined = $state();
 
 	async function copyUrl(url: string) {
-		try {
-			await navigator.clipboard.writeText(url);
-			copied = true;
-		} catch {
-			// コピーできないときは、欄を選んで、手でコピーしてもらう
-			copied = false;
-			urlField?.select();
-		}
+		const ok = await copyState.copy(url);
+		// コピーできないときは、欄を選んで、手でコピーしてもらう
+		if (!ok) urlField?.select();
 	}
 </script>
 
@@ -102,7 +98,7 @@
 					<Label>コピー</Label>
 				</Button>
 			</div>
-			<p class="muted" role="status">{copied ? 'コピーしました。' : ''}</p>
+			<p class="muted" role="status">{copyState.copied ? 'コピーしました。' : ''}</p>
 
 			<div class="qr">
 				<svg
@@ -140,7 +136,7 @@
 					method="POST"
 					action="?/issue"
 					use:enhance={() => {
-						copied = false;
+						copyState.reset();
 					}}
 				>
 					<Button type="submit" variant="unelevated"><Label>再発行する</Label></Button>
@@ -163,7 +159,7 @@
 				method="POST"
 				action="?/issue"
 				use:enhance={() => {
-					copied = false;
+					copyState.reset();
 				}}
 			>
 				<Button type="submit" variant="unelevated"><Label>購読の URL を発行する</Label></Button>

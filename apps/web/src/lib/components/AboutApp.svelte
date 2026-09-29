@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { createCopyState } from '$lib/clipboard.svelte.ts';
 	import { isStandalone } from '$lib/standalone.ts';
 
 	export interface About {
@@ -12,7 +13,7 @@
 
 	// ホーム画面に追加したアプリとして開いているかは、ブラウザでしか分からない
 	let standalone = $state(false);
-	let copied = $state(false);
+	const copyState = createCopyState();
 
 	onMount(() => {
 		standalone = isStandalone();
@@ -27,7 +28,7 @@
 		`${about.client.browser}、${about.client.os}、${standalone ? 'ホーム画面のアプリ' : 'ブラウザ'}`,
 	);
 
-	async function copy() {
+	function copy() {
 		const lines = [
 			`Funmary ${version}`,
 			...(about.build
@@ -35,12 +36,7 @@
 				: []),
 			`クライアント ${client}`,
 		];
-		try {
-			await navigator.clipboard.writeText(lines.join('\n'));
-			copied = true;
-		} catch {
-			copied = false;
-		}
+		void copyState.copy(lines.join('\n'));
 	}
 </script>
 
@@ -49,7 +45,9 @@
 		>Funmary {version}{#if about.build}、{about.build.builtAt} ビルド{/if}</span
 	>
 	<span>{client}</span>
-	<button type="button" onclick={copy}>{copied ? 'コピーしました' : '情報をコピー'}</button>
+	<button type="button" onclick={copy}
+		>{copyState.copied ? 'コピーしました' : '情報をコピー'}</button
+	>
 </p>
 
 <style>

@@ -62,6 +62,8 @@ test('フッターに版とクライアントの情報を出し、まとめて�
 	const copied = await page.evaluate(() => navigator.clipboard.readText());
 	// OS によって、クリップボードの改行が \r\n になる
 	expect(copied).toMatch(/^Funmary 開発版\r?\nクライアント .+、ブラウザ$/);
+	// 「コピーしました」のままにしない。しばらくしたら、元の文言に戻る
+	await expect(footer.getByRole('button', { name: '情報をコピー' })).toBeVisible();
 });
 
 test('機械向けの口 (Hono) のエラーも、ブラウザで開けば猫の付いた画面を出す', async ({

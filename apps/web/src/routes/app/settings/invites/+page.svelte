@@ -2,6 +2,7 @@
 	import Button, { Label } from '@smui/button';
 	import type { InviteIssuance } from '@funmary/core';
 	import { enhance } from '$app/forms';
+	import { createCopyState } from '$lib/clipboard.svelte.ts';
 	import InviteCodeList from '$lib/components/InviteCodeList.svelte';
 	import SettingsBreadcrumb from '$lib/components/SettingsBreadcrumb.svelte';
 	import type { InviteCodeView } from '$lib/server/invites.ts';
@@ -22,18 +23,13 @@
 		} | null;
 	} = $props();
 
-	let copied = $state(false);
+	const copyState = createCopyState();
 	let urlField: HTMLInputElement | undefined = $state();
 
 	async function copyUrl(url: string) {
-		try {
-			await navigator.clipboard.writeText(url);
-			copied = true;
-		} catch {
-			// コピーできないときは、欄を選んで、手でコピーしてもらう
-			copied = false;
-			urlField?.select();
-		}
+		const ok = await copyState.copy(url);
+		// コピーできないときは、欄を選んで、手でコピーしてもらう
+		if (!ok) urlField?.select();
 	}
 
 	const canIssue = $derived(data.issuance.kind === 'admin' || data.issuance.kind === 'member');
@@ -82,7 +78,7 @@
 					<Label>コピー</Label>
 				</Button>
 			</div>
-			<p class="muted" role="status">{copied ? 'コピーしました。' : ''}</p>
+			<p class="muted" role="status">{copyState.copied ? 'コピーしました。' : ''}</p>
 			<p class="muted">
 				コード: <code>{issued.code}</code>{#if issued.expiresAt}
 					。期限: {issued.expiresAt}{/if}
@@ -110,7 +106,7 @@
 				method="POST"
 				action="?/issue"
 				use:enhance={() => {
-					copied = false;
+					copyState.reset();
 				}}
 				class="entry"
 			>

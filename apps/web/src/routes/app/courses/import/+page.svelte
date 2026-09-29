@@ -2,6 +2,7 @@
 	import Button, { Label } from '@smui/button';
 	import { enhance } from '$app/forms';
 	import { onMount } from 'svelte';
+	import { createCopyState } from '$lib/clipboard.svelte.ts';
 
 	interface ImportSummary {
 		read: number;
@@ -23,17 +24,12 @@
 
 	/** 読み取りのコードを動かす方法。ブックマークに登録するか、ブラウザのコンソールに貼るか */
 	let method: 'bookmark' | 'console' = $state('bookmark');
-	let copied = $state(false);
+	const copyState = createCopyState();
 
 	async function copyScript() {
-		try {
-			await navigator.clipboard.writeText(data.script);
-			copied = true;
-		} catch {
-			// コピーできないときは、欄を選んで、手でコピーしてもらう
-			copied = false;
-			scriptField?.select();
-		}
+		const ok = await copyState.copy(data.script);
+		// コピーできないときは、欄を選んで、手でコピーしてもらう
+		if (!ok) scriptField?.select();
 	}
 	let scriptField: HTMLTextAreaElement | undefined = $state();
 
@@ -150,7 +146,7 @@
 					>
 					<div class="copy">
 						<button type="button" onclick={copyScript}>コードをコピーする</button>
-						<span role="status">{copied ? 'コピーしました' : ''}</span>
+						<span role="status">{copyState.copied ? 'コピーしました' : ''}</span>
 					</div>
 				</li>
 				<li>学生ポータルにログインし、時間割のページ (Pt/TimeTable) を開きます。</li>
