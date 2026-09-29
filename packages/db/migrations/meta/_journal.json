@@ -85,6 +85,13 @@
       "when": 1790675237418,
       "tag": "0011_subject_visibility",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1790683129916,
+      "tag": "0012_access_grants",
+      "breakpoints": true
     }
   ]
 }

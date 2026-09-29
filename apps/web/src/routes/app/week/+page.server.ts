@@ -30,7 +30,7 @@ export const load: ServerLoad = ({ cookies, locals, url }) => {
 	const lessons = timetable.lessons.map(toLessonView);
 	// 自分の予定 (日付ごと)。土日は、授業か予定のあるときだけ列を出す
 	const { userEvents } = getServices();
-	const addedEvents = userEvents.listSubscribed(locals.user.id);
+	const addedEvents = userEvents.listSubscribed(locals.user);
 	const events = eventViewsByDate(
 		[...userEvents.listByOwner(locals.user.id), ...addedEvents],
 		range.start,

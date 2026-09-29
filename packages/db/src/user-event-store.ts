@@ -5,7 +5,7 @@ import { randomBytes } from 'node:crypto';
 import { and, asc, eq, inArray, ne } from 'drizzle-orm';
 import type { EventTime, UserEvent } from '@funmary/core';
 import type { Database } from './database.ts';
-import { eventSubscriptions, userEvents } from './schema.ts';
+import { accessGrants, eventSubscriptions, userEvents } from './schema.ts';
 
 /** private は本人だけ、link は共有のリンクを知っている人、public はログインしている全員 */
 export type EventVisibility = 'private' | 'link' | 'public';
@@ -42,17 +42,28 @@ export interface UserEventStore {
 	/** 共有のリンクを作り直す。前のリンクは使えなくなる。限定公開でない、または持ち主でなければ false */
 	rotateShareToken(id: number, ownerId: string): boolean;
 	/**
-	 * viewerId の人が開ける予定。ref は共有のリンクの値か、予定の番号。
-	 * リンクの値では限定公開の予定を、番号では全体に公開された予定と、自分の予定を開ける
+	 * viewer の人が開ける予定。ref は共有のリンクの値か、予定の番号。
+	 * リンクの値では限定公開の予定を、番号では全体に公開された予定と、自分の予定を開ける。
+	 * 非公開でも、viewer のメールアドレスが招待されていれば開ける (#215)
 	 */
-	findShared(ref: string, viewerId: string): SharedEvent | null;
+	findShared(
+		ref: string,
+		viewer: { readonly id: string; readonly email: string },
+	): SharedEvent | null;
 	/** 全体に公開された予定 (自分の予定を除く) を、始まりの日の順に返す */
 	listPublic(viewerId: string): SharedEvent[];
-	/** ほかの人の予定を、自分の時間割に加える。加えられない (自分の予定、非公開、ない) なら false */
-	subscribe(userId: string, eventId: number, now: Date): boolean;
+	/**
+	 * ほかの人の予定を、自分の時間割に加える。
+	 * 加えられない (自分の予定、見られない、ない) なら false
+	 */
+	subscribe(
+		user: { readonly id: string; readonly email: string },
+		eventId: number,
+		now: Date,
+	): boolean;
 	unsubscribe(userId: string, eventId: number): boolean;
-	/** 加えた予定のうち、いま公開されているもの。持ち主が非公開にしたものは含めない */
-	listSubscribed(userId: string): UserEvent[];
+	/** 加えた予定のうち、いま見られるもの。持ち主が非公開にして、招待も外したら含めない */
+	listSubscribed(viewer: { readonly id: string; readonly email: string }): UserEvent[];
 }
 
 type Row = typeof userEvents.$inferSelect;
@@ -118,6 +129,18 @@ export function createUserEventStore(database: Database): UserEventStore {
 				.all()
 				.map((row) => row.id),
 		);
+	const isGrantedTo = (eventId: number, email: string) =>
+		db
+			.select()
+			.from(accessGrants)
+			.where(
+				and(
+					eq(accessGrants.resourceType, 'event'),
+					eq(accessGrants.resourceId, eventId),
+					eq(accessGrants.granteeEmail, email.trim().toLowerCase()),
+				),
+			)
+			.get() !== undefined;
 
 	return {
 		create(ownerId, input, now) {
@@ -170,7 +193,7 @@ export function createUserEventStore(database: Database): UserEventStore {
 					.run().changes > 0
 			);
 		},
-		findShared(ref, viewerId) {
+		findShared(ref, viewer) {
 			const byId = /^[1-9]\d{0,9}$/.test(ref)
 				? db
 						.select()
@@ -180,16 +203,17 @@ export function createUserEventStore(database: Database): UserEventStore {
 				: undefined;
 			const row = byId ?? db.select().from(userEvents).where(eq(userEvents.shareToken, ref)).get();
 			if (!row) return null;
-			const isOwner = row.ownerId === viewerId;
+			const isOwner = row.ownerId === viewer.id;
 			// 番号で開けるのは、全体に公開された予定と、自分の予定だけ。限定公開の予定は、リンクの値でだけ開ける
 			const byToken = row.shareToken !== null && row.shareToken === ref;
-			if (!isOwner && !byToken && row.visibility !== 'public') return null;
-			if (!isOwner && row.visibility === 'private') return null;
+			const granted = !isOwner && isGrantedTo(row.id, viewer.email);
+			if (!isOwner && !granted && !byToken && row.visibility !== 'public') return null;
+			if (!isOwner && !granted && row.visibility === 'private') return null;
 			return {
 				event: toEvent(row),
 				visibility: row.visibility,
 				isOwner,
-				subscribed: subscribedIds(viewerId).has(row.id),
+				subscribed: subscribedIds(viewer.id).has(row.id),
 			};
 		},
 		listPublic(viewerId) {
@@ -207,11 +231,12 @@ export function createUserEventStore(database: Database): UserEventStore {
 					subscribed: subscribed.has(row.id),
 				}));
 		},
-		subscribe(userId, eventId, now) {
+		subscribe(user, eventId, now) {
 			const row = db.select().from(userEvents).where(eq(userEvents.id, eventId)).get();
-			if (!row || row.ownerId === userId || row.visibility === 'private') return false;
+			if (!row || row.ownerId === user.id) return false;
+			if (row.visibility === 'private' && !isGrantedTo(eventId, user.email)) return false;
 			db.insert(eventSubscriptions)
-				.values({ userId, eventId, createdAt: now })
+				.values({ userId: user.id, eventId, createdAt: now })
 				.onConflictDoNothing()
 				.run();
 			return true;
@@ -226,15 +251,16 @@ export function createUserEventStore(database: Database): UserEventStore {
 					.run().changes > 0
 			);
 		},
-		listSubscribed(userId) {
-			const ids = [...subscribedIds(userId)];
+		listSubscribed(viewer) {
+			const ids = [...subscribedIds(viewer.id)];
 			if (ids.length === 0) return [];
 			return db
 				.select()
 				.from(userEvents)
-				.where(and(inArray(userEvents.id, ids), ne(userEvents.visibility, 'private')))
+				.where(inArray(userEvents.id, ids))
 				.orderBy(asc(userEvents.startDate), asc(userEvents.id))
 				.all()
+				.filter((row) => row.visibility !== 'private' || isGrantedTo(row.id, viewer.email))
 				.map(toEvent);
 		},
 	};
