@@ -12,8 +12,7 @@ const IdSchema = v.pipe(
 	v.transform((text) => Number(text)),
 );
 
-const SlotSchema = v.object({
-	subjectId: IdSchema,
+const SlotFieldsSchema = v.object({
 	weekday: v.pipe(
 		v.string(),
 		v.regex(/^[1-6]$/, '曜日は月曜から土曜の中から選んでください'),
@@ -35,15 +34,33 @@ const SlotSchema = v.object({
 	),
 });
 
+const SlotSchema = v.object({ subjectId: IdSchema, ...SlotFieldsSchema.entries });
+
 export function parseSubjectId(form: FormData): number | null {
 	const result = v.safeParse(IdSchema, form.get('subjectId'));
 	return result.success ? result.output : null;
+}
+
+export type SlotFieldsResult =
+	| { readonly ok: true; readonly value: Omit<SharedSlotInput, 'subjectId'> }
+	| { readonly ok: false; readonly error: string };
+
+/** 曜日、時限、教室だけを検査する。科目は URL などから決まっていて、フォームには出さないときに使う */
+export function parseSlotFields(form: FormData): SlotFieldsResult {
+	const result = v.safeParse(SlotFieldsSchema, {
+		weekday: form.get('weekday'),
+		period: form.get('period'),
+		room: form.get('room') ?? undefined,
+	});
+	if (result.success) return { ok: true, value: result.output };
+	return { ok: false, error: result.issues[0].message };
 }
 
 export type SlotFormResult =
 	| { readonly ok: true; readonly value: SharedSlotInput }
 	| { readonly ok: false; readonly error: string };
 
+/** 科目もフォームの値 (hidden の subjectId) から決めるとき使う */
 export function parseSlotForm(form: FormData): SlotFormResult {
 	const result = v.safeParse(SlotSchema, {
 		subjectId: form.get('subjectId'),

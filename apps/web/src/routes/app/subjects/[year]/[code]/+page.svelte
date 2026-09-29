@@ -1,10 +1,10 @@
 <script lang="ts">
 	import Button, { Label } from '@smui/button';
 	import { enhance } from '$app/forms';
-	import { TERMS } from '@funmary/core';
+	import { DEFAULT_PERIODS, TERMS } from '@funmary/core';
 	import StatusBadge from '$lib/components/StatusBadge.svelte';
 	import { resolve } from '$app/paths';
-	import { formatSlot, formatTerm } from '$lib/term-label.ts';
+	import { formatSlot, formatTerm, WEEKDAY_LABELS } from '$lib/term-label.ts';
 
 	interface SubjectView {
 		academicYear: number;
@@ -84,6 +84,36 @@
 			{/if}
 		</dd>
 	</dl>
+
+	<details>
+		<summary>曜日と時限を足す</summary>
+		<form method="POST" action="?/addSlot" use:enhance class="edit">
+			<label>
+				曜日
+				<select name="weekday" required>
+					{#each WEEKDAY_LABELS as day (day.weekday)}
+						<option value={day.weekday}>{day.label}曜</option>
+					{/each}
+				</select>
+			</label>
+			<label>
+				時限
+				<select name="period" required>
+					{#each DEFAULT_PERIODS as period (period.number)}
+						<option value={period.number}>{period.number} 限</option>
+					{/each}
+				</select>
+			</label>
+			<label>
+				教室 (分からなければ空のまま)
+				<input name="room" maxlength="100" autocomplete="off" />
+			</label>
+			<Button type="submit" variant="unelevated"><Label>登録する</Label></Button>
+		</form>
+		<p class="note">
+			曜日、時限、教室は、大学から自動では取得できないため、利用者どうしで登録しています。履修科目に登録していなくても足せ、登録した内容は、この科目を履修しているほかの利用者の時間割にも使われます。
+		</p>
+	</details>
 
 	{#if !data.registered}
 		<p>この科目は、履修科目に登録していません。</p>

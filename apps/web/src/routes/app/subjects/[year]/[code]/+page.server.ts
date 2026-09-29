@@ -2,7 +2,9 @@
 // シラバスにない授業として足した科目は、足した人と管理者が直したり消したりできる。
 import { error, fail, redirect, type Actions, type ServerLoad } from '@sveltejs/kit';
 import { describeClassChange } from '$lib/class-change-label.ts';
+import { parseSlotFields } from '$lib/server/course-form.ts';
 import { getServices } from '$lib/server/services.ts';
+import { alertSlotConflicts } from '$lib/server/slot-conflicts.ts';
 import { canEditSubject, findSameName, parseUserSubjectForm } from '$lib/server/user-subject.ts';
 import { parseSubjectPath } from '$lib/subject-path.ts';
 
@@ -65,6 +67,33 @@ export const load: ServerLoad = ({ locals, params }) => {
 };
 
 export const actions: Actions = {
+	/**
+	 * 曜日と時限を足す。履修登録していない科目でも、ログインしていれば誰でも足せる。
+	 * 曜日と時限は、大学から自動では取れず、利用者どうしで登録して共有するため
+	 */
+	addSlot: async ({ request, locals, params }) => {
+		if (!locals.user) redirect(303, '/login');
+		const subject = findSubject(params);
+		const parsed = parseSlotFields(await request.formData());
+		if (!parsed.ok) return fail(400, { error: parsed.error });
+		const services = getServices();
+		const result = services.courses.addSharedSlots(
+			[{ subjectId: subject.id, ...parsed.value }],
+			{ source: 'manual', createdBy: locals.user.id },
+			new Date(),
+		);
+		if (result.conflicts.length > 0) {
+			await alertSlotConflicts(services, result.conflicts);
+			return fail(409, {
+				error: 'この曜日と時限は、別の教室で登録されています。上書きはせず、管理者が確かめます。',
+			});
+		}
+		if (result.added === 0 && result.updated === 0) {
+			return { message: 'この曜日と時限は、既に登録されています。' };
+		}
+		return { message: '曜日と時限を登録しました。' };
+	},
+
 	/** シラバスにない授業の名前、学期、教員を直す (足した人と管理者だけ) */
 	updateSubject: async ({ request, locals, params }) => {
 		if (!locals.user) redirect(303, '/login');
