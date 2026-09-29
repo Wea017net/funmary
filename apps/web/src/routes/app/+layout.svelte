@@ -17,6 +17,16 @@
 	let header: HTMLElement | undefined = $state();
 	let headerHidden = $state(false);
 
+	// 見えている高さを、CSS 変数 (--app-header-offset) として document に置く。
+	// 幅が広い画面では、この上部バー自体を出していないので、常に 0 になる。
+	// header.offsetHeight (0 か全体の高さかの 2 択) ではなく、実際に描かれている下端 (getBoundingClientRect)
+	// を使う。上部バーは transform (200ms のアニメーション) で出し入れするので、offsetHeight で決め打ちすると、
+	// アニメーションの途中で週の時間割の見出しの位置とずれ、一瞬 1 限の行に重なって見えることがあるため
+	function syncHeaderOffset() {
+		const bottom = header ? Math.max(header.getBoundingClientRect().bottom, 0) : 0;
+		document.documentElement.style.setProperty('--app-header-offset', `${bottom}px`);
+	}
+
 	$effect(() => {
 		let lastY = window.scrollY;
 		const HIDE_THRESHOLD = 8;
@@ -27,16 +37,19 @@
 			else if (delta > HIDE_THRESHOLD) headerHidden = true;
 			else if (delta < -HIDE_THRESHOLD) headerHidden = false;
 			lastY = y;
+			syncHeaderOffset();
 		}
 		window.addEventListener('scroll', onScroll, { passive: true });
 		return () => window.removeEventListener('scroll', onScroll);
 	});
 
-	// 見えている高さを、CSS 変数 (--app-header-offset) として document に置く。
-	// 幅が広い画面では、この上部バー自体を出していないので、常に 0 になる
 	$effect(() => {
-		const offset = header && !headerHidden ? header.offsetHeight : 0;
-		document.documentElement.style.setProperty('--app-header-offset', `${offset}px`);
+		// headerHidden が変わるたびに、すぐ反映しつつ、200ms のアニメーションが終わったところでも合わせ直す
+		void headerHidden;
+		syncHeaderOffset();
+		const el = header;
+		el?.addEventListener('transitionend', syncHeaderOffset);
+		return () => el?.removeEventListener('transitionend', syncHeaderOffset);
 	});
 
 	let {

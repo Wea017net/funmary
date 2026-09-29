@@ -53,7 +53,9 @@
 <div class="landing">
 	<section class="hero" aria-labelledby="hero-heading">
 		<div class="hero-text">
-			<h1 id="hero-heading">大学の<span class="nowrap">「知りたい」</span>を、すべて。</h1>
+			<h1 id="hero-heading">
+				大学の<span class="nowrap">「知りたい」</span>を、<br class="heading-break" />すべて。
+			</h1>
 			<p class="subcatch">履修の取り込みから、休講、教室変更、カレンダー連携、AI 連携まで。</p>
 			<p class="lead">
 				Funmary
@@ -187,6 +189,12 @@
 		}
 	}
 
+	.hero-text {
+		// 見出しが 1 行に収まる幅かどうかを、画面幅ではなく、この列自体の実際の幅で判断する
+		// (2 段組みになる幅でも、この列はまだ 1 行分の幅がないことがあるため)
+		container-type: inline-size;
+	}
+
 	h1 {
 		margin: 0 0 1rem;
 		font-size: 2rem;
@@ -201,6 +209,17 @@
 	/* 「知りたい」が、括弧の途中で折り返らないようにする */
 	.nowrap {
 		white-space: nowrap;
+	}
+
+	/* 見出しが折り返るときは、必ず「を、」の後ろで折り返す。1 行に収まる幅があれば、改行させない */
+	.heading-break {
+		display: inline;
+	}
+
+	@container (min-width: 32rem) {
+		.heading-break {
+			display: none;
+		}
 	}
 
 	.subcatch {

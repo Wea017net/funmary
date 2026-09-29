@@ -21,8 +21,6 @@ body {
 	font-family: fonts.$system;
 	font-size: 1rem;
 	line-height: 1.7;
-	// 個々の要素の直し漏れがあっても、画面全体が横に伸びてスクロールしないようにする最後の砦
-	overflow-x: hidden;
 }
 
 h1,
