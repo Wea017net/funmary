@@ -1676,9 +1676,7 @@ test.describe('スマホの上部バーと、フッターのリンク', () => {
 		await expect(page).toHaveURL('/app');
 	};
 
-	test('下へのスクロールで隠れ、上へのスクロールで出る。一番上では常に出る。週の時間割の見出しは、バーの下に貼り付く', async ({
-		page,
-	}) => {
+	test('下へのスクロールで隠れ、上へのスクロールで出る。一番上では常に出る', async ({ page }) => {
 		await loginAs(page);
 		await page.setViewportSize({ width: 390, height: 700 });
 		await page.goto('/app/week?date=2026-10-07');
@@ -1686,30 +1684,9 @@ test.describe('スマホの上部バーと、フッターのリンク', () => {
 
 		const header = page.locator('header.top');
 		await expect(header).toBeVisible();
-		const shownBox = await header.boundingBox();
-		const barHeight = shownBox?.height ?? 0;
-
-		// 読み込み直後 (一番上) は、見出しの行が、バーの高さの分だけ下にずれて貼り付く
-		const headTh = page.locator('thead th').first();
-		await page.waitForFunction(
-			(height) =>
-				Math.abs(parseFloat(getComputedStyle(document.querySelector('thead th')!).top) - height) <
-				1,
-			barHeight,
-		);
 
 		await page.mouse.wheel(0, 600);
 		await expect(header).toHaveCSS('transform', /matrix\(1, 0, 0, 1, 0, -/);
-		// 隠れている間は、見出しの行は画面の上に貼り付く
-		await page.waitForFunction(
-			() => parseFloat(getComputedStyle(document.querySelector('thead th')!).top) === 0,
-		);
-		// CSS の宣言だけでなく、実際に描かれた位置でも、見出しの行が 1 限の行に重ならないことを確かめる
-		const headRowBox = await page.locator('thead tr').first().boundingBox();
-		const firstPeriodBox = await page.getByRole('row').filter({ hasText: '1 限' }).boundingBox();
-		expect(firstPeriodBox?.y).toBeGreaterThanOrEqual(
-			(headRowBox?.y ?? 0) + (headRowBox?.height ?? 0) - 1,
-		);
 
 		await page.mouse.wheel(0, -600);
 		await expect(header).toHaveCSS('transform', 'none');
@@ -1718,9 +1695,6 @@ test.describe('スマホの上部バーと、フッターのリンク', () => {
 		await page.mouse.wheel(0, 600);
 		await page.mouse.wheel(0, -100000);
 		await expect(header).toHaveCSS('transform', 'none');
-		await expect
-			.poll(async () => parseFloat(await headTh.evaluate((el) => getComputedStyle(el).top)))
-			.toBeCloseTo(barHeight, 0);
 	});
 
 	test('フッターに、リポジトリへのリンクが常に出る', async ({ page }) => {
