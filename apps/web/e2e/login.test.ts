@@ -499,6 +499,73 @@ test.describe('履修科目の登録', () => {
 	});
 });
 
+test.describe('スマホの幅で、画面が横にはみ出さない', () => {
+	test('主な画面を、スマホの幅 (390px) で開いても、横スクロールが出ない', async ({ page }) => {
+		const email = `e2e-overflow-${Date.now()}@fun.ac.jp`;
+		oidc.setIdentity({ sub: email, email, email_verified: true, hd: 'fun.ac.jp' });
+		await page.goto('/auth/google');
+		await expect(page).toHaveURL('/app');
+		await page.setViewportSize({ width: 390, height: 844 });
+
+		seedSubjects(() => {});
+
+		const paths = [
+			'/',
+			'/app',
+			'/app/week',
+			'/app/courses',
+			'/app/courses/import',
+			'/app/subjects/2026/900001',
+			'/app/events',
+			'/app/events/browse',
+			'/app/settings',
+			'/app/settings/calendar',
+			'/app/settings/discord',
+			'/app/settings/invites',
+			'/app/settings/about',
+			'/app/settings/license',
+			'/app/settings/third-party-licenses',
+		];
+		for (const path of paths) {
+			await page.goto(path);
+			const overflow = await page.evaluate(
+				() => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+			);
+			expect(overflow, `${path} が横にはみ出しています`).toBeLessThanOrEqual(1);
+		}
+	});
+
+	test('管理画面を、スマホの幅 (390px) で開いても、横スクロールが出ない', async ({ page }) => {
+		oidc.setIdentity({
+			sub: 'e2e-admin@fun.ac.jp',
+			email: 'e2e-admin@fun.ac.jp',
+			email_verified: true,
+			hd: 'fun.ac.jp',
+		});
+		await page.goto('/auth/google');
+		await expect(page).toHaveURL('/app');
+		await page.setViewportSize({ width: 390, height: 844 });
+
+		const paths = [
+			'/app/admin/lessons',
+			'/app/admin/calendar',
+			'/app/admin/timetable',
+			'/app/admin/invites',
+			'/app/admin/status',
+			'/app/admin/discord',
+			'/app/admin/audit-log',
+			'/app/admin/slot-review',
+		];
+		for (const path of paths) {
+			await page.goto(path);
+			const overflow = await page.evaluate(
+				() => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+			);
+			expect(overflow, `${path} が横にはみ出しています`).toBeLessThanOrEqual(1);
+		}
+	});
+});
+
 test.describe('管理画面', () => {
 	test.beforeAll(() => {
 		seedSubjects((database) => {

@@ -39,6 +39,7 @@
 		border-radius: 0.75rem;
 		background: var(--fm-surface-muted);
 		white-space: pre-wrap;
+		overflow-wrap: anywhere;
 		font-size: 0.8125rem;
 	}
 </style>

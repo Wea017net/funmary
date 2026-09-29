@@ -1,6 +1,13 @@
 // 画面全体の基本のスタイル。色はテーマ (src/theme) の CSS 変数で書き、ライトとダークの両方に効かせる
 @use 'fonts';
 
+// width: 100% と padding を一緒に使っても、要素が親からはみ出さないようにする (箱の大きさに padding と border を含める)
+*,
+*::before,
+*::after {
+	box-sizing: border-box;
+}
+
 html {
 	background: var(--fm-background);
 	color: var(--fm-text);
@@ -12,6 +19,8 @@ body {
 	font-family: fonts.$system;
 	font-size: 1rem;
 	line-height: 1.7;
+	// 個々の要素の直し漏れがあっても、画面全体が横に伸びてスクロールしないようにする最後の砦
+	overflow-x: hidden;
 }
 
 h1,
