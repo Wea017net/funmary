@@ -1,6 +1,7 @@
 // 画面のサーバー側の処理 (load、action) が使う部品。起動時に hooks.server.ts の init が 1 回だけ入れる。
 import type {
 	AcademicCalendarStore,
+	AuditLogStore,
 	AuthStore,
 	ClassChangeStore,
 	CourseStore,
@@ -44,6 +45,8 @@ export interface Services {
 	readonly holidays: HolidayStore;
 	readonly sourceHealth: SourceHealthStore;
 	readonly jobRuns: StoredJobRunStore;
+	/** 利用者が全体に影響する操作をしたときの記録 (設計書、監査ログ) */
+	readonly auditLog: AuditLogStore;
 	readonly estimateHolidays: TimetableSources['estimateHolidays'];
 	/** 動いているアプリの版。手元の開発では null */
 	readonly build: BuildInfo | null;

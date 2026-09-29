@@ -3,6 +3,7 @@
 	import { resolve } from '$app/paths';
 	import { confirmSubmit } from '$lib/actions/confirm-submit.ts';
 	import type { AdminSummary } from '$lib/server/admin-summary.ts';
+	import IconAuditLog from '~icons/material-symbols/fact-check-outline';
 	import IconCalendar from '~icons/material-symbols/calendar-add-on-outline';
 	import IconChevron from '~icons/material-symbols/chevron-right';
 	import IconDiscord from '~icons/material-symbols/forum-outline';
@@ -98,6 +99,12 @@
 				icon: IconDiscord,
 				title: 'Discord設定',
 				description: 'Bot のチャンネルとロールを整え、ロールをユーザーに付ける',
+			},
+			{
+				href: resolve('/app/admin/audit-log'),
+				icon: IconAuditLog,
+				title: '操作の記録',
+				description: 'シラバスにない授業の公開、情報の変更、削除、授業名の紐づけの記録',
 			},
 		];
 	});

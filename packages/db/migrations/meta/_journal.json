@@ -57,6 +57,13 @@
       "when": 1790619931431,
       "tag": "0007_event_visibility",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1790641793613,
+      "tag": "0008_audit_log",
+      "breakpoints": true
     }
   ]
 }

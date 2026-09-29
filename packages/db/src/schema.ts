@@ -508,3 +508,24 @@ export const jobRuns = sqliteTable(
 	},
 	(table) => [index('job_runs_job_started').on(table.job, table.startedAt)],
 );
+
+/**
+ * 利用者が全体に影響する操作 (シラバスにない授業の公開、情報の変更、削除、授業名の紐づけなど) をしたときの記録。
+ * 消せない (管理画面でも削除の口は作らない)。行った人が退会しても、記録は summary の文だけ残す
+ */
+export const auditLogEntries = sqliteTable(
+	'audit_log_entries',
+	{
+		id: integer('id').primaryKey({ autoIncrement: true }),
+		/** 行った人。管理用コマンドなど、利用者によらない操作なら null */
+		actorId: text('actor_id').references((): AnySQLiteColumn => users.id, { onDelete: 'set null' }),
+		/** 操作の種類。例: subject.create、subject.update、subject.delete、lesson.resolve */
+		action: text('action').notNull(),
+		/** 関わった科目 (あれば)。科目を消しても記録は残す */
+		subjectId: integer('subject_id').references(() => subjects.id, { onDelete: 'set null' }),
+		/** 画面に出す一言。個人情報 (氏名、学籍番号、メールアドレス) は入れない */
+		summary: text('summary').notNull(),
+		createdAt: createdAt(),
+	},
+	(table) => [index('audit_log_entries_created').on(table.createdAt)],
+);

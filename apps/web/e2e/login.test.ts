@@ -487,6 +487,43 @@ test.describe('管理画面', () => {
 		expect(response?.status()).toBe(404);
 	});
 
+	test('シラバスにない授業の公開、情報の変更、削除が、操作の記録に残る。管理者でなければ見られない', async ({
+		page,
+	}) => {
+		await loginAs(page, 'e2e-not-admin@fun.ac.jp');
+		expect((await page.goto('/app/admin/audit-log'))?.status()).toBe(404);
+
+		await loginAs(page, 'e2e-admin@fun.ac.jp');
+		const name = `E2E の監査ログ演習${Date.now()}`;
+		await page.goto('/app/courses');
+		await page.getByText('公開シラバスに載っていない授業を、科目として足す').click();
+		await page.getByLabel(/授業の名前/).fill(name);
+		await page.getByLabel('学期').selectOption('後期');
+		await page.getByRole('button', { name: '足して登録する' }).click();
+		await expect(page.getByRole('status')).toContainText(`${name} を足して`);
+
+		await page.getByRole('link', { name }).click();
+		const edit = page.getByRole('region', { name: 'この授業を直す' });
+		await edit.getByLabel('教員 (任意)').fill('監査 太郎');
+		await edit.getByRole('button', { name: '直す' }).click();
+		await expect(page.getByRole('status')).toHaveText('授業を直しました。');
+		await edit.getByText('この授業を消す').click();
+		await edit.getByLabel(/元に戻せないことを確かめました/).check();
+		await edit.getByRole('button', { name: '消す' }).click();
+		await expect(page).toHaveURL('/app/courses');
+
+		await page.goto('/app/admin/audit-log');
+		const entries = page.getByRole('row');
+		await expect(
+			entries.filter({ hasText: `${name} を、シラバスにない授業として足した` }),
+		).toHaveCount(1);
+		await expect(entries.filter({ hasText: `${name} の情報を直した (${name})` })).toHaveCount(1);
+		await expect(
+			entries.filter({ hasText: `${name} を、シラバスにない授業として消した` }),
+		).toHaveCount(1);
+		await expect(entries.filter({ hasText: name }).first()).toContainText('e2e-admin@fun.ac.jp');
+	});
+
 	test('Discord設定の画面は、管理者にだけ開け、Bot が未設定なら設定のしかたを出す', async ({
 		page,
 	}) => {
@@ -573,6 +610,16 @@ test.describe('管理画面', () => {
 			.click();
 		await expect(page.getByRole('heading', { name: '架空の演習Ⅱ (再)' })).toBeVisible();
 		await expect(ignored.getByText('架空の演習Ⅱ (再)')).toHaveCount(0);
+
+		// 紐付けと紐付け外しが、操作の記録に残る (E2E の DB は実行をまたいで残るので、0 件でないことだけ確かめる)
+		await page.goto('/app/admin/audit-log');
+		const entries = page.getByRole('row');
+		await expect(
+			entries.filter({ hasText: '架空の演習Ⅱ (再) を 架空の演習Ⅱ1-AB に紐付けた' }),
+		).not.toHaveCount(0);
+		await expect(entries.filter({ hasText: '架空の演習Ⅱ (再) の紐付けを外した' })).not.toHaveCount(
+			0,
+		);
 	});
 });
 

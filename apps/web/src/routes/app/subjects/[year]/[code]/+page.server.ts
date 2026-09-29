@@ -109,7 +109,17 @@ export const actions: Actions = {
 			subjects.list(subject.academicYear).filter((other) => other.id !== subject.id),
 		);
 		if (same) return fail(409, { error: `同じ名前の科目「${same.name}」があります。` });
-		subjects.updateUserSubject(subject.id, parsed.value, new Date());
+		const now = new Date();
+		subjects.updateUserSubject(subject.id, parsed.value, now);
+		getServices().auditLog.record(
+			{
+				actorId: locals.user.id,
+				action: 'subject.update',
+				subjectId: subject.id,
+				summary: `${subject.name} の情報を直した (${parsed.value.name})`,
+			},
+			now,
+		);
 		return { message: '授業を直しました。' };
 	},
 	/** シラバスにない授業を消す。履修登録と時間割の枠も消える */
@@ -122,7 +132,17 @@ export const actions: Actions = {
 		if ((await request.formData()).get('confirm') !== 'on') {
 			return fail(400, { error: '消すと元に戻せないことを確かめて、チェックを入れてください。' });
 		}
-		getServices().subjects.deleteUserSubject(subject.id);
+		const services = getServices();
+		services.auditLog.record(
+			{
+				actorId: locals.user.id,
+				action: 'subject.delete',
+				subjectId: subject.id,
+				summary: `${subject.name} を、シラバスにない授業として消した`,
+			},
+			new Date(),
+		);
+		services.subjects.deleteUserSubject(subject.id);
 		redirect(303, '/app/courses');
 	},
 };
