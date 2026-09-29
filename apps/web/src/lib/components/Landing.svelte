@@ -53,7 +53,7 @@
 <div class="landing">
 	<section class="hero" aria-labelledby="hero-heading">
 		<div class="hero-text">
-			<h1 id="hero-heading">大学の「知りたい」を、すべて。</h1>
+			<h1 id="hero-heading">大学の<span class="nowrap">「知りたい」</span>を、すべて。</h1>
 			<p class="subcatch">履修の取り込みから、休講、教室変更、カレンダー連携、AI 連携まで。</p>
 			<p class="lead">
 				Funmary
@@ -196,6 +196,11 @@
 		@include breakpoints.wide {
 			font-size: 2.75rem;
 		}
+	}
+
+	/* 「知りたい」が、括弧の途中で折り返らないようにする */
+	.nowrap {
+		white-space: nowrap;
 	}
 
 	.subcatch {
