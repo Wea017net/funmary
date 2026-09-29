@@ -1,7 +1,9 @@
 <script lang="ts">
 	import Button, { Label } from '@smui/button';
 	import { enhance } from '$app/forms';
+	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
+	import { page } from '$app/state';
 	import { confirmSubmit } from '$lib/actions/confirm-submit.ts';
 	import { DEFAULT_PERIODS, TERMS } from '@funmary/core';
 	import type { SubjectPathParams } from '$lib/subject-path.ts';
@@ -45,6 +47,43 @@
 		};
 		form: { error?: string; message?: string } | null;
 	} = $props();
+
+	type Tab = 'registered' | 'search';
+	const TABS: { id: Tab; label: string }[] = [
+		{ id: 'registered', label: '登録した科目' },
+		{ id: 'search', label: '科目を探す' },
+	];
+
+	// どちらのタブを開いているかは URL の tab= に持ち、再読み込みや戻る/進むでも保たれるようにする。
+	// tab= がなければ、検索の結果があるとき (q= で来たとき) だけ「科目を探す」を開く
+	const activeTab = $derived(
+		(page.url.searchParams.get('tab') as Tab | null) ??
+			(data.query.trim() !== '' ? 'search' : 'registered'),
+	);
+
+	function selectTab(tab: Tab) {
+		if (tab === activeTab) return;
+		const url = new URL(page.url);
+		url.searchParams.set('tab', tab);
+		// eslint-disable-next-line svelte/no-navigation-without-resolve -- 今の URL (resolve 済み) に、tab= を足している
+		void goto(url, { replaceState: true, noScroll: true, keepFocus: true });
+	}
+
+	/** 左右矢印キーと Home、End で、タブの間を移動して選ぶ (WAI-ARIA のタブの決まり) */
+	function onTabsKeydown(event: KeyboardEvent) {
+		const index = TABS.findIndex((tab) => tab.id === activeTab);
+		let next = -1;
+		if (event.key === 'ArrowRight') next = (index + 1) % TABS.length;
+		else if (event.key === 'ArrowLeft') next = (index - 1 + TABS.length) % TABS.length;
+		else if (event.key === 'Home') next = 0;
+		else if (event.key === 'End') next = TABS.length - 1;
+		if (next < 0) return;
+		event.preventDefault();
+		selectTab(TABS[next].id);
+		(event.currentTarget as HTMLElement)
+			.querySelector<HTMLButtonElement>(`#${TABS[next].id}-tab`)
+			?.focus();
+	}
 </script>
 
 <svelte:head>
@@ -66,8 +105,29 @@
 	{:else}
 		<p>{data.academicYear} 年度の科目から登録します。</p>
 
-		<section aria-labelledby="registered-heading">
-			<h2 id="registered-heading">登録した科目</h2>
+		<div class="tabs" role="tablist" aria-label="科目" tabindex="-1" onkeydown={onTabsKeydown}>
+			{#each TABS as tab (tab.id)}
+				<button
+					type="button"
+					role="tab"
+					id="{tab.id}-tab"
+					aria-selected={activeTab === tab.id}
+					aria-controls="{tab.id}-panel"
+					tabindex={activeTab === tab.id ? 0 : -1}
+					onclick={() => selectTab(tab.id)}
+				>
+					{tab.label}
+				</button>
+			{/each}
+		</div>
+
+		<div
+			id="registered-panel"
+			role="tabpanel"
+			tabindex="0"
+			aria-labelledby="registered-tab"
+			hidden={activeTab !== 'registered'}
+		>
 			{#if data.registered.length === 0}
 				<p>まだ登録していません。下の「科目を探す」から登録してください。</p>
 			{:else}
@@ -145,11 +205,17 @@
 					{/each}
 				</ul>
 			{/if}
-		</section>
+		</div>
 
-		<section aria-labelledby="search-heading">
-			<h2 id="search-heading">科目を探す</h2>
-			<form method="GET" role="search" data-sveltekit-keepfocus>
+		<div
+			id="search-panel"
+			role="tabpanel"
+			tabindex="0"
+			aria-labelledby="search-tab"
+			hidden={activeTab !== 'search'}
+		>
+			<form method="GET" role="search" data-sveltekit-keepfocus data-sveltekit-noscroll>
+				<input type="hidden" name="tab" value="search" />
 				<label>
 					科目名、教員、シラバスの番号
 					<input type="search" name="q" value={data.query} maxlength="100" />
@@ -183,7 +249,7 @@
 					</ul>
 				{/if}
 			{/if}
-		</section>
+		</div>
 
 		<section aria-labelledby="create-heading">
 			<h2 id="create-heading">シラバスにない授業を足す</h2>
@@ -224,6 +290,29 @@
 <style>
 	.page {
 		max-width: 40rem;
+	}
+	.tabs {
+		display: flex;
+		gap: 0.25rem;
+		margin: 1rem 0;
+		border-bottom: 1px solid var(--fm-divider);
+
+		button {
+			min-height: 44px;
+			padding: 0 1rem;
+			border: none;
+			border-bottom: 2px solid transparent;
+			background: none;
+			color: var(--fm-text-muted);
+			font: inherit;
+			font-weight: 700;
+			cursor: pointer;
+		}
+
+		button[aria-selected='true'] {
+			border-bottom-color: var(--fm-primary);
+			color: var(--fm-text);
+		}
 	}
 	.subjects {
 		padding: 0;

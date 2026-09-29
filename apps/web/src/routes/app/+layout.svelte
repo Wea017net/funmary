@@ -8,8 +8,8 @@
 	import ThemeToggle from '$lib/components/ThemeToggle.svelte';
 	import type { ThemePreference } from '$lib/theme.ts';
 	import IconCourses from '~icons/material-symbols/menu-book-outline';
+	import IconHome from '~icons/material-symbols/home-outline';
 	import IconSettings from '~icons/material-symbols/settings-outline';
-	import IconToday from '~icons/material-symbols/today-outline';
 	import IconWeek from '~icons/material-symbols/calendar-view-week-outline';
 
 	// スマホの上部バーは、下へのスクロールで隠し、上へのスクロールで出す (設計書、Issue #109)。
@@ -57,8 +57,8 @@
 	const items = $derived([
 		{
 			href: resolve('/app'),
-			label: '今日',
-			icon: IconToday,
+			label: 'ホーム',
+			icon: IconHome,
 			current: page.url.pathname === '/app',
 		},
 		{

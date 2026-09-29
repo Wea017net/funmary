@@ -53,7 +53,7 @@ test.describe('ホーム画面に追加 (PWA)', () => {
 		}
 	});
 
-	test('ブラウザで開くと、設定に追加のやり方を出し、追加したアプリで開くと出さない', async ({
+	test('ブラウザで開くと、ホームに追加のやり方を出し、追加したアプリで開くと出さない。折りたたむと、次に開いたときも折りたたんだまま', async ({
 		browser,
 	}) => {
 		const email = 'e2e-pwa@fun.ac.jp';
@@ -61,14 +61,20 @@ test.describe('ホーム画面に追加 (PWA)', () => {
 			oidc.setIdentity({ sub: email, email, email_verified: true, hd: 'fun.ac.jp' });
 			await page.goto('/auth/google');
 			await expect(page).toHaveURL('/app');
-			await page.goto('/app/settings');
 		};
 
 		const browserPage = await (await browser.newContext()).newPage();
 		await login(browserPage);
-		const guide = browserPage.getByRole('region', { name: 'アプリとして使う' });
-		await expect(guide).toContainText('ホーム画面に追加');
-		await expect(guide).toContainText('プッシュ通知は、今後対応する予定');
+		const heading = browserPage.getByRole('heading', { name: 'アプリとして使う' });
+		await expect(heading).toBeVisible();
+		await expect(browserPage.getByText('プッシュ通知は、今後対応する予定')).toBeVisible();
+
+		// 折りたたむと、開き直しても折りたたんだまま (このブラウザだけ覚える)
+		await heading.click();
+		await expect(browserPage.getByText('プッシュ通知は、今後対応する予定')).toBeHidden();
+		await browserPage.reload();
+		await expect(browserPage.getByRole('heading', { name: 'アプリとして使う' })).toBeVisible();
+		await expect(browserPage.getByText('プッシュ通知は、今後対応する予定')).toBeHidden();
 
 		// iOS のホーム画面のアプリは、navigator.standalone が true になる
 		const context = await browser.newContext();
@@ -77,8 +83,8 @@ test.describe('ホーム画面に追加 (PWA)', () => {
 		});
 		const installedPage = await context.newPage();
 		await login(installedPage);
-		await expect(installedPage.getByRole('heading', { name: '設定', exact: true })).toBeVisible();
-		await expect(installedPage.getByRole('region', { name: 'アプリとして使う' })).toHaveCount(0);
+		await expect(installedPage.getByRole('heading', { name: 'ホーム', exact: true })).toBeVisible();
+		await expect(installedPage.getByRole('heading', { name: 'アプリとして使う' })).toHaveCount(0);
 	});
 });
 
@@ -317,17 +323,21 @@ test.describe('履修科目の登録', () => {
 			.click();
 		await expect(page.getByText('まだ登録していません')).toBeVisible();
 
+		// 「科目を探す」はタブで切り替える。開いたタブは URL に残り、読み込み直しても保たれる
+		await page.getByRole('tab', { name: '科目を探す' }).click();
+		await expect(page).toHaveURL(/tab=search/);
 		// ローマ数字を II と打っても見つかる
 		await page.getByRole('searchbox').fill('架空の演習II');
 		await page.getByRole('button', { name: '探す' }).click();
-		const found = page.getByRole('region', { name: '科目を探す' }).getByRole('listitem');
+		const found = page.getByRole('tabpanel', { name: '科目を探す' }).getByRole('listitem');
 		await expect(found).toHaveCount(1);
 		await expect(found).toContainText('後期、架空 一郎');
 		await found.getByRole('button', { name: '登録する' }).click();
 		await expect(page.getByRole('status')).toHaveText('架空の演習Ⅱ1-AB を履修科目に登録しました。');
 
+		await page.getByRole('tab', { name: '登録した科目' }).click();
 		const registered = page
-			.getByRole('region', { name: '登録した科目' })
+			.getByRole('tabpanel', { name: '登録した科目' })
 			.getByRole('listitem')
 			.filter({ hasText: '架空の演習Ⅱ1-AB' });
 		await expect(registered).toContainText('曜日と時限が、まだ登録されていません');
@@ -383,7 +393,7 @@ test.describe('履修科目の登録', () => {
 			`${name} を足して、履修科目に登録しました`,
 		);
 		const registered = page
-			.getByRole('region', { name: '登録した科目' })
+			.getByRole('tabpanel', { name: '登録した科目' })
 			.getByRole('listitem')
 			.filter({ hasText: name });
 		await expect(registered).toContainText('シラバスにない授業');
@@ -1272,10 +1282,10 @@ test.describe('自分の予定', () => {
 		await page.getByRole('button', { name: '足す' }).click();
 		await expect(page.getByRole('status')).toHaveText('予定を足しました。');
 
-		// 今日の画面
+		// ホームの画面
 		await page
 			.getByRole('navigation', { name: 'メニュー' })
-			.getByRole('link', { name: '今日', exact: true })
+			.getByRole('link', { name: 'ホーム', exact: true })
 			.click();
 		const section = page.getByRole('region', { name: '今日の予定' });
 		await expect(section).toContainText('終日');
