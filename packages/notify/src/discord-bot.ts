@@ -62,6 +62,16 @@ export interface DiscordBot {
 	removeMemberRole(userId: string, roleId: string): Promise<void>;
 	/** メンションが効くのは、mentionRoles に挙げたロールだけにする */
 	postMessage(channelId: string, content: string, mentionRoles?: readonly string[]): Promise<void>;
+	/** 利用者との DM チャンネルを開く。相手が DM を拒否していれば 403 の DiscordApiError */
+	createDm(userId: string): Promise<string>;
+	/** 親のチャンネルの下に、本人だけの非公開スレッドを作る (invitable は false 固定) */
+	createPrivateThread(parentChannelId: string, name: string): Promise<string>;
+	/** スレッドに利用者を加える。相手がギルドにいなければ 404 の DiscordApiError */
+	addThreadMember(threadId: string, userId: string): Promise<void>;
+	/** スレッドをアーカイブする (消しはしない)。失敗しても投げない (呼び出し側で無視してよい) */
+	archiveThread(threadId: string): Promise<void>;
+	/** OAuth のアクセストークンを使って、利用者をギルドに参加させる。既に参加済みなら何もしない */
+	addGuildMember(userId: string, accessToken: string): Promise<void>;
 }
 
 export interface DiscordBotOptions {
@@ -164,6 +174,31 @@ export function createDiscordBot(options: DiscordBotOptions): DiscordBot {
 					content,
 					allowed_mentions: { parse: [], roles: [...mentionRoles] },
 				});
+			}),
+		createDm: (userId) => guarded(async () => (await api.users.createDM(userId)).id),
+		createPrivateThread: (parentChannelId, name) =>
+			guarded(async () => {
+				const thread = await api.channels.createThread(parentChannelId, {
+					name,
+					type: ChannelType.GuildPrivateThread,
+					invitable: false,
+					// 7 日 (最大値)。滅多に使わないので、短いと自動でアーカイブされてしまう
+					auto_archive_duration: 10080,
+				});
+				return thread.id;
+			}),
+		addThreadMember: (threadId, userId) => guarded(() => api.threads.addMember(threadId, userId)),
+		async archiveThread(threadId) {
+			try {
+				await guarded(() => api.channels.edit(threadId, { archived: true, locked: true }));
+			} catch {
+				// 消えている、権限がないなどでも、呼び出し側の処理は止めない (設計書 14.9)
+			}
+		},
+		// 既に参加済みなら 204 (No Content) が返るだけで、例外にはならない
+		addGuildMember: (userId, accessToken) =>
+			guarded(async () => {
+				await api.guilds.addMember(guildId, userId, { access_token: accessToken });
 			}),
 	};
 }
