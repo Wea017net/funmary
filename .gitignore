@@ -52,3 +52,7 @@ Thumbs.db
 
 # テーマの CSS (apps/web/scripts/build-theme.js が作る)
 apps/web/src/lib/styles/generated/
+
+# wrangler dev が手元に作る状態 (D1 の手元の DB など) と、手元の秘密の値
+.wrangler/
+.dev.vars
