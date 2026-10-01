@@ -17,8 +17,12 @@ describe('createSecretBox', () => {
 
 	it('暗号文が書き換えられていたら、元に戻さずに失敗する', () => {
 		const box = createSecretBox(key);
-		const encrypted = box.encrypt('秘密の URL');
-		const tampered = encrypted.slice(0, -2) + (encrypted.endsWith('A') ? 'BB' : 'AA');
+		const [version, iv, ciphertext, tag] = box.encrypt('秘密の URL').split('.');
+		// 文字列の末尾を書き換えると、Base64 の使われないビットだけが変わり、中身が同じままのことがある。
+		// 必ず中身が変わるよう、バイトの 1 ビットを反転して符号化し直す
+		const bytes = Buffer.from(ciphertext ?? '', 'base64url');
+		bytes[0] = (bytes[0] ?? 0) ^ 1;
+		const tampered = [version, iv, bytes.toString('base64url'), tag].join('.');
 		expect(() => box.decrypt(tampered)).toThrow();
 	});
 
