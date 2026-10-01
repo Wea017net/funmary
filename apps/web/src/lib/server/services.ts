@@ -6,6 +6,7 @@ import type {
 	AuthStore,
 	ClassChangeStore,
 	CourseStore,
+	DailyDigestStore,
 	DiscordLinkStore,
 	FeedTokenStore,
 	HolidayStore,
@@ -56,6 +57,8 @@ export interface Services {
 		};
 	};
 	readonly courses: CourseStore;
+	/** 予定のまとめ (今日か明日の授業と予定を Discord に送るもの、#207) の、利用者ごとの設定 */
+	readonly dailyDigest: DailyDigestStore;
 	/** 利用者だけに見える、曜日と時限の書き換え */
 	readonly personalSlots: PersonalSlotStore;
 	/** 共有の枠を「モデレーターが確認してから登録する」設定のときの、確認待ちの提出 */

@@ -518,6 +518,29 @@ export const discordLinks = sqliteTable('discord_links', {
 	createdAt: createdAt(),
 });
 
+/**
+ * 予定のまとめ (今日か明日の授業と予定を Discord に送るもの、#207) の、利用者ごとの設定。
+ * 行がなければ既定の設定 (@funmary/core の DEFAULT_DAILY_DIGEST_SETTINGS) とみなす。列の既定値もそれに合わせる
+ */
+export const dailyDigestSettings = sqliteTable('daily_digest_settings', {
+	userId: text('user_id')
+		.primaryKey()
+		.references(() => users.id, { onDelete: 'cascade' }),
+	enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
+	timing: text('timing', { enum: ['evening', 'morning', 'custom'] })
+		.notNull()
+		.default('evening'),
+	/** timing が custom のときの、日本時間の "HH:MM" */
+	customTime: text('custom_time').notNull().default('20:30'),
+	customDay: text('custom_day', { enum: ['today', 'tomorrow'] })
+		.notNull()
+		.default('tomorrow'),
+	sendWhenEmpty: integer('send_when_empty', { mode: 'boolean' }).notNull().default(true),
+	/** 前に送ったまとめの、対象の日 (YYYY-MM-DD)。同じ日の分を 2 回送らないために使う */
+	lastSentFor: text('last_sent_for'),
+	updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
+});
+
 // ---------------------------------------------------------------------------
 // 通知
 

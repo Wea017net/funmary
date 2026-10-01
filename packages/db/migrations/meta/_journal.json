@@ -92,6 +92,13 @@
       "when": 1790683129916,
       "tag": "0012_access_grants",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "6",
+      "when": 1790849799325,
+      "tag": "0013_daily_digest_settings",
+      "breakpoints": true
     }
   ]
 }
