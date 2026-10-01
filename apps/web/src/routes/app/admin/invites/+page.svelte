@@ -30,9 +30,11 @@
 		{ value: 'anyone', label: '誰でも', description: 'ログインしている全員が発行できます。' },
 	];
 
-	// 保存した値から始め、選び直したら上書きする。保存して data が変わると、保存した値に戻る
-	let issuers = $derived(data.settings.issuers);
-	let monthlyLimit = $derived(String(data.settings.monthlyLimit));
+	// 保存していない選択は、保存した値とは別に持つ。一覧の「許可する」など、ほかの操作で data が読み直されても消えないようにし、
+	// 保存できたときだけ消す (書き込める $derived だと、data が読み直されるたびに保存した値に戻ってしまう)
+	let edited = $state<{ issuers?: InviteSettings['issuers']; monthlyLimit?: string }>({});
+	const issuers = $derived(edited.issuers ?? data.settings.issuers);
+	const monthlyLimit = $derived(edited.monthlyLimit ?? String(data.settings.monthlyLimit));
 	const limitUsed = $derived(issuers !== 'admin');
 	const dirty = $derived(
 		issuers !== data.settings.issuers ||
@@ -64,13 +66,16 @@
 
 	<section aria-labelledby="settings-heading">
 		<h2 id="settings-heading">発行できる人</h2>
-		<!-- 既定の enhance は保存のあとにフォームをリセットし、欄が最初に描いた値に戻るので、リセットしない -->
+		<!-- 既定の enhance は保存のあとにフォームをリセットし、欄が最初に描いた値に戻るので、リセットしない。
+			保存できたら、保存していない選択を消し、保存した値を出す -->
 		<form
 			method="POST"
 			action="?/saveSettings"
 			use:enhance={() =>
-				({ update }) =>
-					update({ reset: false })}
+				async ({ result, update }) => {
+					await update({ reset: false });
+					if (result.type === 'success') edited = {};
+				}}
 			class="entry"
 		>
 			<fieldset>
@@ -82,7 +87,7 @@
 							name="issuers"
 							value={issuer.value}
 							checked={issuers === issuer.value}
-							onchange={() => (issuers = issuer.value)}
+							onchange={() => (edited.issuers = issuer.value)}
 						/>
 						<span>
 							<span class="choice-label">{issuer.label}</span>
@@ -101,7 +106,7 @@
 					min="0"
 					max="100"
 					value={monthlyLimit}
-					oninput={(event) => (monthlyLimit = event.currentTarget.value)}
+					oninput={(event) => (edited.monthlyLimit = event.currentTarget.value)}
 					disabled={!limitUsed}
 					required
 					aria-describedby="monthly-limit-note"
