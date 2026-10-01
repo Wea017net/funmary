@@ -1,6 +1,6 @@
 name: ミラーへの複製
 
-# main とタグを otnc/funmary-mirror へ複製する。ほかのブランチは複製しない
+# main とタグを、repository.json の mirror へ複製する。ほかのブランチは複製しない
 on:
   push:
     branches: [main]
@@ -16,9 +16,8 @@ concurrency:
 
 jobs:
   mirror:
-    name: otnc/funmary-mirror へ push
-    # フォークでは動かさない
-    if: github.repository == 'oto-lab/funmary'
+    name: ミラーへ push
+    # フォークでは複製しない。if: では repository.json を読めないので、push-mirror.js が GITHUB_REPOSITORY と比べる
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
