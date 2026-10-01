@@ -23,8 +23,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment: production
+    permissions:
+      contents: read
+      # Release の成果物 (released-sha) を取るため
+      actions: read
     env:
-      HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
       DEPLOY_ENABLED: ${{ vars.DEPLOY_ENABLED }}
       DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
       DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
@@ -32,10 +35,17 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
           persist-credentials: false
       - uses: ./.github/actions/setup
         with:
           install: false
+      # 反映する版は、起動元の Release が作ったものにする (この実行の head_sha は、起動した時点の main の最新で、違うことがある)
+      - name: Release が作った版を受け取る
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_RUN_ID: ${{ github.event.workflow_run.id }}
+        run: gh run download "$RELEASE_RUN_ID" --repo "$GITHUB_REPOSITORY" --name released-sha --dir "$RUNNER_TEMP/released"
       - name: VPS に反映を頼む
+        env:
+          RELEASED_SHA_FILE: ${{ runner.temp }}/released/released-sha
         run: node scripts/workflows/deploy/request-deploy.js

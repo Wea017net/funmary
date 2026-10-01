@@ -1,8 +1,8 @@
 // SSH で VPS に反映を頼む (deploy.yml)。VPS では funmary-update が版の名前を確かめ、update.sh が反映する。
-// 環境変数: HEAD_SHA、DEPLOY_HOST、DEPLOY_SSH_KEY、DEPLOY_KNOWN_HOSTS (Environment production の secret)、
-// DEPLOY_ENABLED (false なら反映しない)
+// 環境変数: RELEASED_SHA_FILE (Release が残した、リリースにしたコミットの hash のファイル)、
+// DEPLOY_HOST、DEPLOY_SSH_KEY、DEPLOY_KNOWN_HOSTS (Environment production の secret)、DEPLOY_ENABLED (false なら反映しない)
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { releaseVersion } from '../release/release-version.js';
@@ -14,6 +14,23 @@ import { releaseVersion } from '../release/release-version.js';
  */
 export function isDeployEnabled(value) {
 	return value !== 'false';
+}
+
+/**
+ * Release が残した released-sha の中身を読む。
+ * workflow_run で起動した Deploy の head_sha は、起動した時点の main の最新のコミットで、Release が作った版と違うことがある
+ * (続けてマージすると、まだ作られていない版を頼んで 404 になる)。そのため、版は Release から受け取る
+ * @param {string} text
+ * @returns {string}
+ */
+export function parseReleasedSha(text) {
+	const sha = text.trim();
+	if (!/^[0-9a-f]{40}$/.test(sha)) {
+		throw new Error(
+			`Release の成果物 released-sha を、コミットの hash として読めません: ${JSON.stringify(sha)}`,
+		);
+	}
+	return sha;
 }
 
 /**
@@ -33,7 +50,9 @@ if (import.meta.main) {
 	if (!isDeployEnabled(process.env['DEPLOY_ENABLED'])) {
 		console.log('DEPLOY_ENABLED が false なので、反映しません');
 	} else {
-		const version = releaseVersion(process.env['HEAD_SHA'] ?? '');
+		const version = releaseVersion(
+			parseReleasedSha(readFileSync(requiredEnv('RELEASED_SHA_FILE'), 'utf8')),
+		);
 		const host = requiredEnv('DEPLOY_HOST');
 		const sshDir = join(homedir(), '.ssh');
 		const keyFile = join(sshDir, 'deploy_key');
