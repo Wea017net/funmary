@@ -523,9 +523,9 @@ test.describe('スマホの幅で、画面が横にはみ出さない', () => {
 			'/app/settings/calendar',
 			'/app/settings/discord',
 			'/app/settings/invites',
-			'/app/settings/about',
-			'/app/settings/license',
-			'/app/settings/third-party-licenses',
+			'/about',
+			'/license',
+			'/third-party-licenses',
 		];
 		for (const path of paths) {
 			await page.goto(path);
@@ -1789,12 +1789,7 @@ test.describe('このアプリについて', () => {
 		const section = page.locator('section', {
 			has: page.getByRole('heading', { name: 'このアプリについて' }),
 		});
-		for (const path of [
-			'/app/settings/about',
-			'/app/settings/license',
-			'/app/settings/third-party-licenses',
-			'/app/settings/contributors',
-		]) {
+		for (const path of ['/about', '/license', '/third-party-licenses', '/contributors']) {
 			await expect(section.locator(`a[href="${path}"]`)).toBeVisible();
 		}
 	});
@@ -1803,7 +1798,7 @@ test.describe('このアプリについて', () => {
 		page,
 	}) => {
 		await loginAs(page);
-		await page.goto('/app/settings/about');
+		await page.goto('/about');
 
 		const repo = page.locator(`a[href="${REPOSITORY_URL}"]`).first();
 		await expect(repo).toHaveAttribute('target', '_blank');
@@ -1812,12 +1807,16 @@ test.describe('このアプリについて', () => {
 		// Contributors の画面は GitHub から取得するので、ここでは開かない
 		await expect(
 			page.getByRole('link', { name: 'コードを書いてくれた人たち', exact: true }),
-		).toHaveAttribute('href', '/app/settings/contributors');
+		).toHaveAttribute('href', '/contributors');
+		await expect(page.getByRole('link', { name: '設定', exact: true })).toHaveAttribute(
+			'href',
+			'/app/settings',
+		);
 	});
 
 	test('ライセンスの画面に、BSD-3-Clause と Apache-2.0 の本文が出る', async ({ page }) => {
 		await loginAs(page);
-		await page.goto('/app/settings/license');
+		await page.goto('/license');
 
 		await page.getByText('BSD-3-Clause', { exact: true }).click();
 		await expect(page.getByText('Redistribution and use')).toBeVisible();
@@ -1828,11 +1827,41 @@ test.describe('このアプリについて', () => {
 
 	test('サードパーティライセンスの画面に、依存の一覧が出る', async ({ page }) => {
 		await loginAs(page);
-		await page.goto('/app/settings/third-party-licenses');
+		await page.goto('/third-party-licenses');
 
 		await expect(
 			page.getByText('Funmary が使っているオープンソースのソフトウェアのライセンスです。'),
 		).toBeVisible();
+	});
+
+	test('このアプリについての画面は、ログインしていなくても開け、パンくずはトップに戻る', async ({
+		page,
+	}) => {
+		await page.goto('/');
+		await page.getByRole('link', { name: 'このアプリについて' }).click();
+		await expect(page).toHaveURL('/about');
+		await expect(page.getByRole('heading', { name: 'リポジトリと作者', level: 1 })).toBeVisible();
+		await expect(page.getByRole('link', { name: 'トップ', exact: true })).toHaveAttribute(
+			'href',
+			'/',
+		);
+
+		await page.getByRole('link', { name: 'ライセンス', exact: true }).click();
+		await expect(page).toHaveURL('/license');
+		await expect(page.getByRole('heading', { name: 'ライセンス', level: 1 })).toBeVisible();
+
+		await page.goto('/third-party-licenses');
+		await expect(
+			page.getByRole('heading', { name: 'サードパーティライセンス', level: 1 }),
+		).toBeVisible();
+	});
+
+	test('設定の下にあった前の URL は、ルートの下の URL に転送する', async ({ request }) => {
+		for (const name of ['about', 'license', 'third-party-licenses', 'contributors']) {
+			const response = await request.get(`/app/settings/${name}`, { maxRedirects: 0 });
+			expect(response.status()).toBe(308);
+			expect(response.headers()['location']).toBe(`/${name}`);
+		}
 	});
 
 	// E2E のサーバーは DISCORD_CLIENT_ID/SECRET を設定していないので、常にこの状態になる (#163)

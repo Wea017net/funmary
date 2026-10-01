@@ -1,13 +1,29 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
+	import { page } from '$app/state';
 
-	/** 設定の下の画面の、現在地の名前 (画面の見出しと同じにする) */
-	let { current }: { current: string } = $props();
+	let {
+		current,
+		public: isPublic = false,
+	}: {
+		/** 設定の下の画面の、現在地の名前 (画面の見出しと同じにする) */
+		current: string;
+		/** ログインしていなくても開ける画面 (#223)。ログインしていなければ、設定の代わりに紹介の画面へ戻す */
+		public?: boolean;
+	} = $props();
+
+	const toTop = $derived(isPublic && page.data['user'] == null);
 </script>
 
 <nav aria-label="パンくず" class="breadcrumb">
 	<ol>
-		<li><a href={resolve('/app/settings')}>設定</a></li>
+		<li>
+			{#if toTop}
+				<a href={resolve('/')}>トップ</a>
+			{:else}
+				<a href={resolve('/app/settings')}>設定</a>
+			{/if}
+		</li>
 		<li aria-current="page">{current}</li>
 	</ol>
 </nav>

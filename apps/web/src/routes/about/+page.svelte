@@ -12,7 +12,7 @@
 </svelte:head>
 
 <div class="page">
-	<SettingsBreadcrumb current="リポジトリと作者" />
+	<SettingsBreadcrumb current="リポジトリと作者" public />
 	<h1>リポジトリと作者</h1>
 	<p class="muted">
 		Funmary は、公立はこだて未来大学の学生向けの、大学とは関係のない非公式のアプリです。
@@ -30,7 +30,13 @@
 			</a>
 		</li>
 		<li>
-			<a href={resolve('/app/settings/contributors')}>コードを書いてくれた人たち</a>
+			<a href={resolve('/contributors')}>コードを書いてくれた人たち</a>
+		</li>
+		<li>
+			<a href={resolve('/license')}>ライセンス</a>
+		</li>
+		<li>
+			<a href={resolve('/third-party-licenses')}>サードパーティライセンス</a>
 		</li>
 		{#if data.operator}
 			<li>

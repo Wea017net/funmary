@@ -1,11 +1,14 @@
 <script lang="ts">
 	// フッターの、ソースコードのリポジトリと、セルフホストの運営者へのリンク (Issue #109)。
+	// 「このアプリについて」は、ログインしていなくても開けるので、ここからたどれるようにする (#223)
+	import { resolve } from '$app/paths';
 	import { REPOSITORY_URL } from '$lib/repository.ts';
 
 	let { operator }: { operator: { name: string; url: string } | null } = $props();
 </script>
 
 <p class="footer-links">
+	<a href={resolve('/about')}>このアプリについて</a>
 	<!-- eslint-disable svelte/no-navigation-without-resolve -- 外部サイトへのリンク -->
 	<a href={REPOSITORY_URL} target="_blank" rel="noopener noreferrer">ソースコード (GitHub)</a>
 	{#if operator}

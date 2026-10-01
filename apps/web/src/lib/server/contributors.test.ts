@@ -101,4 +101,30 @@ describe('fetchContributors', () => {
 
 		await expect(fetchContributors(failing, () => now)).rejects.toThrow();
 	});
+
+	it('失敗したあとしばらくは、GitHub に問い合わせない (だれでも開ける画面なので、開かれるたびに問い合わせない)', async () => {
+		const fetchContributors = await loadFetchContributors();
+		const failing = vi.fn(() => Promise.resolve(new Response(null, { status: 500 })));
+		await expect(fetchContributors(failing, () => now)).rejects.toThrow();
+		await expect(fetchContributors(failing, () => now + 60 * 1000)).rejects.toThrow();
+		expect(failing).toHaveBeenCalledTimes(1);
+
+		const ok = vi.fn(() =>
+			Promise.resolve(new Response(JSON.stringify(RESPONSE), { status: 200 })),
+		);
+		await expect(fetchContributors(ok, () => now + 5 * 60 * 1000)).resolves.toHaveLength(1);
+	});
+
+	it('前に取れていて、取り直しに失敗したあとも、しばらくは問い合わせずに前のものを返す', async () => {
+		const fetchContributors = await loadFetchContributors();
+		const ok = vi.fn(() =>
+			Promise.resolve(new Response(JSON.stringify(RESPONSE), { status: 200 })),
+		);
+		await fetchContributors(ok, () => now);
+		const failing = vi.fn(() => Promise.resolve(new Response(null, { status: 500 })));
+		const later = now + 7 * 60 * 60 * 1000;
+		await fetchContributors(failing, () => later);
+		await expect(fetchContributors(failing, () => later + 60 * 1000)).resolves.toHaveLength(1);
+		expect(failing).toHaveBeenCalledTimes(1);
+	});
 });

@@ -11,6 +11,15 @@ describe('legacyAppPath', () => {
 		expect(legacyAppPath('/admin/calendar')).toBe('/app/admin/calendar');
 	});
 
+	it('設定の下にあった「このアプリについて」の画面の URL を、ルートの下の URL にする', () => {
+		expect(legacyAppPath('/app/settings/about')).toBe('/about');
+		expect(legacyAppPath('/app/settings/license')).toBe('/license');
+		expect(legacyAppPath('/app/settings/third-party-licenses')).toBe('/third-party-licenses');
+		expect(legacyAppPath('/app/settings/contributors')).toBe('/contributors');
+		expect(legacyAppPath('/app/settings')).toBeNull();
+		expect(legacyAppPath('/app/settings/discord')).toBeNull();
+	});
+
 	it('移していない URL と、名前が前方だけ同じ URL は、転送しない', () => {
 		expect(legacyAppPath('/')).toBeNull();
 		expect(legacyAppPath('/login')).toBeNull();

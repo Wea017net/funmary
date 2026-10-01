@@ -1,9 +1,8 @@
-// コードを書いてくれた人たち (GitHub の貢献者)
-import { redirect, type ServerLoad } from '@sveltejs/kit';
+// コードを書いてくれた人たち (GitHub の貢献者)。ログインしていなくても開ける (#223)
+import type { ServerLoad } from '@sveltejs/kit';
 import { fetchContributors } from '$lib/server/contributors.ts';
 
-export const load: ServerLoad = async ({ locals }) => {
-	if (!locals.user) redirect(303, '/login');
+export const load: ServerLoad = async () => {
 	try {
 		return { contributors: await fetchContributors(), error: null };
 	} catch {

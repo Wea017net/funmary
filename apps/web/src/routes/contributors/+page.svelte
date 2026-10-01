@@ -18,7 +18,7 @@
 </svelte:head>
 
 <div class="page">
-	<SettingsBreadcrumb current="Contributors" />
+	<SettingsBreadcrumb current="Contributors" public />
 	<h1>Contributors</h1>
 	<p class="muted">
 		Funmary のコードを書いてくれた人たちです。GitHub
