@@ -91,6 +91,7 @@ sudo chmod 600 /etc/funmary/funmary.env
 | `PORTAL_USER_ID`、`PORTAL_PASSWORD`                                         | 2.4 の学生ポータルのアカウント                                                                                    |
 | `ADMIN_DISCORD_WEBHOOK_URL` か `DISCORD_BOT_TOKEN`/`DISCORD_GUILD_ID`       | 管理用の通知の送り先 (任意)                                                                                       |
 | `OPERATOR_NAME`、`OPERATOR_URL`                                             | 運営者としてフッターに出す名前と連絡先 (任意。両方書くか、両方空にする)                                           |
+| `CONTACT_EMAIL`                                                             | 問い合わせ先のメールアドレス。「このアプリについて」に出す (任意)                                                 |
 | `BRAND_DIR`                                                                 | ロゴ、アイコン、URL を共有したときの画像を差し替えるディレクトリ (必須。次の「ロゴとアイコンを差し替える」を参照) |
 | `ADDRESS_HEADER`、`XFF_DEPTH`                                               | nginx など、リバースプロキシ越しに利用者の IP アドレスを得る設定。この手順のとおりなら `X-Forwarded-For` と `1`   |
 

@@ -54,6 +54,8 @@ export interface Config {
 	readonly operator: { readonly name: string; readonly url: string } | undefined;
 	/** ロゴ、アイコン、OGP の画像を差し替えるディレクトリ (LICENSE-ASSETS)。設定しなければ同梱の画像を使う */
 	readonly brandDir: string | undefined;
+	/** 問い合わせ先のメールアドレス。「このアプリについて」に出す。設定しなければ出さない (リポジトリには書かない) */
+	readonly contactEmail: string | undefined;
 }
 
 export interface ConfigIssue {
@@ -253,6 +255,7 @@ function envSchema(mode: Mode) {
 			v.pipe(v.string(), v.url('https:// で始まる URL を書いてください'), v.startsWith('https://')),
 		),
 		BRAND_DIR: v.optional(v.string()),
+		CONTACT_EMAIL: v.optional(v.pipe(v.string(), v.email('メールアドレスの形で書いてください'))),
 	});
 }
 
@@ -381,6 +384,7 @@ export function parseConfig(env: Readonly<Record<string, string | undefined>>): 
 					? { name: e.OPERATOR_NAME, url: e.OPERATOR_URL }
 					: undefined,
 			brandDir: e.BRAND_DIR,
+			contactEmail: e.CONTACT_EMAIL,
 		},
 	};
 }

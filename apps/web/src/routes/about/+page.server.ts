@@ -3,5 +3,6 @@ import type { ServerLoad } from '@sveltejs/kit';
 import { getServices } from '$lib/server/services.ts';
 
 export const load: ServerLoad = () => {
-	return { operator: getServices().operator };
+	const { operator, contactEmail } = getServices();
+	return { operator, contactEmail };
 };

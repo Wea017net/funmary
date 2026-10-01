@@ -125,6 +125,16 @@ describe('parseConfig', () => {
 		});
 	});
 
+	it('問い合わせ先のメールアドレス (CONTACT_EMAIL) は、メールアドレスの形のときだけ受け付ける', () => {
+		expect(
+			parseConfig({ ...developmentEnv(), CONTACT_EMAIL: 'contact@funmary.example.com' }),
+		).toMatchObject({ ok: true, config: { contactEmail: 'contact@funmary.example.com' } });
+		expect(parseConfig({ ...developmentEnv(), CONTACT_EMAIL: 'not-an-address' })).toMatchObject({
+			ok: false,
+			issues: [{ name: 'CONTACT_EMAIL' }],
+		});
+	});
+
 	it('セルフホストの運営者の情報は、名前と URL がそろったときだけ使う (Issue #109)', () => {
 		expect(parseConfig(developmentEnv())).toMatchObject({
 			ok: true,

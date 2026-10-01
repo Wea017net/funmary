@@ -346,6 +346,7 @@ export const init: ServerInit = () => {
 		origin: publicOrigin,
 		operator: result.config.operator ?? null,
 		brandDir: result.config.brandDir ?? null,
+		contactEmail: result.config.contactEmail ?? null,
 		alertAdmin: (alert: Parameters<typeof alerter.send>[0]) => alerter.send(alert),
 		feedTokens: createFeedTokenStore(database),
 		// リリースでは、tar.gz に同梱した build-info.json を、上の階層へたどって探す
