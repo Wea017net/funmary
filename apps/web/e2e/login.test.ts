@@ -1,5 +1,6 @@
 // Google のログインの通し (設計書 21 章)。Google の代わりに、テスト用の OpenID Connect のサーバーを使う。
 // サーバーは本物の RS256 で署名した ID トークンを返すので、アプリは本番と同じ手順 (PKCE、state、nonce、署名の検証) を通る。
+import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { expect, test } from '@playwright/test';
 import { createCourseStore, createSubjectStore, openDatabase, type Database } from '@funmary/db';
@@ -17,10 +18,14 @@ test.describe.configure({ mode: 'serial' });
 let oidc: MockOidcServer;
 
 test.beforeAll(async () => {
+	mkdirSync(E2E_DATA_DIR, { recursive: true });
 	oidc = await startMockOidcServer({
 		clientId: 'e2e.apps.googleusercontent.com',
 		clientSecret: 'e2e-client-secret',
 		port: OIDC_PORT,
+		// 失敗したテストのやり直しでは、新しいワーカーがこのサーバーを立て直す。アプリは前の公開鍵を覚えているので、
+		// 鍵が変わると ID トークンの検証に失敗し、以降のログインがすべて落ちる。立て直しても同じ鍵を使う
+		keyFile: join(E2E_DATA_DIR, 'mock-oidc-key.pem'),
 	});
 });
 

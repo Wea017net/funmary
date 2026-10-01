@@ -3,11 +3,14 @@
 // 実際に RS256 で署名した ID トークンを返すので、openid-client の署名、state、nonce、PKCE の検証を本物のまま確かめられる。
 import {
 	createHash,
+	createPrivateKey,
+	createPublicKey,
 	createSign,
 	generateKeyPairSync,
 	randomBytes,
 	type KeyObject,
 } from 'node:crypto';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { createServer, type IncomingMessage, type Server } from 'node:http';
 
 export interface MockIdentity {
@@ -23,6 +26,11 @@ export interface MockOidcOptions {
 	clientSecret: string;
 	/** 0 なら空いているポートを使う */
 	port?: number;
+	/**
+	 * 署名の鍵を保存するファイル。あれば読み、なければ作って保存する。
+	 * アプリは公開鍵を覚えて使い回す (同じ kid なら取り直さない) ので、テストのやり直しでサーバーを立て直すときも、同じ鍵にする
+	 */
+	keyFile?: string;
 }
 
 export interface MockOidcServer {
@@ -53,8 +61,25 @@ function signJwt(payload: object, privateKey: KeyObject, kid: string): string {
 	return `${signingInput}.${b64url(signature)}`;
 }
 
-export async function startMockOidcServer(options: MockOidcOptions): Promise<MockOidcServer> {
+function loadOrCreateKeys(keyFile: string | undefined): {
+	privateKey: KeyObject;
+	publicKey: KeyObject;
+} {
+	if (keyFile && existsSync(keyFile)) {
+		const privateKey = createPrivateKey(readFileSync(keyFile, 'utf8'));
+		return { privateKey, publicKey: createPublicKey(privateKey) };
+	}
 	const keys = generateKeyPairSync('rsa', { modulusLength: 2048 });
+	if (keyFile) {
+		writeFileSync(keyFile, keys.privateKey.export({ format: 'pem', type: 'pkcs8' }), {
+			mode: 0o600,
+		});
+	}
+	return keys;
+}
+
+export async function startMockOidcServer(options: MockOidcOptions): Promise<MockOidcServer> {
+	const keys = loadOrCreateKeys(options.keyFile);
 	const otherKeys = generateKeyPairSync('rsa', { modulusLength: 2048 });
 	const kid = 'mock-key-1';
 	const jwk = { ...keys.publicKey.export({ format: 'jwk' }), kid, alg: 'RS256', use: 'sig' };
