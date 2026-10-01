@@ -1,7 +1,6 @@
 // 本番の環境変数ファイルを、手元の .env に合わせる (VPS にログインせず、1 つのコマンドで済ませる)。
 // 使い方: pnpm env:upload
-// SSH でつなぐための秘匿情報 (宛先、鍵、ポート) は、コマンドの引数ではなく .env.ssh に書く
-// (シェルの履歴やプロセス一覧に、接続先や鍵の場所を残さないため)。形は .env.ssh.example を見る。
+// SSH の接続先は .env.ssh に書く (scripts/vps-ssh.js)。
 //
 // 反映専用の制限された鍵 (funmary-deploy、command= で funmary-update だけに絞ったもの) は使わない。
 // 作者自身の SSH 鍵と sudo を使う (自動デプロイの経路とは別)。
@@ -9,7 +8,7 @@
 // 1. リモートの環境変数ファイルを .env.example の並びに揃える (足りない鍵を空のまま足す。値は変えない)
 // 2. 手元の .env にあって、リモートにない値、またはリモートと違う値だけを、1 つずつ上書きするか確認する
 //    (どちらにもない鍵、リモートにしかない鍵には触れない)
-import { execFileSync } from 'node:child_process';
+// 3. 値を上書きしたら、いま再起動するか確認し、再起動したら動いているかを確かめる
 import { existsSync, readFileSync } from 'node:fs';
 import { createInterface } from 'node:readline/promises';
 import {
@@ -18,38 +17,18 @@ import {
 	SECRET_NAMES,
 	setEnvValues,
 } from '../apps/web/src/lib/server/env-file.ts';
+import { loadSshConfig, restartFunmary, runSsh, shellQuote as quote } from './vps-ssh.js';
 
-if (!existsSync('.env.ssh')) {
-	console.error(
-		'.env.ssh がありません。.env.ssh.example を .env.ssh に写し、接続先を書いてください。',
-	);
-	process.exit(1);
-}
-process.loadEnvFile('.env.ssh');
-
-const host = process.env['SSH_HOST'];
-if (!host) throw new Error('.env.ssh に SSH_HOST を書いてください (例: root@funmary.example.com)');
-const remoteFile = process.env['REMOTE_ENV_FILE'] || '/etc/funmary/funmary.env';
-const sshPort = process.env['SSH_PORT'];
-const sshKey = process.env['SSH_KEY'];
+const { ssh: sshConfig, remoteEnvFile: remoteFile } = loadSshConfig();
+const { host } = sshConfig;
 
 if (!existsSync('.env')) throw new Error('.env がありません (pnpm funmary-admin init で作れます)');
 if (!existsSync('.env.example')) throw new Error('.env.example が見つかりません');
 const localText = readFileSync('.env', 'utf8');
 const templateText = readFileSync('.env.example', 'utf8');
 
-/** @param {string[]} args @returns {string[]} */
-const withConnectionArgs = (args) => [
-	...(sshPort ? ['-p', sshPort] : []),
-	...(sshKey ? ['-i', sshKey] : []),
-	...args,
-];
-/** @param {string[]} args @returns {string} */
-const ssh = (args) =>
-	execFileSync('ssh', withConnectionArgs([host, ...args]), { encoding: 'utf8' });
-
 console.log(`${host} の ${remoteFile} を読んでいます…`);
-const remoteText = ssh(['sudo', 'cat', remoteFile]);
+const remoteText = runSsh(sshConfig, ['sudo', 'cat', quote(remoteFile)]);
 
 // まず、リモートの並びと足りない鍵を .env.example に揃える (値のある行の値は変えない)
 const structured = alignEnvFile(remoteText, templateText);
@@ -115,16 +94,29 @@ const finalText = setEnvValues(structured.text, overrides);
 
 const backupPath = `${remoteFile}.bak.${new Date().toISOString().replaceAll(/[:.]/g, '-')}`;
 console.log(`\n${host} の ${remoteFile} を ${backupPath} に控えてから書き換えます…`);
-ssh(['sudo', 'cp', '-p', remoteFile, backupPath]);
-// 既存のファイルに上書きするので、所有者と権限 (root:funmary、640) は変わらない
-execFileSync('ssh', withConnectionArgs([host, 'sudo', 'tee', remoteFile]), {
-	input: finalText,
-	stdio: ['pipe', 'ignore', 'inherit'],
-});
+// 控えと書き換えを 1 回の接続で行う。既存のファイルに上書きするので、所有者と権限 (root:funmary、640) は変わらない
+runSsh(
+	sshConfig,
+	[
+		`sudo cp -p ${quote(remoteFile)} ${quote(backupPath)} && sudo tee ${quote(remoteFile)} > /dev/null`,
+	],
+	{ input: finalText },
+);
 
 console.log(
 	`書き換えました。上書きした鍵: ${overrides.size > 0 ? [...overrides.keys()].join(', ') : 'なし'}`,
 );
+// 値を変えたときだけ、再起動するか聞く (並びを揃えただけなら、動きは変わらない)。
+// 利用者の少ない時間に後で再起動したいこともあるので、聞かずには再起動しない
 if (overrides.size > 0) {
-	console.log('本番に反映するには、Funmary を再起動してください: sudo systemctl restart funmary');
+	const rl = createInterface({ input: process.stdin, output: process.stdout });
+	const answer = await rl.question(
+		'\n変えた値を反映するため、いま Funmary を再起動しますか? (y/N): ',
+	);
+	rl.close();
+	if (/^y(es)?$/i.test(answer.trim())) {
+		if (!restartFunmary(sshConfig)) process.exitCode = 1;
+	} else {
+		console.log('本番に反映するには、あとで再起動してください: sudo systemctl restart funmary');
+	}
 }
