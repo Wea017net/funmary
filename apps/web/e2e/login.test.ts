@@ -712,6 +712,9 @@ test.describe('管理画面', () => {
 		// 管理者には、設定の中に管理の節が出る。前の管理の入口は、そこへ転送する
 		await page.goto('/app/admin');
 		await expect(page).toHaveURL('/app/settings#admin');
+		// 管理の節は、ふだん使う項目の邪魔にならないよう、アカウント (ログアウト) より下に出す
+		const headings = await page.getByRole('heading', { level: 2 }).allTextContents();
+		expect(headings.indexOf('管理')).toBeGreaterThan(headings.indexOf('アカウント'));
 		await page
 			.getByRole('region', { name: '管理' })
 			.getByRole('link', { name: /照合できなかった授業名/ })

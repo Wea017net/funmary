@@ -225,20 +225,6 @@
 		</section>
 	{/if}
 
-	{#if data.admin}
-		<section id="admin" aria-labelledby="admin-heading">
-			<h2 id="admin-heading">管理</h2>
-			<p class="muted">管理者にだけ出ています。</p>
-			{@render links(adminItems)}
-		</section>
-	{:else if data.moderator}
-		<section id="moderator" aria-labelledby="moderator-heading">
-			<h2 id="moderator-heading">モデレーター</h2>
-			<p class="muted">モデレーターにだけ出ています。</p>
-			{@render links(moderatorItems)}
-		</section>
-	{/if}
-
 	<section aria-labelledby="about-heading">
 		<h2 id="about-heading">このアプリについて</h2>
 		{@render links(aboutItems)}
@@ -265,6 +251,21 @@
 			</li>
 		</ul>
 	</section>
+
+	<!-- 管理者とモデレーターだけの項目は、ふだん使う項目の邪魔にならないよう、いちばん下に置く -->
+	{#if data.admin}
+		<section id="admin" aria-labelledby="admin-heading">
+			<h2 id="admin-heading">管理</h2>
+			<p class="muted">管理者にだけ出ています。</p>
+			{@render links(adminItems)}
+		</section>
+	{:else if data.moderator}
+		<section id="moderator" aria-labelledby="moderator-heading">
+			<h2 id="moderator-heading">モデレーター</h2>
+			<p class="muted">モデレーターにだけ出ています。</p>
+			{@render links(moderatorItems)}
+		</section>
+	{/if}
 </div>
 
 <style>

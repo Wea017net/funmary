@@ -25,7 +25,7 @@
 			: '開発版',
 	);
 	const client = $derived(
-		`${about.client.browser}、${about.client.os}、${standalone ? 'ホーム画面のアプリ' : 'ブラウザ'}`,
+		`${about.client.browser}、${about.client.os}、${standalone ? 'PWA' : 'ブラウザ'}`,
 	);
 
 	function copy() {
