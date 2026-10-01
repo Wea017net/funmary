@@ -7,6 +7,7 @@ import {
 	startMockOidcServer,
 	type MockOidcServer,
 } from '../../../packages/auth/src/testing/mock-oidc-server.ts';
+import { REPOSITORY_URL } from '../src/lib/repository.ts';
 import { E2E_DATA_DIR } from '../e2e-data-dir.ts';
 import { OIDC_PORT } from '../oidc-port.ts';
 
@@ -1700,7 +1701,7 @@ test.describe('スマホの上部バーと、フッターのリンク', () => {
 	test('フッターに、リポジトリへのリンクが常に出る', async ({ page }) => {
 		await page.goto('/');
 		const link = page.getByRole('link', { name: 'ソースコード (GitHub)' });
-		await expect(link).toHaveAttribute('href', 'https://github.com/oto-lab/funmary');
+		await expect(link).toHaveAttribute('href', REPOSITORY_URL);
 		await expect(link).toHaveAttribute('target', '_blank');
 		await expect(link).toHaveAttribute('rel', 'noopener noreferrer');
 
@@ -1804,7 +1805,7 @@ test.describe('このアプリについて', () => {
 		await loginAs(page);
 		await page.goto('/app/settings/about');
 
-		const repo = page.locator('a[href="https://github.com/oto-lab/funmary"]').first();
+		const repo = page.locator(`a[href="${REPOSITORY_URL}"]`).first();
 		await expect(repo).toHaveAttribute('target', '_blank');
 		await expect(repo).toHaveAttribute('rel', 'noopener noreferrer');
 

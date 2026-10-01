@@ -1,0 +1,14 @@
+// 文書や設定に書いたリポジトリの参照 (owner/repo) を拾う。repository.json を読み込めないファイル (Markdown、シェル、YAML) の値が、
+// repository.json と食い違っていないかを repository-references.test.js で確かめるために使う。
+
+// GitHub のホスト名の直後、シェルの既定値 (${VAR:-...}) の中、パスや名前の途中でない位置にある owner/funmary と owner/funmary-mirror を拾う
+const REFERENCE =
+	/(?:(?<=github(?:usercontent)?\.com[/:])|(?<=:-)|(?<![\w./@$-]))([A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?\/funmary(?:-mirror)?)(?![\w-])/g;
+
+/**
+ * @param {string} text
+ * @returns {string[]} 見つかった順の owner/repo
+ */
+export function findRepositoryReferences(text) {
+	return Array.from(text.matchAll(REFERENCE), (match) => match[1] ?? '');
+}
