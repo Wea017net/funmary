@@ -45,8 +45,3 @@ jobs:
           name: released-sha
           path: released-sha
           retention-days: 7
-      - name: 古い自動リリースを消す
-        env:
-          GH_TOKEN: ${{ github.token }}
-          KEEP: '10'
-        run: node scripts/workflows/release/prune-releases.js

@@ -19,42 +19,27 @@ if (!/^[\w.-]+\/[\w.-]+$/.test(repo)) {
 const run = (command, args) => execFileSync(command, args, { encoding: 'utf8' }).trim();
 
 /**
- * 今回より前の、最も新しい自動リリース (build-<hash>) の版と、そのコミット。なければ null
+ * 今回のコミットから main の履歴 (first-parent) をさかのぼって、一番近い自動リリース (build-<hash>) のタグの版と、そのコミット。
+ * なければ null。作った日時の順では選ばない (消えたリリースを復元すると、古いリリースほど作った日時が新しくなるため)。
+ * タグを読むので、checkout は履歴とタグをすべて取る (fetch-depth: 0)
  * @returns {{ version: string; sha: string } | null}
  */
 function previousRelease() {
-	const tags = run('gh', [
-		'release',
-		'list',
-		'--limit',
-		'30',
-		'--json',
-		'tagName,createdAt',
-		'--jq',
-		'sort_by(.createdAt) | reverse | .[].tagName',
-	])
-		.split('\n')
-		.filter((tag) => /^build-[0-9a-f]{7,40}$/.test(tag) && tag !== version);
-	for (const tag of tags) {
-		const target = run('gh', [
-			'release',
-			'view',
-			tag,
-			'--json',
-			'targetCommitish',
-			'--jq',
-			'.targetCommitish',
+	try {
+		const tag = run('git', [
+			'describe',
+			'--tags',
+			'--abbrev=0',
+			'--first-parent',
+			'--match',
+			'build-*',
+			`${sha}~1`,
 		]);
-		// 手元のクローンにそのコミットがなければ (履歴が浅いなど)、差分を取れないので、次の候補を見る
-		if (!/^[0-9a-f]{40}$/.test(target)) continue;
-		try {
-			run('git', ['cat-file', '-e', `${target}^{commit}`]);
-			return { version: tag, sha: target };
-		} catch {
-			continue;
-		}
+		return { version: tag, sha: run('git', ['rev-list', '-n', '1', tag]) };
+	} catch {
+		// さかのぼっても見つからない (最初のリリース) か、親のコミットがない
+		return null;
 	}
-	return null;
 }
 
 const previous = previousRelease();
