@@ -15,7 +15,7 @@
 </svelte:head>
 
 <div class="page">
-	<SettingsBreadcrumb current="ライセンス" />
+	<SettingsBreadcrumb current="ライセンス" public />
 	<h1>ライセンス</h1>
 	<p class="muted">
 		Funmary のコードは、BSD-3-Clause と Apache-2.0

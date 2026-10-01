@@ -10,7 +10,7 @@
 </svelte:head>
 
 <div class="page">
-	<SettingsBreadcrumb current="サードパーティライセンス" />
+	<SettingsBreadcrumb current="サードパーティライセンス" public />
 	<h1>サードパーティライセンス</h1>
 	<p class="muted">Funmary が使っている、オープンソースのソフトウェアの一覧です。</p>
 

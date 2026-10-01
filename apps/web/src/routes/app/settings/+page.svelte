@@ -134,25 +134,25 @@
 
 	const aboutItems: Item[] = [
 		{
-			href: resolve('/app/settings/about'),
+			href: resolve('/about'),
 			icon: IconAbout,
 			title: 'リポジトリと作者',
 			description: 'ソースコードと、Funmary を作った人へのリンク',
 		},
 		{
-			href: resolve('/app/settings/license'),
+			href: resolve('/license'),
 			icon: IconLicense,
 			title: 'ライセンス',
 			description: 'Funmary 自身のライセンス (BSD-3-Clause または Apache-2.0)',
 		},
 		{
-			href: resolve('/app/settings/third-party-licenses'),
+			href: resolve('/third-party-licenses'),
 			icon: IconThirdParty,
 			title: 'サードパーティライセンス',
 			description: '使っているオープンソースのソフトウェアの一覧',
 		},
 		{
-			href: resolve('/app/settings/contributors'),
+			href: resolve('/contributors'),
 			icon: IconContributors,
 			title: 'Contributors',
 			description: 'コードを書いてくれた人たち',
