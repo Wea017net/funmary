@@ -5,6 +5,7 @@
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import AboutApp, { type About } from '$lib/components/AboutApp.svelte';
+	import BrandLogo from '$lib/components/BrandLogo.svelte';
 	import FooterLinks from '$lib/components/FooterLinks.svelte';
 	import ThemeToggle from '$lib/components/ThemeToggle.svelte';
 	import type { ThemePreference } from '$lib/theme.ts';
@@ -30,7 +31,7 @@
 	{@render children()}
 {:else}
 	<header class="guest-top">
-		<a class="brand" href={resolve('/')}>Funmary</a>
+		<a class="brand" href={resolve('/')}><BrandLogo height="1.75rem" /></a>
 		<ThemeToggle initial={data.theme} compact />
 	</header>
 	<main class="solo">

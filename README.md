@@ -1,3 +1,10 @@
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/logo-dark.svg" />
+    <img src="docs/assets/logo-light.svg" alt="Funmary" width="360" />
+  </picture>
+</p>
+
 # Funmary
 
 Funmary (ファンマリー) は、公立はこだて未来大学の学生向けの便利な総合 Web アプリです。

@@ -6,6 +6,7 @@
 	import IconImport from '~icons/material-symbols/bookmark-add-outline';
 	import IconNotice from '~icons/material-symbols/swap-horiz';
 	import IconToday from '~icons/material-symbols/today-outline';
+	import BrandLogo from '$lib/components/BrandLogo.svelte';
 	import LessonRoom from '$lib/components/LessonRoom.svelte';
 	import StatusBadge from '$lib/components/StatusBadge.svelte';
 	import { resolve } from '$app/paths';
@@ -53,6 +54,7 @@
 <div class="landing">
 	<section class="hero" aria-labelledby="hero-heading">
 		<div class="hero-text">
+			<p class="hero-logo"><BrandLogo height="3.5rem" /></p>
 			<h1 id="hero-heading">
 				大学の<span class="nowrap">「知りたい」</span>を、<br class="heading-break" />すべて。
 			</h1>
@@ -187,6 +189,10 @@
 			align-items: center;
 			padding: 3rem 0 3.5rem;
 		}
+	}
+
+	.hero-logo {
+		margin: 0 0 1.5rem;
 	}
 
 	.hero-text {
