@@ -3,6 +3,7 @@
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import AboutApp, { type About } from '$lib/components/AboutApp.svelte';
+	import BrandLogo from '$lib/components/BrandLogo.svelte';
 	import FooterLinks from '$lib/components/FooterLinks.svelte';
 	import MaskedEmail from '$lib/components/MaskedEmail.svelte';
 	import ThemeToggle from '$lib/components/ThemeToggle.svelte';
@@ -97,14 +98,14 @@
 
 <div class="shell">
 	<header class="top" class:hidden={headerHidden}>
-		<a class="brand" href={resolve('/app')}>Funmary</a>
+		<a class="brand" href={resolve('/app')}><BrandLogo height="1.75rem" /></a>
 		<div class="top-actions">
 			<ThemeToggle initial={data.theme} compact />
 		</div>
 	</header>
 
 	<nav class="side" aria-label="メニュー">
-		<a class="brand" href={resolve('/app')}>Funmary</a>
+		<a class="brand" href={resolve('/app')}><BrandLogo height="1.75rem" /></a>
 		{@render navItems('side-items')}
 		<div class="account">
 			<div class="email"><MaskedEmail email={data.user.email} /></div>

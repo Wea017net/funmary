@@ -1,3 +1,10 @@
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/logo-dark.svg" />
+    <img src="docs/assets/logo-light.svg" alt="Funmary" width="360" />
+  </picture>
+</p>
+
 # Funmary
 
 Funmary (ファンマリー) は、公立はこだて未来大学の学生向けの便利な総合 Web アプリです。
@@ -73,3 +80,7 @@ Funmary のコードは、次の 2 つのライセンスのどちらかを選ん
 - Apache License, Version 2.0 ([LICENSE-APACHE-2.0](LICENSE-APACHE-2.0))
 
 Funmary に送られた貢献も、特に断りがなければ、追加の条件なしに同じ 2 つのライセンスで受け取ります。
+
+## クレジット
+
+ロゴの文字には、フォント「07あかずきんポップ」を使っています。フリーダウンロード: <https://flopdesign.booth.pm/items/1748058>

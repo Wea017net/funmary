@@ -42,6 +42,23 @@ test('ログインしていないと、トップページにログインへの�
 	await expect(page.getByRole('link', { name: '大学のアカウントではじめる' })).toBeVisible();
 });
 
+test('共有したときのカード (OGP) の情報を出し、画像は絶対 URL で配る', async ({
+	page,
+	request,
+}) => {
+	await page.goto('/');
+	const image = await page.locator('meta[property="og:image"]').getAttribute('content');
+	expect(image).toMatch(/^https?:\/\/[^/]+\/og-image\.png$/);
+	await expect(page.locator('meta[property="og:title"]')).toHaveAttribute('content', 'Funmary');
+	await expect(page.locator('meta[name="twitter:card"]')).toHaveAttribute(
+		'content',
+		'summary_large_image',
+	);
+	const response = await request.get(new URL(image ?? '').pathname);
+	expect(response.status()).toBe(200);
+	expect(response.headers()['content-type']).toBe('image/png');
+});
+
 test.describe('ホーム画面に追加 (PWA)', () => {
 	test('マニフェストとアイコンを配る', async ({ request }) => {
 		const manifest = await request.get('/manifest.webmanifest');
