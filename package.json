@@ -20,6 +20,7 @@
 		"funmary-admin": "node apps/web/src/cli.ts",
 		"env:migrate": "node apps/web/src/cli.ts align-env",
 		"env:upload": "node scripts/env-upload.js",
+		"vps:restart": "node scripts/vps-restart.js",
 		"lint": "eslint .",
 		"format": "prettier --write .",
 		"format:check": "prettier --check .",
