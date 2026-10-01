@@ -43,7 +43,7 @@ test('共有したときのカード (OGP) の情報を出し、画像は絶対 
 }) => {
 	await page.goto('/');
 	const image = await page.locator('meta[property="og:image"]').getAttribute('content');
-	expect(image).toMatch(/^https?:\/\/[^/]+\/og-image\.png$/);
+	expect(image).toMatch(/^https?:\/\/[^/]+\/brand\/og-image\.png$/);
 	await expect(page.locator('meta[property="og:title"]')).toHaveAttribute('content', 'Funmary');
 	await expect(page.locator('meta[name="twitter:card"]')).toHaveAttribute(
 		'content',
@@ -52,6 +52,22 @@ test('共有したときのカード (OGP) の情報を出し、画像は絶対 
 	const response = await request.get(new URL(image ?? '').pathname);
 	expect(response.status()).toBe(200);
 	expect(response.headers()['content-type']).toBe('image/png');
+});
+
+test('ロゴとアイコンを /brand で配り、決まった名前のほかは返さない', async ({ request, page }) => {
+	for (const [name, type] of [
+		['logo-light.svg', 'image/svg+xml'],
+		['icon.svg', 'image/svg+xml'],
+		['og-image.png', 'image/png'],
+	]) {
+		const response = await request.get(`/brand/${name}`);
+		expect(response.status(), name).toBe(200);
+		expect(response.headers()['content-type']).toBe(type);
+	}
+	expect((await request.get('/brand/secret.txt')).status()).toBe(404);
+
+	await page.goto('/');
+	await expect(page.getByRole('link', { name: 'Funmary' }).first()).toBeVisible();
 });
 
 test.describe('ホーム画面に追加 (PWA)', () => {
@@ -63,7 +79,7 @@ test.describe('ホーム画面に追加 (PWA)', () => {
 		expect(body).toMatchObject({ start_url: '/app', scope: '/app', display: 'standalone' });
 		for (const icon of [
 			...body.icons.map((i: { src: string }) => i.src),
-			'/apple-touch-icon.png',
+			'/brand/apple-touch-icon.png',
 		]) {
 			const response = await request.get(icon);
 			expect(response.status(), icon).toBe(200);
@@ -1831,15 +1847,24 @@ test.describe('このアプリについて', () => {
 		);
 	});
 
-	test('ライセンスの画面に、BSD-3-Clause と Apache-2.0 の本文が出る', async ({ page }) => {
+	test('ライセンスの画面に、BSD-3-Clause と Apache-2.0、ロゴとアイコンの利用条件の本文が出る', async ({
+		page,
+	}) => {
 		await loginAs(page);
 		await page.goto('/license');
+		const license = (name: string) =>
+			page.locator('details').filter({ has: page.getByText(name, { exact: true }) });
 
 		await page.getByText('BSD-3-Clause', { exact: true }).click();
-		await expect(page.getByText('Redistribution and use')).toBeVisible();
+		await expect(license('BSD-3-Clause').getByText('Redistribution and use')).toBeVisible();
 
 		await page.getByText('Apache-2.0', { exact: true }).click();
-		await expect(page.getByText('Apache License')).toBeVisible();
+		await expect(license('Apache-2.0').getByText('Apache License')).toBeVisible();
+
+		await page.getByText('ロゴとアイコンの利用条件', { exact: true }).click();
+		await expect(
+			license('ロゴとアイコンの利用条件').getByText('許可なくしてはいけないこと'),
+		).toBeVisible();
 	});
 
 	test('サードパーティライセンスの画面に、依存の一覧が出る', async ({ page }) => {

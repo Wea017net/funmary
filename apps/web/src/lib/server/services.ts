@@ -89,6 +89,8 @@ export interface Services {
 	readonly origin: string;
 	/** セルフホストの運営者の情報。設定されていなければ null */
 	readonly operator: { readonly name: string; readonly url: string } | null;
+	/** ロゴ、アイコン、OGP の画像を差し替えるディレクトリ。設定されていなければ null */
+	readonly brandDir: string | null;
 	/** 管理者への知らせ。秘密の値を含めない */
 	readonly alertAdmin: (alert: {
 		severity: 'info' | 'warn' | 'error';

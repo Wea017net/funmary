@@ -20,6 +20,7 @@ describe('findLegalInfo', () => {
 		mkdirSync(legal, { recursive: true });
 		writeFileSync(join(legal, 'LICENSE-BSD-3-CLAUSE'), 'BSD の本文');
 		writeFileSync(join(legal, 'LICENSE-APACHE-2.0'), 'Apache の本文');
+		writeFileSync(join(legal, 'LICENSE-ASSETS'), 'ロゴとアイコンの本文');
 		writeFileSync(join(legal, 'THIRD_PARTY_LICENSES.txt'), '依存の一覧');
 
 		const deep = join(dir, 'build', 'server', 'chunks');
@@ -29,6 +30,7 @@ describe('findLegalInfo', () => {
 			licenses: [
 				{ file: 'LICENSE-BSD-3-CLAUSE', text: 'BSD の本文' },
 				{ file: 'LICENSE-APACHE-2.0', text: 'Apache の本文' },
+				{ file: 'LICENSE-ASSETS', text: 'ロゴとアイコンの本文' },
 			],
 			thirdPartyLicenses: '依存の一覧',
 		});

@@ -114,6 +114,17 @@ describe('parseConfig', () => {
 		});
 	});
 
+	it('ロゴとアイコンを差し替えるディレクトリ (BRAND_DIR) は、書いたときだけ使う', () => {
+		expect(parseConfig(developmentEnv())).toMatchObject({
+			ok: true,
+			config: { brandDir: undefined },
+		});
+		expect(parseConfig({ ...developmentEnv(), BRAND_DIR: '/etc/funmary/brand' })).toMatchObject({
+			ok: true,
+			config: { brandDir: '/etc/funmary/brand' },
+		});
+	});
+
 	it('セルフホストの運営者の情報は、名前と URL がそろったときだけ使う (Issue #109)', () => {
 		expect(parseConfig(developmentEnv())).toMatchObject({
 			ok: true,
