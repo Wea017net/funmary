@@ -2,6 +2,7 @@
 	import Button, { Label } from '@smui/button';
 	import { enhance } from '$app/forms';
 	import { confirmSubmit } from '$lib/actions/confirm-submit.ts';
+	import { DAILY_DIGEST_STEP_MINUTES, type DailyDigestSettings } from '@funmary/core';
 	import SettingsBreadcrumb from '$lib/components/SettingsBreadcrumb.svelte';
 
 	let {
@@ -12,12 +13,22 @@
 			configured: boolean;
 			enabled: boolean;
 			linked: { destination: 'thread' | 'dm' } | null;
+			/** 予定のまとめの設定。連携していなければ null */
+			digest: DailyDigestSettings | null;
 			callback: { ok: boolean; message: string } | null;
 		};
 		form: { error?: string; message?: string } | null;
 	} = $props();
 
+	const pad = (value: number) => String(value).padStart(2, '0');
+	const HOURS = Array.from({ length: 24 }, (_, hour) => pad(hour));
+	const MINUTES = Array.from({ length: 60 / DAILY_DIGEST_STEP_MINUTES }, (_, index) =>
+		pad(index * DAILY_DIGEST_STEP_MINUTES),
+	);
+
 	let destination = $state<'thread' | 'dm'>('thread');
+	// 保存すると data が読み直されるので、保存した値に戻る
+	let timing = $derived(data.digest?.timing ?? 'evening');
 </script>
 
 <svelte:head>
@@ -61,6 +72,83 @@
 		>
 			<Button type="submit" variant="outlined"><Label>連携を解除する</Label></Button>
 		</form>
+
+		{#if data.digest}
+			<section aria-labelledby="digest-heading">
+				<h2 id="digest-heading">予定のまとめ</h2>
+				<p>
+					今日か明日の授業 (休講、補講、教室変更を含む) と予定を、1 日に 1
+					回、上の送り先に届けます。メンションはしません。
+				</p>
+				<!-- 保存した値が欄に残るよう、送信のあとにフォームを初期状態へ戻さない -->
+				<form
+					method="POST"
+					action="?/digest"
+					use:enhance={() =>
+						({ update }) =>
+							update({ reset: false })}
+					class="link-form"
+				>
+					<label>
+						<input type="checkbox" name="enabled" checked={data.digest.enabled} />
+						予定のまとめを受け取る
+					</label>
+					<fieldset>
+						<legend>届ける時刻</legend>
+						<label>
+							<input type="radio" name="timing" value="evening" bind:group={timing} />
+							前日の 20:30 に、明日の予定を届ける
+						</label>
+						<label>
+							<input type="radio" name="timing" value="morning" bind:group={timing} />
+							当日の 06:30 に、今日の予定を届ける
+						</label>
+						<label>
+							<input type="radio" name="timing" value="custom" bind:group={timing} />
+							時刻を選ぶ
+						</label>
+						<div class="custom">
+							<label>
+								時
+								<select
+									name="customHour"
+									value={data.digest.customTime.slice(0, 2)}
+									disabled={timing !== 'custom'}
+								>
+									{#each HOURS as hour (hour)}<option value={hour}>{Number(hour)}</option>{/each}
+								</select>
+							</label>
+							<label>
+								分
+								<select
+									name="customMinute"
+									value={data.digest.customTime.slice(3, 5)}
+									disabled={timing !== 'custom'}
+								>
+									{#each MINUTES as minute (minute)}<option value={minute}>{minute}</option>{/each}
+								</select>
+							</label>
+							<label>
+								届ける予定
+								<select
+									name="customDay"
+									value={data.digest.customDay}
+									disabled={timing !== 'custom'}
+								>
+									<option value="today">その日の予定</option>
+									<option value="tomorrow">翌日の予定</option>
+								</select>
+							</label>
+						</div>
+					</fieldset>
+					<label>
+						<input type="checkbox" name="sendWhenEmpty" checked={data.digest.sendWhenEmpty} />
+						授業も予定もない日にも、「予定はありません」と届ける
+					</label>
+					<Button type="submit" variant="unelevated"><Label>保存する</Label></Button>
+				</form>
+			</section>
+		{/if}
 	{:else}
 		<p>
 			Discord のアカウントを紐付け、休講などの通知を、Funmary
@@ -108,6 +196,17 @@
 		padding: 0.75rem 1rem;
 		border: 1px solid var(--fm-divider);
 		border-radius: 0.5rem;
+	}
+
+	h2 {
+		margin-top: 2rem;
+	}
+
+	.custom {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem 1.5rem;
+		padding-left: 1.75rem;
 	}
 
 	label {

@@ -30,3 +30,8 @@ export {
 	type AcademicCalendarImportOutcome,
 	type ImportAcademicCalendarDeps,
 } from './import-academic-calendar.ts';
+export {
+	createSendDailyDigestJob,
+	type DailyDigestTarget,
+	type SendDailyDigestDeps,
+} from './send-daily-digest.ts';

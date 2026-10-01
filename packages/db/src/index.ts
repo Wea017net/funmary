@@ -118,3 +118,8 @@ export {
 	type DiscordLinkInput,
 	type DiscordLinkStore,
 } from './discord-link-store.ts';
+export {
+	createDailyDigestStore,
+	type DailyDigestRecipient,
+	type DailyDigestStore,
+} from './daily-digest-store.ts';

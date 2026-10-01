@@ -41,6 +41,11 @@ export interface JobDefinition {
 	readonly timeoutMs: number;
 	/** 時刻ぴったりに動かさず、0 からこの時間までのランダムな遅れを入れる */
 	readonly jitterMs?: number;
+	/**
+	 * 短い間隔で動かし、たいていは何もしない処理に付ける。成功して文を返さなかった回は記録しない
+	 * (実行の記録が、ほかの処理の記録を押し流さないように)。動いている間も、記録には running を残さない
+	 */
+	readonly quietWhenIdle?: boolean;
 	/** 実行する処理。返した文は、記録の message に残る */
 	run(context: JobContext): Promise<string | void>;
 }
@@ -116,8 +121,8 @@ export function createJobRunner(options: JobRunnerOptions): JobRunner {
 		const tagged = log.withTag(name);
 		const controller = new AbortController();
 		const startedAt = now();
-		const id = store.start(name, startedAt);
-		tagged.info('始めます');
+		const id = job.quietWhenIdle ? null : store.start(name, startedAt);
+		if (!job.quietWhenIdle) tagged.info('始めます');
 
 		const work = (async (): Promise<JobResult> => {
 			const timer = setTimeout(
@@ -153,7 +158,10 @@ export function createJobRunner(options: JobRunnerOptions): JobRunner {
 		running.set(name, { done: work, controller });
 		const result = await work;
 		running.delete(name);
-		store.finish(id, result.status, result.message, now());
+		const idle = result.status === 'succeeded' && result.message === null;
+		if (id !== null) store.finish(id, result.status, result.message, now());
+		else if (!idle)
+			store.finish(store.start(name, startedAt), result.status, result.message, now());
 		try {
 			await options.onFinish?.(name, result);
 		} catch (error) {
@@ -162,6 +170,7 @@ export function createJobRunner(options: JobRunnerOptions): JobRunner {
 			);
 		}
 		const took = now().getTime() - startedAt.getTime();
+		if (job.quietWhenIdle && idle) return result;
 		if (result.status === 'succeeded') {
 			tagged.info(`成功 (${took} ms)${result.message ? `: ${result.message}` : ''}`);
 		} else {

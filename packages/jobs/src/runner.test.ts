@@ -170,6 +170,31 @@ describe('runNow', () => {
 	});
 });
 
+describe('quietWhenIdle', () => {
+	it('することがなかった回 (成功して文を返さない) は、記録しない', async () => {
+		const { runner, runs } = setup({ quietWhenIdle: true, run: () => Promise.resolve() });
+		expect(await runner.runNow('test-job')).toEqual({ status: 'succeeded', message: null });
+		expect(runs).toEqual([]);
+	});
+
+	it('文を返した回と、失敗した回は、ふだんどおり記録する', async () => {
+		const { runner, runs } = setup({
+			quietWhenIdle: true,
+			run: vi
+				.fn<JobDefinition['run']>()
+				.mockResolvedValueOnce('2 人に送りました')
+				.mockRejectedValueOnce(new Error('送れませんでした')),
+		});
+		await runner.runNow('test-job');
+		await runner.runNow('test-job');
+		expect(runs).toMatchObject([
+			{ job: 'test-job', status: 'succeeded', message: '2 人に送りました' },
+			{ job: 'test-job', status: 'failed', message: '送れませんでした' },
+		]);
+		expect(runs[0]?.finishedAt).not.toBeNull();
+	});
+});
+
 describe('onFinish', () => {
 	it('終わるたびに、タスクの名前と結果を渡す。失敗のときも渡す', async () => {
 		const seen: [string, string][] = [];

@@ -20,6 +20,7 @@ import {
 	createUserEventStore,
 	createClassChangeStore,
 	createCourseStore,
+	createDailyDigestStore,
 	createFeedTokenStore,
 	createHolidayStore,
 	createPersonalSlotStore,
@@ -37,6 +38,7 @@ import {
 	createJobRunner,
 	createImportHolidaysJob,
 	createRemindTimetableImportJob,
+	createSendDailyDigestJob,
 	createScrapePortalJob,
 	type JobDefinition,
 } from '@funmary/jobs';
@@ -73,7 +75,8 @@ import {
 import { OFFICIAL_CALENDAR_KEY } from '$lib/server/official-documents.ts';
 import { legacyAppPath } from '$lib/server/legacy-path.ts';
 import { findMigrationsFolder } from '$lib/server/migrations-path.ts';
-import { setServices } from '$lib/server/services.ts';
+import { getServices, setServices } from '$lib/server/services.ts';
+import { dailyDigestDeps } from '$lib/server/daily-digest.ts';
 import { parseThemePreference, THEME_COOKIE } from '$lib/theme.ts';
 
 /** Hono に渡すパス。これ自身か、この下のパスが対象になる */
@@ -256,6 +259,8 @@ export const init: ServerInit = () => {
 			}),
 		);
 	}
+	// 予定のまとめは、利用者の Discord 連携 (Bot が送る) を使う。送る処理の中で getServices を呼ぶ (services はこのあと入れる)
+	if (discordBot) jobs.push(createSendDailyDigestJob(dailyDigestDeps(getServices, discordBot)));
 	const runner = createJobRunner({
 		jobs,
 		store: jobRunStore,
@@ -323,6 +328,7 @@ export const init: ServerInit = () => {
 			},
 		},
 		courses: createCourseStore(database),
+		dailyDigest: createDailyDigestStore(database),
 		personalSlots: createPersonalSlotStore(database),
 		slotSubmissions: createSlotSubmissionStore(database),
 		userEvents: createUserEventStore(database),

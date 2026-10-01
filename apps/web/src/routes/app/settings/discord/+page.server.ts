@@ -1,6 +1,7 @@
 // 利用者の Discord 連携の設定 (設計書 14.9、#163)。連携する、解除する、認可コードを受け取って完成させる。
 import { fail, redirect, type Actions, type ServerLoad } from '@sveltejs/kit';
 import type { DiscordDestination } from '@funmary/db';
+import { parseDailyDigestForm } from '$lib/server/daily-digest-form.ts';
 import { completeDiscordLink, openLinkState, sealLinkState } from '$lib/server/discord-link.ts';
 import { getServices } from '$lib/server/services.ts';
 
@@ -9,7 +10,7 @@ const isDestination = (value: unknown): value is DiscordDestination =>
 
 export const load: ServerLoad = async ({ locals, url }) => {
 	if (!locals.user) redirect(303, '/login');
-	const { discord } = getServices();
+	const { discord, dailyDigest } = getServices();
 	const { link } = discord;
 
 	const code = url.searchParams.get('code');
@@ -38,6 +39,7 @@ export const load: ServerLoad = async ({ locals, url }) => {
 		configured: link.configured,
 		enabled: link.enabled(),
 		linked: current ? { destination: current.destination } : null,
+		digest: current ? dailyDigest.get(locals.user.id) : null,
 		callback,
 	};
 };
@@ -60,6 +62,17 @@ export const actions: Actions = {
 			startedAt: Date.now(),
 		});
 		redirect(303, link.oauth.authorizationUrl(sealed));
+	},
+	/** 予定のまとめ (#207) の設定を保存する */
+	digest: async ({ request, locals }) => {
+		if (!locals.user) redirect(303, '/login');
+		const { discord, dailyDigest } = getServices();
+		if (!discord.link.store.findByUser(locals.user.id))
+			return fail(400, { error: '連携していません。' });
+		const parsed = parseDailyDigestForm(await request.formData(), dailyDigest.get(locals.user.id));
+		if (!parsed.ok) return fail(400, { error: parsed.error });
+		dailyDigest.save(locals.user.id, parsed.settings, new Date());
+		return { message: '予定のまとめの設定を保存しました。' };
 	},
 	/** 連携を解除する。Discord に接続できなくても、必ず成功する (設計書 14.9) */
 	unlink: ({ locals }) => {
