@@ -1,9 +1,16 @@
 name: CI
 
+# PR では、必須の検査をすべて動かす。main への push では、リリースの前に要るものだけを動かす
+# (E2E は PR で通したものとする。Windows での単体テストは windows.yml で、main への push のときに別に動かす)。
+# 文書だけの変更では、main の CI を動かさない。CI が動かなければ Release と Deploy も走らず、本番を再起動しない
 on:
   pull_request:
   push:
     branches: [main]
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+      - '.github/ISSUE_TEMPLATE/**'
 
 permissions:
   contents: read
@@ -40,11 +47,22 @@ jobs:
 
   e2e:
     name: E2E テスト
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup
+      - name: Playwright の版
+        id: playwright
+        run: echo "version=$(pnpm --filter @funmary/web exec playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+      # キャッシュは main の実行 (browser-cache) だけが書き、PR は読むだけにする。PR の変更が、ほかの PR や main の実行に
+      # 渡るブラウザを差し替えられないようにするため。鍵に版を入れるので、Playwright を上げると取り直す
+      - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+      # キャッシュがあれば、ブラウザの取得は飛ばされ、OS の依存だけを入れる
       - run: pnpm --filter @funmary/web exec playwright install --with-deps chromium
       - run: pnpm test:e2e
       - if: failure()
@@ -54,14 +72,31 @@ jobs:
           path: apps/web/playwright-report/
           retention-days: 7
 
-  windows:
-    name: Windows での単体テスト
-    runs-on: windows-latest
-    timeout-minutes: 15
+  # E2E が使うブラウザのキャッシュを、main の実行で用意する。キャッシュがあれば (Playwright の版が同じなら) 何もしない
+  browser-cache:
+    name: ブラウザのキャッシュ
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup
-      - run: pnpm test
+      - name: Playwright の版
+        id: playwright
+        run: echo "version=$(pnpm --filter @funmary/web exec playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+      - id: cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+          lookup-only: true
+      - if: steps.cache.outputs.cache-hit != 'true'
+        run: pnpm --filter @funmary/web exec playwright install chromium
+      - if: steps.cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
 
   secrets:
     name: 秘密情報の混入検査

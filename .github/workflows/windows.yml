@@ -1,0 +1,30 @@
+name: Windows での単体テスト
+
+# 作者は Windows で開発するので、Windows 特有の不具合 (パスの区切りなど) がないかを確かめる。
+# PR の待ち時間を延ばさないよう、main への push のときだけ、CI とは別に動かす (Release はこの結果を待たない)。
+# 落ちたら、手元の Windows で pnpm test を動かして直す
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+      - '.github/ISSUE_TEMPLATE/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows:
+    name: Windows での単体テスト
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+      - run: pnpm test
