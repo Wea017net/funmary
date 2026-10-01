@@ -10,3 +10,11 @@ paths = ['''^\.agents/skills/''']
 description = "設定の検査のテストが使う、Discord の Bot のトークンの形をした架空の値"
 paths = ['''^apps/web/src/lib/server/config\.test\.ts$''']
 regexes = ['''MTIzNDU2Nzg5MDEyMzQ1Njc4\.Gabcde\.''']
+
+[[allowlists]]
+description = "GitHub App の秘密鍵 (PEM) を読む処理と、そのテストがその場で作る鍵。本物の鍵は含まない (Issue #235)"
+targetRules = ['private-key']
+paths = [
+  '''^apps/license-agreement/src/github\.ts$''',
+  '''^apps/license-agreement/src/github\.test\.ts$''',
+]

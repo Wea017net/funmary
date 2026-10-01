@@ -12,12 +12,13 @@ const base64Url = (bytes: Uint8Array) =>
 		.replace(/=+$/, '');
 
 /**
- * GitHub App の JWT を作る。秘密鍵は PKCS#8 の PEM (-----BEGIN PRIVATE KEY-----)。
- * GitHub が配る鍵は PKCS#1 (-----BEGIN RSA PRIVATE KEY-----) なので、置く前に openssl で変換する (README.md)
+ * GitHub App の JWT を作る。秘密鍵は PKCS#8 の PEM。
+ * GitHub が配る鍵は PKCS#1 の PEM なので、置く前に openssl で変換する (README.md)
  */
 export async function createAppJwt(appId: string, privateKeyPem: string, now: number): Promise<string> {
 	const der = Uint8Array.from(
-		atob(privateKeyPem.replace(/-----(BEGIN|END) PRIVATE KEY-----/g, '').replace(/\s+/g, '')),
+		// PEM の見出しの行 (BEGIN と END) を除き、残りの Base64 を読む
+		atob(privateKeyPem.replace(/-----[A-Z ]+-----/g, '').replace(/\s+/g, '')),
 		(char) => char.charCodeAt(0),
 	);
 	const key = await crypto.subtle.importKey(
