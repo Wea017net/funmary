@@ -52,6 +52,8 @@ export interface Config {
 	readonly proxy: { readonly addressHeader: string; readonly xffDepth: number } | undefined;
 	/** セルフホストの運営者の情報 (設計書、Issue #109)。フッターに出す。設定しなければ出さない */
 	readonly operator: { readonly name: string; readonly url: string } | undefined;
+	/** ロゴ、アイコン、OGP の画像を差し替えるディレクトリ (LICENSE-ASSETS)。設定しなければ同梱の画像を使う */
+	readonly brandDir: string | undefined;
 }
 
 export interface ConfigIssue {
@@ -250,6 +252,7 @@ function envSchema(mode: Mode) {
 		OPERATOR_URL: v.optional(
 			v.pipe(v.string(), v.url('https:// で始まる URL を書いてください'), v.startsWith('https://')),
 		),
+		BRAND_DIR: v.optional(v.string()),
 	});
 }
 
@@ -377,6 +380,7 @@ export function parseConfig(env: Readonly<Record<string, string | undefined>>): 
 				e.OPERATOR_NAME !== undefined && e.OPERATOR_URL !== undefined
 					? { name: e.OPERATOR_NAME, url: e.OPERATOR_URL }
 					: undefined,
+			brandDir: e.BRAND_DIR,
 		},
 	};
 }
