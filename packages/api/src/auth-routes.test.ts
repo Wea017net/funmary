@@ -195,9 +195,11 @@ describe('GET /auth/google/callback', () => {
 	});
 
 	it('書き換えられた Cookie は、受け付けない', async () => {
-		const sealed = sealFlow(flowNow(), KEY);
-		const tampered = sealed.slice(0, -2) + (sealed.endsWith('AA') ? 'BB' : 'AA');
-		const res = await callback(makeApi(), tampered);
+		// 文字列の末尾を書き換えると、Base64 の使われないビットだけが変わり、中身が同じままのことがある。
+		// 必ず中身が変わるよう、最後のバイトの 1 ビットを反転して符号化し直す
+		const bytes = Buffer.from(sealFlow(flowNow(), KEY), 'base64url');
+		bytes[bytes.length - 1] = (bytes.at(-1) ?? 0) ^ 1;
+		const res = await callback(makeApi(), bytes.toString('base64url'));
 		expect(res.headers.get('Location')).toBe('/login?error=flow-expired');
 	});
 

@@ -4,6 +4,16 @@ import { openFlow, sealFlow } from './flow-cookie.ts';
 import type { LoginFlow } from './service.ts';
 
 const KEY = randomBytes(32);
+
+/**
+ * 封の最後のバイトの 1 ビットを反転する。文字列の末尾を書き換えると、Base64 の使われないビットだけが変わり、
+ * 中身が同じままのことがあるので、バイトを書き換えてから符号化し直す
+ */
+function flipLastByte(sealed: string): string {
+	const bytes = Buffer.from(sealed, 'base64url');
+	bytes[bytes.length - 1] = (bytes.at(-1) ?? 0) ^ 1;
+	return bytes.toString('base64url');
+}
 const FLOW: LoginFlow = {
 	state: 's',
 	nonce: 'n',
@@ -30,9 +40,7 @@ describe('ログインの途中の値の暗号化', () => {
 	});
 
 	it('1 文字でも書き換えられていたら開けない', () => {
-		const sealed = sealFlow(FLOW, KEY);
-		const tampered = sealed.slice(0, -2) + (sealed.endsWith('AA') ? 'BB' : 'AA');
-		expect(openFlow(tampered, KEY)).toBeNull();
+		expect(openFlow(flipLastByte(sealFlow(FLOW, KEY)), KEY)).toBeNull();
 	});
 
 	it('壊れた文字列や空の文字列は、例外にせず開けないものとして扱う', () => {
