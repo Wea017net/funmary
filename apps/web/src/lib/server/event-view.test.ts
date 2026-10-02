@@ -25,9 +25,11 @@ describe('eventViewsByDate', () => {
 			'2026-10-05',
 			'2026-10-11',
 		);
-		expect(views.get('2026-10-05')?.map((view) => [view.title, view.time])).toEqual([
-			['終日の予定', '終日'],
-			['架空のサークル', '18:00-19:30'],
+		expect(
+			views.get('2026-10-05')?.map((view) => [view.title, view.time, view.startPeriod]),
+		).toEqual([
+			['終日の予定', '終日', null],
+			['架空のサークル', '18:00-19:30', null],
 		]);
 		expect(views.get('2026-10-06')?.map((view) => view.title)).toEqual(['別の日']);
 		expect(views.get('2026-10-07')).toBeUndefined();
@@ -56,7 +58,10 @@ describe('eventViewsByDate', () => {
 			'2026-10-19',
 		);
 		expect([...views.keys()]).toEqual(['2026-10-05', '2026-10-12', '2026-10-19']);
-		expect(views.get('2026-10-12')?.[0]?.time).toBe('2 限から 3 限');
+		expect(views.get('2026-10-12')?.[0]).toMatchObject({
+			time: '2 限から 3 限',
+			startPeriod: 2,
+		});
 	});
 });
 

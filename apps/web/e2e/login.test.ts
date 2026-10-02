@@ -1786,6 +1786,32 @@ test.describe('自分の予定', () => {
 		await expect(row).toContainText('終日');
 	});
 
+	test('時限で決めた予定が、週の時間割の時限行に出る', async ({ page }) => {
+		await login(page, `e2e-period-events-${Date.now()}@fun.ac.jp`);
+		const date = '2026-12-07';
+		await page.goto('/app/events');
+		await page.getByRole('link', { name: '予定を足す' }).click();
+		await page.getByLabel('予定の名前').fill('時限で決めた架空の予定');
+		await page.getByLabel('場所 (任意)').fill('架空の講堂');
+		await page.getByLabel('開始日').fill(date);
+		await page.getByRole('radio', { name: '時限で決める' }).check();
+		await page.getByLabel('始まりの時限').selectOption('5');
+		await page.getByLabel('終わりの時限').selectOption('5');
+		await page.getByRole('button', { name: '足す' }).click();
+		await expect(page.getByRole('status')).toHaveText('予定を足しました。');
+
+		await page.goto(`/app/week?date=${date}`);
+		const periodRow = page
+			.getByRole('row')
+			.filter({ has: page.getByRole('rowheader', { name: /^5 限/ }) });
+		const eventRow = page
+			.getByRole('row')
+			.filter({ has: page.getByRole('rowheader', { name: '予定' }) });
+		await expect(periodRow).toContainText('時限で決めた架空の予定');
+		await expect(periodRow).toContainText('5 限');
+		await expect(eventRow.getByText('時限で決めた架空の予定', { exact: true })).toHaveCount(0);
+	});
+
 	test('公開範囲を選べる。全体に公開した予定は、ほかの人が探して加えられ、限定公開は、リンクの値でだけ開ける', async ({
 		browser,
 		page,

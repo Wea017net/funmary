@@ -69,10 +69,17 @@ export const load: ServerLoad = ({ cookies, locals, url }) => {
 				period: number,
 				start: period?.start ?? null,
 				end: period?.end ?? null,
-				cells: days.map((day) => ({ date: day, lessons: cells.get(`${day}|${number}`) ?? [] })),
+				cells: days.map((day) => ({
+					date: day,
+					lessons: cells.get(`${day}|${number}`) ?? [],
+					events: (events.get(day) ?? []).filter((event) => event.startPeriod === number),
+				})),
 			};
 		}),
-		eventCells: days.map((day) => ({ date: day, events: events.get(day) ?? [] })),
+		eventCells: days.map((day) => ({
+			date: day,
+			events: (events.get(day) ?? []).filter((event) => event.startPeriod === null),
+		})),
 		hasLessons: lessons.length > 0,
 		usesEstimatedTerms: timetable.usesEstimatedTerms,
 	};
