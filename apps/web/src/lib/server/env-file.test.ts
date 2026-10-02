@@ -169,10 +169,15 @@ describe('setEnvValues', () => {
 		expect(result).toBe(['ORIGIN=new', 'HOST=127.0.0.1', ''].join('\n'));
 	});
 
-	it('行のない鍵は無視する (構成は変えない)', () => {
-		const text = 'ORIGIN=old\n';
-		const result = setEnvValues(text, new Map([['NOT_THERE', 'x']]));
-		expect(result).toBe(text);
+	it('行のない鍵は、黙って捨てずに末尾に足す (.env.example にまだない鍵を、手元から送るとき)', () => {
+		const added = ['', '# .env.example にない鍵 (手元の .env から足した)', 'NEW_KEY=x', ''];
+		expect(setEnvValues('ORIGIN=old\n', new Map([['NEW_KEY', 'x']]))).toBe(
+			['ORIGIN=old', ...added].join('\n'),
+		);
+		// 末尾に改行がないファイルでも、行をつなげずに足す
+		expect(setEnvValues('ORIGIN=old', new Map([['NEW_KEY', 'x']]))).toBe(
+			['ORIGIN=old', ...added].join('\n'),
+		);
 	});
 
 	it('Windows の改行 (CRLF) を保つ', () => {
