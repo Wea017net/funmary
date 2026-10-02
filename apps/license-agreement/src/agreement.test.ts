@@ -28,8 +28,8 @@ describe('コメントの文面', () => {
 
 describe('isRepositoryName', () => {
 	it('owner/repo の形だけを受け付ける', () => {
-		expect(isRepositoryName('oto-lab/funmary')).toBe(true);
-		expect(isRepositoryName('oto-lab/funmary/issues')).toBe(false);
+		expect(isRepositoryName('funmary-app/funmary')).toBe(true);
+		expect(isRepositoryName('funmary-app/funmary/issues')).toBe(false);
 		expect(isRepositoryName('../etc')).toBe(false);
 		expect(isRepositoryName('a b/c')).toBe(false);
 	});

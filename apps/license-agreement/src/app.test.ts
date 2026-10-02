@@ -68,7 +68,7 @@ async function sign(body: string): Promise<string> {
 function pullRequestEvent(overrides: { action?: string; association?: string; type?: string } = {}) {
 	return JSON.stringify({
 		action: overrides.action ?? 'opened',
-		repository: { full_name: 'oto-lab/funmary' },
+		repository: { full_name: 'funmary-app/funmary' },
 		pull_request: {
 			number: 7,
 			head: { sha: 'abc123' },
@@ -105,12 +105,12 @@ describe('Webhook', () => {
 		expect(comment?.args[2]).toContain(MARKER);
 		expect(comment?.args[3]).toEqual({ create: true });
 		expect(calls.find((call) => call.method === 'setStatus')?.args).toEqual([
-			'oto-lab/funmary',
+			'funmary-app/funmary',
 			'abc123',
 			{
 				state: 'pending',
 				description: 'PR の作者の、ライセンスへの同意を待っています',
-				targetUrl: `${ORIGIN}/agree?repo=oto-lab%2Ffunmary`,
+				targetUrl: `${ORIGIN}/agree?repo=funmary-app%2Ffunmary`,
 			},
 		]);
 	});
@@ -149,12 +149,12 @@ describe('同意のページ', () => {
 	it('リポジトリの指定が正しくなければ、400 を返す', async () => {
 		const { app } = setup();
 		expect((await app.request(`${ORIGIN}/agree?repo=../etc`)).status).toBe(400);
-		expect((await app.request(`${ORIGIN}/agree?repo=oto-lab/funmary`)).status).toBe(200);
+		expect((await app.request(`${ORIGIN}/agree?repo=funmary-app/funmary`)).status).toBe(200);
 	});
 
 	it('ログインでは、署名した state を付けて GitHub の認可の画面へ送り、戻ってきたら確認の画面を出す', async () => {
 		const { app } = setup();
-		const login = await app.request(`${ORIGIN}/login?repo=oto-lab/funmary`);
+		const login = await app.request(`${ORIGIN}/login?repo=funmary-app/funmary`);
 		expect(login.status).toBe(302);
 		const location = new URL(login.headers.get('Location') ?? '');
 		expect(location.origin + location.pathname).toBe('https://github.com/login/oauth/authorize');
@@ -173,7 +173,7 @@ describe('同意のページ', () => {
 		const { app, calls, records } = setup({ pulls: [{ number: 7, headSha: 'abc123' }] });
 		const token = await signToken(
 			'signing-key',
-			{ repo: 'oto-lab/funmary', userId: 42, login: 'student' },
+			{ repo: 'funmary-app/funmary', userId: 42, login: 'student' },
 			NOW + 600,
 		);
 		const form = () => {
@@ -205,7 +205,7 @@ describe('同意のページ', () => {
 			},
 		]);
 		expect(calls.find((call) => call.method === 'setStatus')?.args.slice(0, 2)).toEqual([
-			'oto-lab/funmary',
+			'funmary-app/funmary',
 			'abc123',
 		]);
 	});
