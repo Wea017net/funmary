@@ -1,0 +1,83 @@
+name: 消えたリリースの復元
+
+# 以前の Release が消した古いリリースを作り直す (Issue #222)。手で 1 回だけ動かす。
+# 1. これまでの Release の実行のログから各回のコミットを取り出し、タグが残っていないものにタグを付け直す
+# 2. 各コミットを、そのコミット自身の設定でビルドし直し、リリースノートと tar.gz を付けたリリースを作る
+#    (ノートと公開の処理は main のものを使う。前回のリリースは、タグから正しく見つかる)
+on:
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: 'true なら、タグもリリースも作らず、復元するものの一覧だけを出す'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+# Release と同時に動かさない (どちらもリリースを作る)
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    name: 復元するものを決め、タグを付け直す
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      actions: read
+    outputs:
+      plan: ${{ steps.plan.outputs.plan }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          install: false
+      - id: plan
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DRY_RUN: ${{ inputs.dry-run }}
+        run: node scripts/workflows/release/restore-releases.js
+
+  restore:
+    name: ${{ matrix.version }} を作り直す
+    needs: plan
+    if: inputs.dry-run == false && needs.plan.outputs.plan != '[]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    strategy:
+      # 古いコミットは、今の環境でビルドできないことがある。1 つ失敗しても、ほかは続ける
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        include: ${{ fromJSON(needs.plan.outputs.plan) }}
+    env:
+      HEAD_SHA: ${{ matrix.sha }}
+    steps:
+      # リリースにしたコミットを、履歴とタグごと取る (リリースノートで、前回のリリースのタグを探すため)
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ matrix.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      # ノートと公開の処理は、main のものを使う (前回のリリースを、作った日時ではなくタグから探す版)
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          path: .restore
+          sparse-checkout: scripts/workflows/release
+          persist-credentials: false
+      # Node.js と依存は、そのコミット自身の設定で入れる
+      - uses: ./.github/actions/setup
+      - run: pnpm build
+      - name: tar.gz を作り、GitHub Releases に置く
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: node .restore/scripts/workflows/release/publish-release.js
