@@ -1,9 +1,9 @@
 name: 消えたリリースの復元
 
 # 以前の Release が消した古いリリースを作り直す (Issue #222)。手で 1 回だけ動かす。
-# 1. これまでの Release の実行のログから各回のコミットを取り出し、タグが残っていないものにタグを付け直す
-# 2. 各コミットを、そのコミット自身の設定でビルドし直し、リリースノートと tar.gz を付けたリリースを作る
-#    (ノートと公開の処理は main のものを使う。前回のリリースは、タグから正しく見つかる)
+# 1. これまでの Release の実行のログから各回のコミットを取り出し、タグが残っていないものについて、
+#    リリースノート付きの項目を古い順に作る (タグは、ふだんの Release と同じく、リリースの API で作る)
+# 2. 各コミットを、そのコミット自身の設定でビルドし直し、tar.gz などを項目に置く
 on:
   workflow_dispatch:
     inputs:
@@ -22,7 +22,7 @@ concurrency:
 
 jobs:
   plan:
-    name: 復元するものを決め、タグを付け直す
+    name: 復元するものを決め、リリースの項目を作る
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -31,8 +31,10 @@ jobs:
     outputs:
       plan: ${{ steps.plan.outputs.plan }}
     steps:
+      # リリースノートで前回のリリースを探すので、履歴とタグをすべて取る
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          fetch-depth: 0
           persist-credentials: false
       - uses: ./.github/actions/setup
         with:
@@ -60,13 +62,11 @@ jobs:
     env:
       HEAD_SHA: ${{ matrix.sha }}
     steps:
-      # リリースにしたコミットを、履歴とタグごと取る (リリースノートで、前回のリリースのタグを探すため)
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ matrix.sha }}
-          fetch-depth: 0
           persist-credentials: false
-      # ノートと公開の処理は、main のものを使う (前回のリリースを、作った日時ではなくタグから探す版)
+      # ファイルを置く処理は、main のものを使う
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.event.repository.default_branch }}
@@ -76,8 +76,8 @@ jobs:
       # Node.js と依存は、そのコミット自身の設定で入れる
       - uses: ./.github/actions/setup
       - run: pnpm build
-      - name: tar.gz を作り、GitHub Releases に置く
+      - name: tar.gz を作り、作り直した項目に置く
         env:
           GH_TOKEN: ${{ github.token }}
           GITHUB_REPOSITORY: ${{ github.repository }}
-        run: node .restore/scripts/workflows/release/publish-release.js
+        run: node .restore/scripts/workflows/release/upload-restored-assets.js
