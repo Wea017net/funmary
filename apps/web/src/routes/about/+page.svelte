@@ -3,7 +3,10 @@
 	import SettingsBreadcrumb from '$lib/components/SettingsBreadcrumb.svelte';
 	import { REPOSITORY_URL } from '$lib/repository.ts';
 
-	let { data }: { data: { operator: { name: string; url: string } | null } } = $props();
+	let {
+		data,
+	}: { data: { operator: { name: string; url: string } | null; contactEmail: string | null } } =
+		$props();
 </script>
 
 <svelte:head>
@@ -44,6 +47,12 @@
 				<a href={data.operator.url} target="_blank" rel="noopener noreferrer">
 					運営: {data.operator.name}
 				</a>
+			</li>
+		{/if}
+		{#if data.contactEmail}
+			<li>
+				<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- メールの作成画面を開く -->
+				<a href="mailto:{data.contactEmail}">問い合わせ: {data.contactEmail}</a>
 			</li>
 		{/if}
 	</ul>

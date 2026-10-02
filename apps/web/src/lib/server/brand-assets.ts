@@ -7,6 +7,7 @@ import { join } from 'node:path';
 /** 返せる画像の名前と、その Content-Type。ここにない名前は返さない (BRAND_DIR のほかのファイルを読ませないため) */
 export const BRAND_FILES = {
 	'icon.svg': 'image/svg+xml',
+	'icon-dark.svg': 'image/svg+xml',
 	'icon-192.png': 'image/png',
 	'icon-512.png': 'image/png',
 	'icon-maskable-512.png': 'image/png',

@@ -4,6 +4,7 @@ import appleTouchIcon from '$lib/assets/brand/apple-touch-icon.png?inline';
 import icon192 from '$lib/assets/brand/icon-192.png?inline';
 import icon512 from '$lib/assets/brand/icon-512.png?inline';
 import iconMaskable512 from '$lib/assets/brand/icon-maskable-512.png?inline';
+import iconDarkSvg from '$lib/assets/brand/icon-dark.svg?inline';
 import iconSvg from '$lib/assets/brand/icon.svg?inline';
 import logoDark from '$lib/assets/brand/logo-dark.svg?inline';
 import logoLight from '$lib/assets/brand/logo-light.svg?inline';
@@ -14,6 +15,7 @@ import { getServices } from '$lib/server/services.ts';
 // 同梱の画像は、サーバーのコードに埋め込む (リリースの tar.gz の中の置き場所に依らず読めるように)
 const DEFAULTS: Record<BrandFile, Uint8Array<ArrayBuffer>> = {
 	'icon.svg': decodeDataUrl(iconSvg),
+	'icon-dark.svg': decodeDataUrl(iconDarkSvg),
 	'icon-192.png': decodeDataUrl(icon192),
 	'icon-512.png': decodeDataUrl(icon512),
 	'icon-maskable-512.png': decodeDataUrl(iconMaskable512),

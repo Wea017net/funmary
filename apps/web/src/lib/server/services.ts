@@ -91,6 +91,8 @@ export interface Services {
 	readonly operator: { readonly name: string; readonly url: string } | null;
 	/** ロゴ、アイコン、OGP の画像を差し替えるディレクトリ。設定されていなければ null */
 	readonly brandDir: string | null;
+	/** 問い合わせ先のメールアドレス。設定されていなければ null */
+	readonly contactEmail: string | null;
 	/** 管理者への知らせ。秘密の値を含めない */
 	readonly alertAdmin: (alert: {
 		severity: 'info' | 'warn' | 'error';

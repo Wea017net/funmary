@@ -91,6 +91,7 @@ sudo chmod 600 /etc/funmary/funmary.env
 | `PORTAL_USER_ID`、`PORTAL_PASSWORD`                                         | 2.4 の学生ポータルのアカウント                                                                                    |
 | `ADMIN_DISCORD_WEBHOOK_URL` か `DISCORD_BOT_TOKEN`/`DISCORD_GUILD_ID`       | 管理用の通知の送り先 (任意)                                                                                       |
 | `OPERATOR_NAME`、`OPERATOR_URL`                                             | 運営者としてフッターに出す名前と連絡先 (任意。両方書くか、両方空にする)                                           |
+| `CONTACT_EMAIL`                                                             | 問い合わせ先のメールアドレス。「このアプリについて」に出す (任意)                                                 |
 | `BRAND_DIR`                                                                 | ロゴ、アイコン、URL を共有したときの画像を差し替えるディレクトリ (必須。次の「ロゴとアイコンを差し替える」を参照) |
 | `ADDRESS_HEADER`、`XFF_DEPTH`                                               | nginx など、リバースプロキシ越しに利用者の IP アドレスを得る設定。この手順のとおりなら `X-Forwarded-For` と `1`   |
 
@@ -105,7 +106,7 @@ Funmary のロゴとアイコンは、コードのライセンスの対象外で
 
    | 名前                              | 大きさ           | 使うところ                                                                   |
    | --------------------------------- | ---------------- | ---------------------------------------------------------------------------- |
-   | `icon.svg`                        | 正方形           | ブラウザのタブ                                                               |
+   | `icon.svg`、`icon-dark.svg`       | 正方形           | ブラウザのタブ (端末の設定が明るいとき、暗いとき)                            |
    | `icon-192.png`、`icon-512.png`    | 192x192、512x512 | ホーム画面に追加したとき                                                     |
    | `icon-maskable-512.png`           | 512x512          | ホーム画面に追加したとき (端末が丸などに切り抜く。中身は中央の 80% に収める) |
    | `apple-touch-icon.png`            | 180x180          | iPhone のホーム画面                                                          |

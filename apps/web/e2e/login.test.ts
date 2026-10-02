@@ -63,6 +63,7 @@ test('ロゴとアイコンを /brand で配り、決まった名前のほかは
 	for (const [name, type] of [
 		['logo-light.svg', 'image/svg+xml'],
 		['icon.svg', 'image/svg+xml'],
+		['icon-dark.svg', 'image/svg+xml'],
 		['og-image.png', 'image/png'],
 	]) {
 		const response = await request.get(`/brand/${name}`);

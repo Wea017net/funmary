@@ -6,7 +6,14 @@
 		<meta name="color-scheme" content="light dark" />
 		<meta name="theme-color" content="#9d2126" />
 		<link rel="manifest" href="/manifest.webmanifest" />
+		<!-- タブのアイコンは、端末の設定がダークならダーク版にする。media に対応しないブラウザは、最初のものを使う -->
 		<link rel="icon" href="/brand/icon.svg" type="image/svg+xml" />
+		<link
+			rel="icon"
+			href="/brand/icon-dark.svg"
+			type="image/svg+xml"
+			media="(prefers-color-scheme: dark)"
+		/>
 		<link rel="apple-touch-icon" href="/brand/apple-touch-icon.png" />
 		%sveltekit.head%
 	</head>
