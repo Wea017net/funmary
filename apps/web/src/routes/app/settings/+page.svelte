@@ -118,6 +118,12 @@
 				description: 'Bot のチャンネルとロールを整え、ロールをユーザーに付ける',
 			},
 			{
+				href: resolve('/app/admin/support-invites'),
+				icon: IconDiscord,
+				title: 'サポートサーバーの招待',
+				description: 'Discord の招待リンクの発行、登録、公開と取り消し',
+			},
+			{
 				href: resolve('/app/admin/audit-log'),
 				icon: IconAuditLog,
 				title: '操作の記録',

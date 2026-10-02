@@ -4,13 +4,14 @@ import type { DiscordDestination } from '@funmary/db';
 import { parseDailyDigestForm } from '$lib/server/daily-digest-form.ts';
 import { completeDiscordLink, openLinkState, sealLinkState } from '$lib/server/discord-link.ts';
 import { getServices } from '$lib/server/services.ts';
+import { SUPPORT_INVITES_KEY, publicInvite, readInvites } from '$lib/server/support-invites.ts';
 
 const isDestination = (value: unknown): value is DiscordDestination =>
 	value === 'thread' || value === 'dm';
 
 export const load: ServerLoad = async ({ locals, url }) => {
 	if (!locals.user) redirect(303, '/login');
-	const { discord, dailyDigest } = getServices();
+	const { discord, dailyDigest, settings } = getServices();
 	const { link } = discord;
 
 	const code = url.searchParams.get('code');
@@ -41,6 +42,7 @@ export const load: ServerLoad = async ({ locals, url }) => {
 		linked: current ? { destination: current.destination } : null,
 		digest: current ? dailyDigest.get(locals.user.id) : null,
 		callback,
+		supportInvite: publicInvite(readInvites(settings.get(SUPPORT_INVITES_KEY)), new Date()),
 	};
 };
 

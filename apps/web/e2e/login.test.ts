@@ -592,6 +592,7 @@ test.describe('スマホの幅で、画面が横にはみ出さない', () => {
 			'/app/admin/timetable',
 			'/app/admin/invites',
 			'/app/admin/status',
+			'/app/admin/support-invites',
 			'/app/admin/discord',
 			'/app/admin/audit-log',
 			'/app/admin/slot-review',
@@ -1336,6 +1337,79 @@ test.describe('学年暦の管理', () => {
 		});
 		await page.getByRole('button', { name: '読み取る' }).click();
 		await expect(page.getByRole('alert')).toContainText('授業時間割の PDF として読めませんでした');
+	});
+});
+
+test.describe('サポートサーバーの招待', () => {
+	// 手元では DB が残るので、前の実行で入れた招待を消してから始める
+	test.beforeAll(() => {
+		seedSubjects((database) => {
+			database.sqlite.prepare("DELETE FROM settings WHERE key = 'support-invites'").run();
+		});
+	});
+
+	test.afterAll(() => {
+		seedSubjects((database) => {
+			database.sqlite.prepare("DELETE FROM settings WHERE key = 'support-invites'").run();
+		});
+	});
+
+	test('管理者が自分で作った招待を登録して公開すると、「このアプリについて」に出る。取り消すと消える', async ({
+		page,
+	}) => {
+		const email = 'e2e-admin@fun.ac.jp';
+		oidc.setIdentity({ sub: email, email, email_verified: true, hd: 'fun.ac.jp' });
+		await page.goto('/auth/google');
+		await page.goto('/app/settings');
+		await page.getByRole('link', { name: 'サポートサーバーの招待' }).click();
+		// E2E では Bot を設定していない
+		await expect(page.getByRole('region', { name: 'Bot で発行する' })).toContainText(
+			'DISCORD_BOT_TOKEN',
+		);
+
+		const register = page.getByRole('region', { name: '自分で作った招待を登録する' });
+		await register.getByLabel('招待の URL').fill('https://example.com/abc');
+		await register.getByRole('button', { name: '登録する' }).click();
+		await expect(page.getByRole('alert')).toContainText('Discord の招待の URL');
+
+		await register.getByLabel('招待の URL').fill('https://discord.gg/e2eSupport');
+		await register.getByLabel('メモ (任意)').fill('E2E');
+		await register.getByRole('button', { name: '登録する' }).click();
+		await expect(page.getByRole('status')).toContainText('招待を登録しました');
+		const item = page
+			.getByRole('region', { name: '使える招待' })
+			.getByRole('listitem')
+			.filter({ hasText: 'https://discord.gg/e2eSupport' });
+		await expect(item).toContainText('非公開');
+
+		// 非公開のうちは出ない
+		await page.goto('/about');
+		await expect(page.getByRole('link', { name: 'Discord のサポートサーバー' })).toHaveCount(0);
+
+		await page.goto('/app/admin/support-invites');
+		await item.getByRole('button', { name: '公開する' }).click();
+		await expect(page.getByRole('status')).toContainText('公開にしました');
+		await page.goto('/about');
+		const link = page.getByRole('link', { name: 'Discord のサポートサーバー' });
+		await expect(link).toHaveAttribute('href', 'https://discord.gg/e2eSupport');
+		await expect(link).toHaveAttribute('target', '_blank');
+
+		await page.goto('/app/admin/support-invites');
+		await item.getByRole('button', { name: '取り消す' }).click();
+		await expect(page.getByRole('status')).toContainText('招待を取り消しました');
+		await expect(
+			page.getByRole('region', { name: '使えなくなった招待' }).getByRole('listitem'),
+		).toContainText('取り消し済み');
+		await page.goto('/about');
+		await expect(page.getByRole('link', { name: 'Discord のサポートサーバー' })).toHaveCount(0);
+	});
+
+	test('管理者でなければ、見つからないことにする', async ({ page }) => {
+		const email = 'e2e-not-admin@fun.ac.jp';
+		oidc.setIdentity({ sub: email, email, email_verified: true, hd: 'fun.ac.jp' });
+		await page.goto('/auth/google');
+		const response = await page.goto('/app/admin/support-invites');
+		expect(response?.status()).toBe(404);
 	});
 });
 
