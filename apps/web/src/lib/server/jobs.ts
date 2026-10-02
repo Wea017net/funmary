@@ -4,6 +4,7 @@ import {
 	createAcademicCalendarStore,
 	createClassChangeStore,
 	createHolidayStore,
+	createNotificationStore,
 	createSettingsStore,
 	createSourceHealthStore,
 	createSubjectStore,
@@ -14,6 +15,8 @@ import {
 	createImportAcademicCalendarJob,
 	createImportHolidaysJob,
 	createImportSyllabusJob,
+	createNotifyClassChangesJob,
+	createPruneNotificationsJob,
 	createRemindTimetableImportJob,
 	createScrapePortalJob,
 	type JobDefinition,
@@ -37,6 +40,8 @@ export const JOB_LABELS: ReadonlyMap<string, string> = new Map([
 	['import-academic-calendar', '学年暦の取り込み'],
 	['remind-timetable-import', '時間割の PDF の取り込みの案内'],
 	['send-daily-digest', '予定のまとめの送信'],
+	['notify-class-changes', '休講などの通知欄への記録'],
+	['prune-notifications', '古い通知の削除'],
 ]);
 
 /**
@@ -109,6 +114,15 @@ export function createJobDefinitions({ config, database, alert }: JobFactoryDeps
 			health: createSourceHealthStore(database),
 			alert,
 		}),
+	);
+	// 履修している科目の休講などを、利用者の通知欄に入れる (設計書 14.1)
+	const notificationStore = createNotificationStore(database);
+	jobs.push(
+		createNotifyClassChangesJob({
+			candidates: (today) => notificationStore.classChangeCandidates(today),
+			insert: (entries, now) => notificationStore.insertMany(entries, now),
+		}),
+		createPruneNotificationsJob({ prune: (before) => notificationStore.pruneBefore(before) }),
 	);
 	const portal = config.portal;
 	const heartbeatUrl = config.heartbeatUrl;
