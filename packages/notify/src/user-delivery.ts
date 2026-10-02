@@ -35,8 +35,14 @@ export function isDiscordWebhookUrl(url: string): boolean {
 
 /** 画面に出す形。トークンの部分を伏せる */
 export function maskWebhookUrl(url: string): string {
-	const match = /^(https:\/\/[^/]+\/api\/webhooks\/\d+\/)/.exec(url);
-	return match ? `${match[1]}…` : '…';
+	const discord = /^(https:\/\/[^/]+\/api\/webhooks\/\d+\/)/.exec(url);
+	if (discord) return `${discord[1]}…`;
+	// 汎用の Webhook の URL は形がさまざまなので、オリジン (秘密ではない) だけを見せる
+	try {
+		return `${new URL(url).origin}/…`;
+	} catch {
+		return '…';
+	}
 }
 
 /** 休講は赤、補講は緑、教室変更は黄 (設計書 14.3)。ほかは灰色 */

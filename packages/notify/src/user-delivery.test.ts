@@ -33,6 +33,16 @@ describe('Webhook の URL', () => {
 		expect(maskWebhookUrl(URL_OK)).toBe('https://discord.com/api/webhooks/123456/…');
 		expect(maskWebhookUrl(URL_OK)).not.toContain('abc');
 	});
+
+	it('Discord の形でない URL は、オリジンだけ見せる (汎用の Webhook)', () => {
+		expect(maskWebhookUrl('https://example.com/webhooks/funmary?token=secret')).toBe(
+			'https://example.com/…',
+		);
+		expect(maskWebhookUrl('https://example.com/webhooks/funmary?token=secret')).not.toContain(
+			'secret',
+		);
+		expect(maskWebhookUrl('not a url')).toBe('…');
+	});
 });
 
 describe('埋め込み', () => {
