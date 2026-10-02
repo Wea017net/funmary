@@ -23,7 +23,7 @@
 		period: number;
 		start: string | null;
 		end: string | null;
-		cells: { date: string; lessons: LessonView[] }[];
+		cells: { date: string; lessons: LessonView[]; events: EventView[] }[];
 	}
 
 	let {
@@ -106,6 +106,21 @@
 		new Set(data.days.filter((day) => isDayOff(day.note)).map((day) => day.date)),
 	);
 </script>
+
+{#snippet eventCard(event: EventView)}
+	<div class="event">
+		{#if event.added}
+			<a href={resolve('/app/events/shared/[ref]', { ref: String(event.eventId) })}>{event.title}</a
+			>
+		{:else}
+			<a href={resolve('/app/events/[id]', { id: String(event.eventId) })}>{event.title}</a>
+		{/if}
+		<span class="time"
+			>{event.time}{event.continued ? ' (続き)' : ''}{event.added ? ' (加えた予定)' : ''}</span
+		>
+		{#if event.location}<span class="room">{event.location}</span>{/if}
+	</div>
+{/snippet}
 
 <svelte:head>
 	<title>週の時間割 - Funmary</title>
@@ -201,23 +216,7 @@
 						{#each data.eventCells as cell (cell.date)}
 							<td class={{ today: cell.date === data.today, off: offDates.has(cell.date) }}>
 								{#each cell.events as event (event.key)}
-									<div class="event">
-										{#if event.added}
-											<a href={resolve('/app/events/shared/[ref]', { ref: String(event.eventId) })}
-												>{event.title}</a
-											>
-										{:else}
-											<a href={resolve('/app/events/[id]', { id: String(event.eventId) })}
-												>{event.title}</a
-											>
-										{/if}
-										<span class="time"
-											>{event.time}{event.continued ? ' (続き)' : ''}{event.added
-												? ' (加えた予定)'
-												: ''}</span
-										>
-										{#if event.location}<span class="room">{event.location}</span>{/if}
-									</div>
+									{@render eventCard(event)}
 								{/each}
 							</td>
 						{/each}
@@ -235,6 +234,9 @@
 						</th>
 						{#each row.cells as cell (cell.date)}
 							<td class={{ today: cell.date === data.today, off: offDates.has(cell.date) }}>
+								{#each cell.events as event (event.key)}
+									{@render eventCard(event)}
+								{/each}
 								{#each cell.lessons as lesson (lesson.key)}
 									<div class={['lesson', { cancelled: lesson.status === 'cancelled' }]}>
 										<a href={resolve('/app/subjects/[year]/[code]', lesson.subjectPath)}
@@ -460,6 +462,9 @@
 		font-weight: normal;
 	}
 	.event + .event {
+		margin-top: 0.5rem;
+	}
+	.event + .lesson {
 		margin-top: 0.5rem;
 	}
 	.event a {

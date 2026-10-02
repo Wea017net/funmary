@@ -11,6 +11,8 @@ export interface EventView {
 	readonly location: string | null;
 	/** 例: "終日"、"18:00-19:30"、"2 限から 3 限" */
 	readonly time: string;
+	/** 時限で決めた予定の、始まりの時限。終日や時刻で決めた予定なら null */
+	readonly startPeriod: number | null;
 	/** 数日にわたる予定の、2 日目以降 */
 	readonly continued: boolean;
 	/** ほかの人の予定を、自分の時間割に加えたもの (直せない) */
@@ -41,6 +43,7 @@ export function eventViewsByDate(
 					title: occurrence.title,
 					location: occurrence.location,
 					time: formatOccurrenceTime(occurrence),
+					startPeriod: occurrence.periods?.from ?? null,
 					continued: date > occurrence.startDate,
 					added: addedIds.has(occurrence.eventId),
 				},
