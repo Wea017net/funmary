@@ -140,6 +140,7 @@ export {
 	type NewWebhook,
 	type StoredWebhook,
 	type WebhookChanges,
+	type WebhookKind,
 } from './channel-store.ts';
 export {
 	createDeliveryStore,

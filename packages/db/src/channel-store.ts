@@ -1,6 +1,7 @@
-// 利用者が登録した通知の送り先 (チャネル、設計書 14.3)。Webhook の URL は暗号化して保存し、読み出すときだけ復号する。
-// Discord 連携 (Bot が送る) の送り先は、連携のたびに利用者へ作って、解除したら消す (discordLink)
-import { and, count, eq, notInArray } from 'drizzle-orm';
+// 利用者が登録した通知の送り先 (チャネル、設計書 14.3、14.3.1)。Webhook の URL (と、汎用の Webhook の署名の鍵) は
+// 暗号化して保存し、読み出すときだけ復号する。Discord 連携 (Bot が送る) の送り先は、連携のたびに利用者へ作って、
+// 解除したら消す (discordLink)
+import { and, count, eq, inArray, notInArray } from 'drizzle-orm';
 import type { Database } from './database.ts';
 import type { NotificationKind } from './notification-store.ts';
 import { channels, deliveries, discordLinks } from './schema.ts';
@@ -16,11 +17,18 @@ export const DEFAULT_CHANNEL_KINDS: readonly NotificationKind[] = [
 
 export type ChannelStatus = 'active' | 'disabled';
 
+/** discord は Discord の Webhook、generic は利用者が自分で用意した Webhook (設計書 14.3.1) */
+export type WebhookKind = 'discord' | 'generic';
+const WEBHOOK_KINDS: readonly WebhookKind[] = ['discord', 'generic'];
+
 export interface StoredWebhook {
 	readonly id: number;
 	readonly userId: string;
+	readonly kind: WebhookKind;
 	/** 暗号化を解いた URL。画面には伏せて出す */
 	readonly url: string;
+	/** generic だけ持つ、Standard Webhooks の署名の鍵。discord なら null */
+	readonly signingKey: string | null;
 	readonly label: string | null;
 	/** null なら既定の種類 (DEFAULT_CHANNEL_KINDS) */
 	readonly notificationKinds: readonly NotificationKind[] | null;
@@ -30,7 +38,10 @@ export interface StoredWebhook {
 }
 
 export interface NewWebhook {
+	readonly kind: WebhookKind;
 	readonly url: string;
+	/** generic のときに渡す、最初の署名の鍵。discord なら省く */
+	readonly signingKey?: string;
 	readonly label: string | null;
 	readonly notificationKinds: readonly NotificationKind[] | null;
 }
@@ -40,6 +51,8 @@ export interface WebhookChanges {
 	readonly notificationKinds?: readonly NotificationKind[] | null;
 	/** true なら有効に戻し、止めた理由を消す。false なら止める */
 	readonly enabled?: boolean;
+	/** generic の署名の鍵を差し替える (再発行) */
+	readonly signingKey?: string;
 }
 
 export interface DiscordLinkChannel {
@@ -49,10 +62,10 @@ export interface DiscordLinkChannel {
 
 export interface ChannelStore {
 	addWebhook(userId: string, input: NewWebhook, now: Date): StoredWebhook;
-	/** 古い順 */
+	/** discord と generic を合わせて、古い順 */
 	listWebhooks(userId: string): StoredWebhook[];
 	findWebhook(userId: string, id: number): StoredWebhook | null;
-	/** 止められたものを含めた、登録済みの数 */
+	/** 止められたものを含めた、discord と generic を合わせた登録済みの数 (設計書 14.3.1) */
 	countWebhooks(userId: string): number;
 	/** その人の Webhook なら更新して返す。ほかの人のものや、無いものは null */
 	updateWebhook(userId: string, id: number, changes: WebhookChanges): StoredWebhook | null;
@@ -68,36 +81,55 @@ export interface ChannelStore {
 }
 
 type Row = typeof channels.$inferSelect;
+interface WebhookConfig {
+	readonly url: string;
+	readonly signingKey?: string | null;
+}
 
 export function createChannelStore(database: Database, secretBox: SecretBox): ChannelStore {
 	const { db, sqlite } = database;
 
-	const toWebhook = (row: Row): StoredWebhook => ({
-		id: row.id,
-		userId: row.userId,
-		url: (JSON.parse(secretBox.decrypt(row.configEncrypted)) as { url: string }).url,
-		label: row.label,
-		notificationKinds: row.notificationKinds as NotificationKind[] | null,
-		status: row.status,
-		disabledReason: row.disabledReason,
-		createdAt: row.createdAt,
-	});
+	const decodeConfig = (row: Row): WebhookConfig =>
+		JSON.parse(secretBox.decrypt(row.configEncrypted)) as WebhookConfig;
+
+	const toWebhook = (row: Row): StoredWebhook => {
+		const config = decodeConfig(row);
+		return {
+			id: row.id,
+			userId: row.userId,
+			kind: row.kind as WebhookKind,
+			url: config.url,
+			signingKey: config.signingKey ?? null,
+			label: row.label,
+			notificationKinds: row.notificationKinds as NotificationKind[] | null,
+			status: row.status,
+			disabledReason: row.disabledReason,
+			createdAt: row.createdAt,
+		};
+	};
 
 	const find = (userId: string, id: number) =>
 		db
 			.select()
 			.from(channels)
-			.where(and(eq(channels.id, id), eq(channels.userId, userId), eq(channels.kind, 'discord')))
+			.where(
+				and(
+					eq(channels.id, id),
+					eq(channels.userId, userId),
+					inArray(channels.kind, WEBHOOK_KINDS),
+				),
+			)
 			.get();
 
 	return {
 		addWebhook(userId, input, now) {
+			const config: WebhookConfig = { url: input.url, signingKey: input.signingKey ?? null };
 			const row = db
 				.insert(channels)
 				.values({
 					userId,
-					kind: 'discord',
-					configEncrypted: secretBox.encrypt(JSON.stringify({ url: input.url })),
+					kind: input.kind,
+					configEncrypted: secretBox.encrypt(JSON.stringify(config)),
 					label: input.label,
 					notificationKinds: input.notificationKinds ? [...input.notificationKinds] : null,
 					createdAt: now,
@@ -110,7 +142,7 @@ export function createChannelStore(database: Database, secretBox: SecretBox): Ch
 			return db
 				.select()
 				.from(channels)
-				.where(and(eq(channels.userId, userId), eq(channels.kind, 'discord')))
+				.where(and(eq(channels.userId, userId), inArray(channels.kind, WEBHOOK_KINDS)))
 				.orderBy(channels.id)
 				.all()
 				.map(toWebhook);
@@ -124,12 +156,13 @@ export function createChannelStore(database: Database, secretBox: SecretBox): Ch
 				db
 					.select({ count: count() })
 					.from(channels)
-					.where(and(eq(channels.userId, userId), eq(channels.kind, 'discord')))
+					.where(and(eq(channels.userId, userId), inArray(channels.kind, WEBHOOK_KINDS)))
 					.get()?.count ?? 0
 			);
 		},
 		updateWebhook(userId, id, changes) {
-			if (!find(userId, id)) return null;
+			const current = find(userId, id);
+			if (!current) return null;
 			const set: Partial<typeof channels.$inferInsert> = {};
 			if (changes.label !== undefined) set.label = changes.label;
 			if (changes.notificationKinds !== undefined) {
@@ -140,6 +173,12 @@ export function createChannelStore(database: Database, secretBox: SecretBox): Ch
 				set.disabledReason = null;
 			} else if (changes.enabled === false) {
 				set.status = 'disabled';
+			}
+			if (changes.signingKey !== undefined) {
+				const config = decodeConfig(current);
+				set.configEncrypted = secretBox.encrypt(
+					JSON.stringify({ url: config.url, signingKey: changes.signingKey }),
+				);
 			}
 			if (Object.keys(set).length > 0) {
 				db.update(channels).set(set).where(eq(channels.id, id)).run();

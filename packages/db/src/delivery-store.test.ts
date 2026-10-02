@@ -79,7 +79,7 @@ describe('Webhook のチャネル', () => {
 		const b = newUser('b');
 		const channel = channels.addWebhook(
 			a,
-			{ url: URL_A, label: '自分のサーバー', notificationKinds: ['cancellation'] },
+			{ kind: 'discord', url: URL_A, label: '自分のサーバー', notificationKinds: ['cancellation'] },
 			at('2026-10-01T00:00:00Z'),
 		);
 		expect(channel.url).toBe(URL_A);
@@ -98,7 +98,7 @@ describe('Webhook のチャネル', () => {
 		const a = newUser('a');
 		const { id } = channels.addWebhook(
 			a,
-			{ url: URL_A, label: null, notificationKinds: ['cancellation'] },
+			{ kind: 'discord', url: URL_A, label: null, notificationKinds: ['cancellation'] },
 			at('2026-10-01T00:00:00Z'),
 		);
 		channels.disable(id, 'Webhook が削除されました');
@@ -124,12 +124,70 @@ describe('Webhook のチャネル', () => {
 		const a = newUser('a');
 		const { id } = channels.addWebhook(
 			a,
-			{ url: URL_A, label: null, notificationKinds: null },
+			{ kind: 'discord', url: URL_A, label: null, notificationKinds: null },
 			at('2026-10-01T00:00:00Z'),
 		);
 		expect(channels.removeWebhook(newUser('b'), id)).toBe(false);
 		expect(channels.removeWebhook(a, id)).toBe(true);
 		expect(channels.countWebhooks(a)).toBe(0);
+	});
+
+	it('汎用の Webhook は、署名の鍵も暗号化して保存する。discord と合わせて数え、一覧に並ぶ', () => {
+		const a = newUser('a');
+		channels.addWebhook(
+			a,
+			{ kind: 'discord', url: URL_A, label: null, notificationKinds: null },
+			at('2026-10-01T00:00:00Z'),
+		);
+		const generic = channels.addWebhook(
+			a,
+			{
+				kind: 'generic',
+				url: 'https://example.com/hook',
+				signingKey: 'whsec_abc',
+				label: '自作のスクリプト',
+				notificationKinds: null,
+			},
+			at('2026-10-01T00:00:01Z'),
+		);
+		expect(generic).toMatchObject({
+			kind: 'generic',
+			url: 'https://example.com/hook',
+			signingKey: 'whsec_abc',
+		});
+		const raw = database.sqlite
+			.prepare('SELECT config_encrypted FROM channels WHERE id = ?')
+			.get(generic.id) as { config_encrypted: string };
+		expect(raw.config_encrypted).not.toContain('whsec_abc');
+		expect(channels.countWebhooks(a)).toBe(2);
+		expect(channels.listWebhooks(a).map((w) => w.kind)).toEqual(['discord', 'generic']);
+	});
+
+	it('discord の Webhook は、署名の鍵を持たない', () => {
+		const a = newUser('a');
+		const discord = channels.addWebhook(
+			a,
+			{ kind: 'discord', url: URL_A, label: null, notificationKinds: null },
+			at('2026-10-01T00:00:00Z'),
+		);
+		expect(discord.signingKey).toBeNull();
+	});
+
+	it('署名の鍵を再発行できる。URL は変わらない', () => {
+		const a = newUser('a');
+		const { id } = channels.addWebhook(
+			a,
+			{
+				kind: 'generic',
+				url: 'https://example.com/hook',
+				signingKey: 'whsec_old',
+				label: null,
+				notificationKinds: null,
+			},
+			at('2026-10-01T00:00:00Z'),
+		);
+		const updated = channels.updateWebhook(a, id, { signingKey: 'whsec_new' });
+		expect(updated).toMatchObject({ url: 'https://example.com/hook', signingKey: 'whsec_new' });
 	});
 });
 
@@ -209,12 +267,17 @@ describe('送信待ち', () => {
 		const a = newUser('a');
 		channels.addWebhook(
 			a,
-			{ url: URL_A, label: null, notificationKinds: ['cancellation'] },
+			{ kind: 'discord', url: URL_A, label: null, notificationKinds: ['cancellation'] },
 			at('2026-09-30T00:00:00Z'),
 		);
 		const off = channels.addWebhook(
 			a,
-			{ url: 'https://discord.com/api/webhooks/456/zzz', label: null, notificationKinds: null },
+			{
+				kind: 'discord',
+				url: 'https://discord.com/api/webhooks/456/zzz',
+				label: null,
+				notificationKinds: null,
+			},
 			at('2026-09-30T00:00:00Z'),
 		);
 		channels.updateWebhook(a, off.id, { enabled: false });
@@ -236,7 +299,7 @@ describe('送信待ち', () => {
 		const a = newUser('a');
 		channels.addWebhook(
 			a,
-			{ url: URL_A, label: null, notificationKinds: null },
+			{ kind: 'discord', url: URL_A, label: null, notificationKinds: null },
 			at('2026-09-30T00:00:00Z'),
 		);
 		notify(a, 'k1');
@@ -249,7 +312,7 @@ describe('送信待ち', () => {
 		notify(a, 'old');
 		channels.addWebhook(
 			a,
-			{ url: URL_A, label: null, notificationKinds: null },
+			{ kind: 'discord', url: URL_A, label: null, notificationKinds: null },
 			at('2026-10-01T00:30:00Z'),
 		);
 		expect(deliveries.enqueueMissing(at('2026-10-01T01:00:00Z'))).toBe(0);
@@ -259,7 +322,7 @@ describe('送信待ち', () => {
 		const a = newUser('a');
 		channels.addWebhook(
 			a,
-			{ url: URL_A, label: null, notificationKinds: null },
+			{ kind: 'discord', url: URL_A, label: null, notificationKinds: null },
 			at('2026-09-01T00:00:00Z'),
 		);
 		notify(a, 'old');
@@ -282,7 +345,7 @@ describe('送信待ち', () => {
 		const a = newUser('a');
 		channels.addWebhook(
 			a,
-			{ url: URL_A, label: null, notificationKinds: null },
+			{ kind: 'discord', url: URL_A, label: null, notificationKinds: null },
 			at('2026-09-30T00:00:00Z'),
 		);
 		notify(a, 'k1');
@@ -308,7 +371,7 @@ describe('送信待ち', () => {
 		const a = newUser('a');
 		const channel = channels.addWebhook(
 			a,
-			{ url: URL_A, label: null, notificationKinds: null },
+			{ kind: 'discord', url: URL_A, label: null, notificationKinds: null },
 			at('2026-09-30T00:00:00Z'),
 		);
 		notify(a, 'k1');
@@ -330,7 +393,7 @@ describe('送信待ち', () => {
 		const a = newUser('a');
 		const channel = channels.addWebhook(
 			a,
-			{ url: URL_A, label: null, notificationKinds: null },
+			{ kind: 'discord', url: URL_A, label: null, notificationKinds: null },
 			at('2026-09-30T00:00:00Z'),
 		);
 		for (const key of ['k1', 'k2', 'k3']) notify(a, key);
