@@ -67,6 +67,8 @@ function fakeBot(overrides: Partial<DiscordBot> = {}): DiscordBot {
 		addThreadMember: () => Promise.resolve(),
 		archiveThread: () => Promise.resolve(),
 		addGuildMember: () => Promise.resolve(),
+		createInvite: () => Promise.resolve({ code: 'abc', expiresAt: null }),
+		deleteInvite: () => Promise.resolve(),
 		...overrides,
 	};
 }

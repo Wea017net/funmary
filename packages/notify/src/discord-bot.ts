@@ -72,6 +72,16 @@ export interface DiscordBot {
 	archiveThread(threadId: string): Promise<void>;
 	/** OAuth のアクセストークンを使って、利用者をギルドに参加させる。既に参加済みなら何もしない */
 	addGuildMember(userId: string, accessToken: string): Promise<void>;
+	/**
+	 * チャンネルへの招待を発行する。maxAgeSeconds が 0 なら無期限、maxUses が 0 なら回数の制限なし。
+	 * roleIds のロールは、招待を受けて参加した人に Discord が付ける (Bot に「ロールの管理」が要り、Bot より上のロールは付けられない)
+	 */
+	createInvite(
+		channelId: string,
+		options: { maxAgeSeconds: number; maxUses: number; roleIds: readonly string[] },
+	): Promise<{ code: string; expiresAt: Date | null }>;
+	/** 招待を消す。もう無ければ何もしない */
+	deleteInvite(code: string): Promise<void>;
 }
 
 export interface DiscordBotOptions {
@@ -200,6 +210,28 @@ export function createDiscordBot(options: DiscordBotOptions): DiscordBot {
 			guarded(async () => {
 				await api.guilds.addMember(guildId, userId, { access_token: accessToken });
 			}),
+		createInvite: (channelId, { maxAgeSeconds, maxUses, roleIds }) =>
+			guarded(async () => {
+				const invite = await api.channels.createInvite(channelId, {
+					max_age: maxAgeSeconds,
+					max_uses: maxUses,
+					// 同じ設定の招待があっても、使い回さずに新しく作る (取り消しを別々にできるように)
+					unique: true,
+					...(roleIds.length > 0 ? { role_ids: [...roleIds] } : {}),
+				});
+				return {
+					code: invite.code,
+					expiresAt: invite.expires_at ? new Date(invite.expires_at) : null,
+				};
+			}),
+		async deleteInvite(code) {
+			try {
+				await guarded(() => api.invites.delete(code));
+			} catch (error) {
+				if (error instanceof DiscordApiError && error.status === 404) return;
+				throw error;
+			}
+		},
 	};
 }
 

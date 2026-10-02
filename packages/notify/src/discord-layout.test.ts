@@ -46,6 +46,8 @@ function fakeBot(initial: { channels?: DiscordChannel[]; roles?: DiscordRole[] }
 		addThreadMember: () => Promise.resolve(),
 		archiveThread: () => Promise.resolve(),
 		addGuildMember: () => Promise.resolve(),
+		createInvite: () => Promise.resolve({ code: 'abc', expiresAt: null }),
+		deleteInvite: () => Promise.resolve(),
 	};
 	return { bot, created };
 }
