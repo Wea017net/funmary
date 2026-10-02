@@ -42,6 +42,11 @@ export interface WebhookChanges {
 	readonly enabled?: boolean;
 }
 
+export interface DiscordLinkChannel {
+	/** null なら既定の種類 (DEFAULT_CHANNEL_KINDS) */
+	readonly notificationKinds: readonly NotificationKind[] | null;
+}
+
 export interface ChannelStore {
 	addWebhook(userId: string, input: NewWebhook, now: Date): StoredWebhook;
 	/** 古い順 */
@@ -56,6 +61,10 @@ export interface ChannelStore {
 	disable(channelId: number, reason: string): void;
 	/** 連携した人には Discord 連携の送り先を作り、連携を解除した人の分は消す */
 	syncLinkChannels(now: Date): void;
+	/** 利用者の Discord 連携の送り先 (設計書 14.9、#163)。連携していなければ null */
+	discordLinkChannel(userId: string): DiscordLinkChannel | null;
+	/** 届ける通知の種類を変える。連携していなければ false */
+	updateDiscordLinkKinds(userId: string, kinds: readonly NotificationKind[] | null): boolean;
 }
 
 type Row = typeof channels.$inferSelect;
@@ -193,6 +202,22 @@ export function createChannelStore(database: Database, secretBox: SecretBox): Ch
 					)
 					.run();
 			})();
+		},
+		discordLinkChannel(userId) {
+			const row = db
+				.select({ notificationKinds: channels.notificationKinds })
+				.from(channels)
+				.where(and(eq(channels.userId, userId), eq(channels.kind, 'discordLink')))
+				.get();
+			return row ? { notificationKinds: row.notificationKinds as NotificationKind[] | null } : null;
+		},
+		updateDiscordLinkKinds(userId, kinds) {
+			const changes = db
+				.update(channels)
+				.set({ notificationKinds: kinds ? [...kinds] : null })
+				.where(and(eq(channels.userId, userId), eq(channels.kind, 'discordLink')))
+				.run().changes;
+			return changes > 0;
 		},
 	};
 }
