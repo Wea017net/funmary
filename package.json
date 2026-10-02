@@ -24,7 +24,7 @@
 		"lint": "eslint .",
 		"format": "prettier --write .",
 		"format:check": "prettier --check .",
-		"typecheck": "tsc --noEmit && pnpm --filter @funmary/web check && pnpm --filter @funmary/license-agreement typecheck",
+		"typecheck": "tsc --noEmit && pnpm --filter @funmary/web check",
 		"typecheck:ts6": "tsc6 --noEmit",
 		"test": "vitest run",
 		"test:watch": "vitest",

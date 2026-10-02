@@ -11,6 +11,3 @@ LICENSE-*
 **/playwright-report/
 **/test-results/
 **/fixtures/
-# wrangler types が作る型と、wrangler dev が手元に作る状態
-**/worker-configuration.d.ts
-**/.wrangler/

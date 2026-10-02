@@ -15,15 +15,6 @@ export default defineConfig({
 				},
 			},
 			{
-				// 外部の人の PR で、ライセンスへの同意を求める Worker (Issue #235)。判断と署名を Node.js で試す (Web Crypto は Node.js にもある)
-				test: {
-					name: 'license-agreement',
-					root: 'apps/license-agreement',
-					include: ['src/**/*.test.ts'],
-					environment: 'node',
-				},
-			},
-			{
 				// SvelteKit の Vite プラグインは作業ディレクトリを基準にするので、ここでは読み込まない。
 				// .svelte のコンポーネントを試すときは @sveltejs/vite-plugin-svelte を足す
 				resolve: {
