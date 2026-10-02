@@ -17,7 +17,14 @@ import {
 	SECRET_NAMES,
 	setEnvValues,
 } from '../apps/web/src/lib/server/env-file.ts';
-import { loadSshConfig, restartFunmary, runSsh, shellQuote as quote } from './vps-ssh.js';
+import {
+	loadSshConfig,
+	parseWriteResult,
+	reportRestart,
+	runSsh,
+	shellQuote as quote,
+	writeFileCommand,
+} from './vps-ssh.js';
 
 const { ssh: sshConfig, remoteEnvFile: remoteFile } = loadSshConfig();
 const { host } = sshConfig;
@@ -92,31 +99,44 @@ if (overrides.size === 0 && structured.text === remoteText) {
 
 const finalText = setEnvValues(structured.text, overrides);
 
-const backupPath = `${remoteFile}.bak.${new Date().toISOString().replaceAll(/[:.]/g, '-')}`;
-console.log(`\n${host} の ${remoteFile} を ${backupPath} に控えてから書き換えます…`);
-// 控えと書き換えを 1 回の接続で行う。既存のファイルに上書きするので、所有者と権限 (root:funmary、640) は変わらない
-runSsh(
-	sshConfig,
-	[
-		`sudo cp -p ${quote(remoteFile)} ${quote(backupPath)} && sudo tee ${quote(remoteFile)} > /dev/null`,
-	],
-	{ input: finalText },
-);
-
-console.log(
-	`書き換えました。上書きした鍵: ${overrides.size > 0 ? [...overrides.keys()].join(', ') : 'なし'}`,
-);
 // 値を変えたときだけ、再起動するか聞く (並びを揃えただけなら、動きは変わらない)。
-// 利用者の少ない時間に後で再起動したいこともあるので、聞かずには再起動しない
+// 利用者の少ない時間に後で再起動したいこともあるので、聞かずには再起動しない。
+// 書き換えと同じ接続で再起動できるよう、書き換える前に聞く (パスフレーズを聞かれる回数を減らすため)
+let restart = false;
 if (overrides.size > 0) {
 	const rl = createInterface({ input: process.stdin, output: process.stdout });
 	const answer = await rl.question(
-		'\n変えた値を反映するため、いま Funmary を再起動しますか? (y/N): ',
+		'\n書き換えたあと、変えた値を反映するため、Funmary を再起動しますか? (y/N): ',
 	);
 	rl.close();
-	if (/^y(es)?$/i.test(answer.trim())) {
-		if (!restartFunmary(sshConfig)) process.exitCode = 1;
-	} else {
-		console.log('本番に反映するには、あとで再起動してください: sudo systemctl restart funmary');
-	}
+	restart = /^y(es)?$/i.test(answer.trim());
+}
+
+const backupPath = `${remoteFile}.bak.${new Date().toISOString().replaceAll(/[:.]/g, '-')}`;
+console.log(
+	`\n${host} の ${remoteFile} を ${backupPath} に控えてから書き換えます${restart ? '。そのあと Funmary を再起動します' : ''}…`,
+);
+let output;
+try {
+	output = runSsh(sshConfig, [
+		writeFileCommand({ file: remoteFile, backup: backupPath, content: finalText, restart }),
+	]);
+} catch (error) {
+	// 再起動のあとに動いていなければ、is-active が 0 以外で終わる。書き換えが済んだかは、出力から読む
+	output = error instanceof Error && 'stdout' in error ? String(error.stdout) : '';
+}
+const result = parseWriteResult(output);
+if (!result.written) {
+	console.error(
+		`${remoteFile} を書き換えられませんでした。控えは ${backupPath} にあるか、まだ作られていません。`,
+	);
+	process.exit(1);
+}
+console.log(
+	`書き換えました。上書きした鍵: ${overrides.size > 0 ? [...overrides.keys()].join(', ') : 'なし'}`,
+);
+if (restart) {
+	if (!reportRestart(result.state)) process.exitCode = 1;
+} else if (overrides.size > 0) {
+	console.log('本番に反映するには、あとで再起動してください: pnpm vps:restart');
 }
