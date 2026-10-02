@@ -54,6 +54,7 @@ export {
 	discordEmbed,
 	isDiscordWebhookUrl,
 	maskWebhookUrl,
+	retryAfterMs,
 	sendViaBot,
 	sendViaWebhook,
 	type DeliveryMessage,
@@ -76,3 +77,9 @@ export {
 	type SignWebhookOptions,
 	type WebhookHeaders,
 } from './webhook-signature.ts';
+export {
+	genericWebhookBody,
+	sendViaGenericWebhook,
+	type GenericWebhookMessage,
+	type GenericWebhookOptions,
+} from './generic-webhook.ts';
