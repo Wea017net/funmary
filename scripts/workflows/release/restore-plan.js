@@ -12,12 +12,12 @@ export function extractReleasedSha(log) {
 }
 
 /**
- * 復元するリリースを決める。Release の実行は新しい順に渡す。タグが残っているものは除き、古い順に、重複なく返す
+ * 復元するリリースを決める。Release の実行は新しい順に渡す。リリースの項目が残っているものは除き、古い順に、重複なく返す
  * @param {readonly string[]} releasedShas
- * @param {ReadonlySet<string>} existingTags
+ * @param {ReadonlySet<string>} existingReleases 項目が残っているリリースの版 (タグの名前)
  * @returns {{ sha: string; version: string }[]}
  */
-export function planRestore(releasedShas, existingTags) {
+export function planRestore(releasedShas, existingReleases) {
 	const seen = new Set();
 	/** @type {{ sha: string; version: string }[]} */
 	const plan = [];
@@ -25,7 +25,7 @@ export function planRestore(releasedShas, existingTags) {
 		if (seen.has(sha)) continue;
 		seen.add(sha);
 		const version = releaseVersion(sha);
-		if (!existingTags.has(version)) plan.push({ sha, version });
+		if (!existingReleases.has(version)) plan.push({ sha, version });
 	}
 	return plan;
 }

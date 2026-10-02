@@ -22,7 +22,7 @@ describe('extractReleasedSha', () => {
 });
 
 describe('planRestore', () => {
-	it('タグが残っていないコミットだけを、古い順に、重複なく返す', () => {
+	it('リリースの項目が残っていないコミットだけを、古い順に、重複なく返す', () => {
 		expect(
 			planRestore(
 				// Release の実行は新しい順に届く。同じコミットを 2 回リリースしたこともある
