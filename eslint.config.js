@@ -15,9 +15,6 @@ export default defineConfig(
 			'**/coverage/',
 			'**/playwright-report/',
 			'**/test-results/',
-			// wrangler types が作る型と、wrangler dev が手元に作る状態
-			'**/worker-configuration.d.ts',
-			'**/.wrangler/',
 			// pnpm package-release が作るリリース
 			'release/',
 			'.agents/',

@@ -12,7 +12,7 @@ paths = ['''^apps/web/src/lib/server/config\.test\.ts$''']
 regexes = ['''MTIzNDU2Nzg5MDEyMzQ1Njc4\.Gabcde\.''']
 
 [[allowlists]]
-description = "GitHub App の秘密鍵 (PEM) を読む処理と、そのテストがその場で作る鍵。本物の鍵は含まない (Issue #235)"
+description = "過去のコミットに残る、GitHub App の秘密鍵 (PEM) を読む処理と、そのテストがその場で作る鍵。本物の鍵は含まない (Worker は funmary-app/license-agreement に移した)"
 targetRules = ['private-key']
 paths = [
   '''^apps/license-agreement/src/github\.ts$''',
