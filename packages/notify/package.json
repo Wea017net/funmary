@@ -13,5 +13,8 @@
 		"@discordjs/ws": "^2.0.4",
 		"@funmary/log": "workspace:*",
 		"undici": "^8.11.2"
+	},
+	"devDependencies": {
+		"standardwebhooks": "^1.1.1"
 	}
 }
