@@ -19,6 +19,7 @@ export {
 	type DiscordBot,
 	type DiscordBotOptions,
 	type DiscordChannel,
+	type DiscordEmbed,
 	type DiscordRole,
 } from './discord-bot.ts';
 export {
@@ -49,3 +50,12 @@ export {
 	type EnsureReport,
 	type LayoutEntry,
 } from './discord-layout.ts';
+export {
+	discordEmbed,
+	isDiscordWebhookUrl,
+	maskWebhookUrl,
+	sendViaBot,
+	sendViaWebhook,
+	type DeliveryMessage,
+	type SendOutcome,
+} from './user-delivery.ts';
