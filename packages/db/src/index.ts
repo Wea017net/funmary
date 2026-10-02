@@ -131,3 +131,19 @@ export {
 	type DailyDigestRecipient,
 	type DailyDigestStore,
 } from './daily-digest-store.ts';
+export {
+	createChannelStore,
+	DEFAULT_CHANNEL_KINDS,
+	type ChannelStatus,
+	type ChannelStore,
+	type NewWebhook,
+	type StoredWebhook,
+	type WebhookChanges,
+} from './channel-store.ts';
+export {
+	createDeliveryStore,
+	type DeliveryStore,
+	type DeliveryTarget,
+	type PendingDelivery,
+	type RetryPlan,
+} from './delivery-store.ts';
