@@ -5,8 +5,13 @@
 
 	let {
 		data,
-	}: { data: { operator: { name: string; url: string } | null; contactEmail: string | null } } =
-		$props();
+	}: {
+		data: {
+			operator: { name: string; url: string } | null;
+			contactEmail: string | null;
+			supportInvite: { url: string } | null;
+		};
+	} = $props();
 </script>
 
 <svelte:head>
@@ -46,6 +51,14 @@
 				<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- 外部サイトへのリンク -->
 				<a href={data.operator.url} target="_blank" rel="noopener noreferrer">
 					運営: {data.operator.name}
+				</a>
+			</li>
+		{/if}
+		{#if data.supportInvite}
+			<li>
+				<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- Discord の招待 (外部のサイト) -->
+				<a href={data.supportInvite.url} target="_blank" rel="noopener noreferrer">
+					Discord のサポートサーバー
 				</a>
 			</li>
 		{/if}

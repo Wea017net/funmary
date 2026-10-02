@@ -13,6 +13,7 @@ export {
 	type AdminDiscordSink,
 } from './admin-discord.ts';
 export {
+	CHANNEL_TYPES,
 	createDiscordBot,
 	DiscordApiError,
 	type DiscordBot,

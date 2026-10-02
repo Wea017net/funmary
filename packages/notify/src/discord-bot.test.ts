@@ -20,7 +20,9 @@ function setup(results: Record<string, unknown> = {}, fail?: () => never) {
 			createMessage: op('channels.createMessage'),
 			createThread: op('channels.createThread'),
 			edit: op('channels.edit'),
+			createInvite: op('channels.createInvite'),
 		},
+		invites: { delete: op('invites.delete') },
 		threads: { addMember: op('threads.addMember') },
 		guilds: {
 			getChannels: op('guilds.getChannels'),
@@ -42,6 +44,40 @@ const discordError = (status: number, message: string) =>
 	});
 
 describe('createDiscordBot', () => {
+	it('招待を発行する。期限 0 は無期限、ロールを付け、同じ設定の招待を使い回さない', async () => {
+		const { bot, calls } = setup({
+			'channels.createInvite': { code: 'abc', expires_at: null },
+		});
+		await expect(
+			bot.createInvite('5', { maxAgeSeconds: 0, maxUses: 0, roleIds: ['7'] }),
+		).resolves.toEqual({ code: 'abc', expiresAt: null });
+		expect(calls[0]).toEqual([
+			'channels.createInvite',
+			'5',
+			{ max_age: 0, max_uses: 0, unique: true, role_ids: ['7'] },
+		]);
+	});
+
+	it('期限のある招待は、期限の時刻を返す。ロールがなければ role_ids を送らない', async () => {
+		const { bot, calls } = setup({
+			'channels.createInvite': { code: 'xyz', expires_at: '2026-10-09T00:00:00.000Z' },
+		});
+		await expect(
+			bot.createInvite('5', { maxAgeSeconds: 604800, maxUses: 10, roleIds: [] }),
+		).resolves.toEqual({ code: 'xyz', expiresAt: new Date('2026-10-09T00:00:00.000Z') });
+		expect(calls[0]?.[2]).toEqual({ max_age: 604800, max_uses: 10, unique: true });
+	});
+
+	it('招待を消す。もう無いもの (404) は、消せたことにする', async () => {
+		const { bot, calls } = setup();
+		await bot.deleteInvite('abc');
+		expect(calls[0]).toEqual(['invites.delete', 'abc']);
+		const gone = setup({}, () => {
+			throw discordError(404, 'Unknown Invite');
+		});
+		await expect(gone.bot.deleteInvite('abc')).resolves.toBeUndefined();
+	});
+
 	it('ギルドのチャンネルを、使う項目だけの形にして返す', async () => {
 		const { bot, calls } = setup({
 			'guilds.getChannels': [

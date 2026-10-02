@@ -16,6 +16,8 @@
 			/** 予定のまとめの設定。連携していなければ null */
 			digest: DailyDigestSettings | null;
 			callback: { ok: boolean; message: string } | null;
+			/** 管理者が公開にした、サポートサーバーへの招待。なければ null */
+			supportInvite: { url: string } | null;
 		};
 		form: { error?: string; message?: string } | null;
 	} = $props();
@@ -39,6 +41,14 @@
 <div class="page">
 	<SettingsBreadcrumb current="Discord連携" />
 	<h1>Discord連携</h1>
+	{#if data.supportInvite}
+		<p>
+			<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- Discord の招待 (外部のサイト) -->
+			<a href={data.supportInvite.url} target="_blank" rel="noopener noreferrer"
+				>Discord のサポートサーバー</a
+			>に、招待リンクから参加できます。
+		</p>
+	{/if}
 
 	{#if data.callback}
 		<p class={data.callback.ok ? 'message' : 'error'} role={data.callback.ok ? 'status' : 'alert'}>
