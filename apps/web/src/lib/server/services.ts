@@ -4,6 +4,7 @@ import type {
 	AccessGrantStore,
 	AuditLogStore,
 	AuthStore,
+	ChannelStore,
 	ClassChangeStore,
 	CourseStore,
 	DailyDigestStore,
@@ -22,7 +23,13 @@ import type {
 	UserEventStore,
 } from '@funmary/db';
 import type { JobResult } from '@funmary/jobs';
-import type { AdminChannel, DiscordBot, DiscordLayout, DiscordOAuthClient } from '@funmary/notify';
+import type {
+	AdminChannel,
+	DiscordBot,
+	DiscordLayout,
+	DiscordOAuthClient,
+	SendOutcome,
+} from '@funmary/notify';
 import type { BuildInfo } from './build-info.ts';
 import type { LegalInfo } from './legal.ts';
 import type { ResponseTimes } from './response-times.ts';
@@ -62,6 +69,15 @@ export interface Services {
 	readonly courses: CourseStore;
 	/** 利用者の通知欄 (設計書 14.1、14.2) */
 	readonly notifications: NotificationStore;
+	/** 利用者が登録した通知の送り先 (Discord の Webhook) (設計書 14.3) */
+	readonly channels: ChannelStore;
+	readonly webhooks: {
+		/** 1 人が登録できる Webhook の個数 (管理者が決める) */
+		limit(): number;
+		setLimit(limit: number): void;
+		/** Webhook にテスト通知を送る。NOTIFY_DRY_RUN のときは送らずに、送れたことにする */
+		sendTest(url: string): Promise<SendOutcome>;
+	};
 	/** 予定のまとめ (今日か明日の授業と予定を Discord に送るもの、#207) の、利用者ごとの設定 */
 	readonly dailyDigest: DailyDigestStore;
 	/** 利用者だけに見える、曜日と時限の書き換え */

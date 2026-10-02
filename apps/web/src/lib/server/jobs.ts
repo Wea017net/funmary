@@ -40,15 +40,16 @@ export const JOB_LABELS: ReadonlyMap<string, string> = new Map([
 	['import-academic-calendar', '学年暦の取り込み'],
 	['remind-timetable-import', '時間割の PDF の取り込みの案内'],
 	['send-daily-digest', '予定のまとめの送信'],
+	['deliver-notifications', '通知の送信'],
 	['notify-class-changes', '休講などの通知欄への記録'],
 	['prune-notifications', '古い通知の削除'],
 ]);
 
 /**
- * サーバーの中でだけ動かす定期処理。予定のまとめは利用者に送るので、
+ * サーバーの中でだけ動かす定期処理。予定のまとめと通知の送信は利用者に送るので、
  * 管理用コマンドから別のプロセスで動かすと、サーバーの実行と重なって二重に送ることがある
  */
-export const SERVER_ONLY_JOBS: readonly string[] = ['send-daily-digest'];
+export const SERVER_ONLY_JOBS: readonly string[] = ['send-daily-digest', 'deliver-notifications'];
 
 export interface JobFactoryDeps {
 	readonly config: Config;

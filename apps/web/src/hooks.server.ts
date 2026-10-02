@@ -14,6 +14,8 @@ import {
 	createAccessGrantStore,
 	createAuditLogStore,
 	createAuthStore,
+	createChannelStore,
+	createDeliveryStore,
 	createDiscordLinkStore,
 	createSecretBox,
 	createSettingsStore,
@@ -33,7 +35,12 @@ import {
 	openDatabase,
 	type AuthStore,
 } from '@funmary/db';
-import { createJobRunner, createSendDailyDigestJob, type JobDefinition } from '@funmary/jobs';
+import {
+	createDeliverNotificationsJob,
+	createJobRunner,
+	createSendDailyDigestJob,
+	type JobDefinition,
+} from '@funmary/jobs';
 import { bundledHolidays, estimateHolidays } from '@funmary/sources';
 import {
 	createAdminAlerter,
@@ -42,6 +49,7 @@ import {
 	createDiscordOAuthClient,
 	createDiscordPresence,
 	parseLayout,
+	sendViaWebhook,
 	type DiscordLayout,
 } from '@funmary/notify';
 import { createLogger, type Logger } from '@funmary/log';
@@ -62,6 +70,8 @@ import { legacyAppPath } from '$lib/server/legacy-path.ts';
 import { findMigrationsFolder } from '$lib/server/migrations-path.ts';
 import { getServices, setServices } from '$lib/server/services.ts';
 import { dailyDigestDeps } from '$lib/server/daily-digest.ts';
+import { deliverNotificationsDeps, testMessage } from '$lib/server/notification-delivery.ts';
+import { readWebhookLimit, WEBHOOKS_PER_USER_KEY } from '$lib/server/webhook-limit.ts';
 import { parseThemePreference, THEME_COOKIE } from '$lib/theme.ts';
 
 /** Hono に渡すパス。これ自身か、この下のパスが対象になる */
@@ -167,6 +177,24 @@ export const init: ServerInit = () => {
 	});
 	// 予定のまとめは、利用者の Discord 連携 (Bot が送る) を使う。送る処理の中で getServices を呼ぶ (services はこのあと入れる)
 	if (discordBot) jobs.push(createSendDailyDigestJob(dailyDigestDeps(getServices, discordBot)));
+	// 利用者への通知 (通知欄に入ったもの) を、利用者のチャネルへ送る (設計書 14.1)
+	const channelStore = createChannelStore(database, discordSecretBox);
+	const deliveryStore = createDeliveryStore(database, discordSecretBox);
+	const deliveryOrigin = result.config.origin ?? DEV_ORIGIN;
+	jobs.push(
+		createDeliverNotificationsJob(
+			deliverNotificationsDeps({
+				channels: channelStore,
+				deliveries: deliveryStore,
+				notifications: createNotificationStore(database),
+				bot: discordBot,
+				origin: deliveryOrigin,
+				dryRun: result.config.notifyDryRun,
+				linkEnabled: linkingEnabled,
+				log: logger,
+			}),
+		),
+	);
 	const runner = createJobRunner({
 		jobs,
 		store: jobRunStore,
@@ -235,6 +263,19 @@ export const init: ServerInit = () => {
 		},
 		courses: createCourseStore(database),
 		notifications: createNotificationStore(database),
+		channels: channelStore,
+		webhooks: {
+			limit: () => readWebhookLimit(settingsStore.get(WEBHOOKS_PER_USER_KEY)),
+			setLimit: (limit: number) => settingsStore.set(WEBHOOKS_PER_USER_KEY, { limit }, new Date()),
+			// 手元の開発 (NOTIFY_DRY_RUN) では、本物の Webhook には送らず、送れたことにする
+			sendTest: (url: string) => {
+				if (result.config.notifyDryRun) {
+					logger?.withTag('deliver').info('(送信を止めています) Webhook へのテスト通知');
+					return Promise.resolve({ status: 'sent' as const });
+				}
+				return sendViaWebhook(url, testMessage(deliveryOrigin, new Date()));
+			},
+		},
 		dailyDigest: createDailyDigestStore(database),
 		personalSlots: createPersonalSlotStore(database),
 		slotSubmissions: createSlotSubmissionStore(database),

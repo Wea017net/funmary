@@ -41,6 +41,7 @@ function fakeBot(initial: { channels?: DiscordChannel[]; roles?: DiscordRole[] }
 		addMemberRole: () => Promise.resolve(),
 		removeMemberRole: () => Promise.resolve(),
 		postMessage: () => Promise.resolve(),
+		postEmbed: () => Promise.resolve(),
 		createDm: () => Promise.resolve('dm-channel'),
 		createPrivateThread: () => Promise.resolve('thread'),
 		addThreadMember: () => Promise.resolve(),

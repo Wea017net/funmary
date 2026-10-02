@@ -62,7 +62,11 @@ describe('埋め込み', () => {
 });
 
 const respond = (status: number, init: { headers?: Record<string, string>; body?: string } = {}) =>
-	vi.fn().mockResolvedValue(new Response(init.body ?? null, { status, headers: init.headers }));
+	vi
+		.fn()
+		.mockResolvedValue(
+			new Response(init.body ?? null, { status, ...(init.headers && { headers: init.headers }) }),
+		);
 
 describe('sendViaWebhook', () => {
 	it('埋め込みを POST する。メンションは効かせない', async () => {

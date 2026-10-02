@@ -79,7 +79,7 @@ export function createDeliveryStore(database: Database, secretBox: SecretBox): D
 						if (channel.userId !== notification.userId) continue;
 						if (channel.createdAt > notification.createdAt) continue;
 						const kinds = channel.notificationKinds ?? DEFAULT_CHANNEL_KINDS;
-						if (!kinds.includes(notification.kind)) continue;
+						if (!kinds.includes(notification.kind as NotificationKind)) continue;
 						created += db
 							.insert(deliveries)
 							.values({ notificationId: notification.id, channelId: channel.id })
