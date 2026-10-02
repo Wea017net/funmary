@@ -1,29 +1,25 @@
 import { describe, expect, it } from 'vitest';
-import { shellQuote, sshArgs, sshFailureHint } from './vps-ssh.js';
+import {
+	RESTART_COMMAND,
+	parseWriteResult,
+	resolveSshBin,
+	shellQuote,
+	sshArgs,
+	writeFileCommand,
+} from './vps-ssh.js';
 
 describe('sshArgs', () => {
-	it('パスワードやパスフレーズを聞かず、鍵だけで入る', () => {
-		const args = sshArgs({ host: 'root@funmary.example.com' }, [
-			'systemctl',
-			'is-active',
-			'funmary',
-		]);
-		expect(args).toEqual([
-			'-o',
-			'BatchMode=yes',
+	it('パスフレーズを聞けるよう、BatchMode は付けない', () => {
+		expect(sshArgs({ host: 'root@funmary.example.com' }, ['true'])).toEqual([
 			'root@funmary.example.com',
-			'systemctl',
-			'is-active',
-			'funmary',
+			'true',
 		]);
 	});
 
-	it('ポートと鍵を書いていれば渡す', () => {
+	it('ポートと鍵を書いていれば渡し、鍵はその鍵だけを使う', () => {
 		expect(
 			sshArgs({ host: 'root@funmary.example.com', port: '2222', key: 'C:/keys/vps' }, ['true']),
 		).toEqual([
-			'-o',
-			'BatchMode=yes',
 			'-o',
 			'IdentitiesOnly=yes',
 			'-p',
@@ -36,15 +32,62 @@ describe('sshArgs', () => {
 	});
 });
 
-describe('sshFailureHint', () => {
-	it('鍵で入れなかったときは、SSH_KEY の設定を案内する', () => {
-		expect(sshFailureHint('root@203.0.113.1: Permission denied (publickey,password).')).toMatch(
-			/SSH_KEY/,
-		);
+describe('resolveSshBin', () => {
+	const windowsOpenSsh = 'C:\\Windows\\System32\\OpenSSH\\ssh.exe';
+
+	it('SSH_BIN を書いていれば、それを使う', () => {
+		expect(
+			resolveSshBin({ sshBin: 'C:/tools/ssh.exe', platform: 'win32', exists: () => true }),
+		).toBe('C:/tools/ssh.exe');
 	});
 
-	it('ほかの失敗では、案内を足さない', () => {
-		expect(sshFailureHint('cat: /etc/funmary/funmary.env: No such file or directory')).toBeNull();
+	it('Windows では、Windows の OpenSSH があればそれを使う (Git for Windows の ssh より優先する)', () => {
+		expect(resolveSshBin({ platform: 'win32', exists: (path) => path === windowsOpenSsh })).toBe(
+			windowsOpenSsh,
+		);
+		expect(resolveSshBin({ platform: 'win32', exists: () => false })).toBe('ssh');
+	});
+
+	it('Windows でなければ、PATH の ssh を使う', () => {
+		expect(resolveSshBin({ platform: 'linux', exists: () => true })).toBe('ssh');
+	});
+});
+
+describe('writeFileCommand と parseWriteResult', () => {
+	const content = "KEY=値 'quote' $HOME\n";
+
+	it('中身を Base64 にしてコマンドに含め、控えてから書き換える (標準入力には流さない)', () => {
+		const command = writeFileCommand({
+			file: '/etc/funmary/funmary.env',
+			backup: '/etc/funmary/funmary.env.bak.1',
+			content,
+			restart: false,
+		});
+		const base64 = Buffer.from(content, 'utf8').toString('base64');
+		expect(command).toContain(
+			`printf %s '${base64}' | base64 -d | sudo tee '/etc/funmary/funmary.env'`,
+		);
+		expect(command.indexOf('sudo cp -p')).toBeLessThan(command.indexOf('sudo tee'));
+		expect(command).not.toContain('systemctl');
+	});
+
+	it('再起動を頼むと、書き換えのあとに同じ接続で再起動する', () => {
+		const command = writeFileCommand({
+			file: '/etc/funmary/funmary.env',
+			backup: '/etc/funmary/funmary.env.bak.1',
+			content,
+			restart: true,
+		});
+		expect(command.endsWith(`{ ${RESTART_COMMAND}; }`)).toBe(true);
+	});
+
+	it('出力から、書き換えが済んだかと、再起動のあとの状態を読む', () => {
+		expect(parseWriteResult('__funmary_written__\nactive\n')).toEqual({
+			written: true,
+			state: 'active',
+		});
+		expect(parseWriteResult('__funmary_written__\r\n')).toEqual({ written: true, state: null });
+		expect(parseWriteResult('')).toEqual({ written: false, state: null });
 	});
 });
 

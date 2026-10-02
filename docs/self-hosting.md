@@ -228,7 +228,7 @@ cp .env.ssh.example .env.ssh
 pnpm env:upload
 ```
 
-反映専用の制限された鍵 (`funmary-deploy`) は使わず、自分の SSH 鍵と `sudo` を使います。パスワードやパスフレーズは聞かずに鍵だけで入るので、鍵で入れないときは `.env.ssh` の `SSH_KEY` に秘密鍵のパスを書いてください (パスフレーズ付きの鍵は、先に `ssh-agent` に登録します)。
+反映専用の制限された鍵 (`funmary-deploy`) は使わず、自分の SSH 鍵と `sudo` を使います。パスフレーズ付きの鍵なら、接続のたびに端末で聞かれます (`pnpm env:upload` では、読むときと書くときの 2 回)。先に `ssh-add` で `ssh-agent` に登録すれば、聞かれません。`~/.ssh/config` の設定が当たらないときは、`.env.ssh` の `SSH_KEY` に秘密鍵のパスを書きます。
 
 `pnpm env:upload` で値を上書きしたときは、最後にいま再起動するか聞かれ、`y` と答えると再起動して、動いているかまで確かめます。再起動だけをしたいときや、再起動を後回しにしたときは、`pnpm vps:restart` を使います (VPS の上では `systemctl restart funmary`)。
 
