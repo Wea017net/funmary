@@ -1810,6 +1810,11 @@ test.describe('自分の予定', () => {
 		await expect(periodRow).toContainText('時限で決めた架空の予定');
 		await expect(periodRow).toContainText('5 限');
 		await expect(eventRow.getByText('時限で決めた架空の予定', { exact: true })).toHaveCount(0);
+
+		// 時限の行では、行自体が時限を示すので、名前と場所の間に時限 (「5 限」) を繰り返さない
+		const card = periodRow.locator('.event').filter({ hasText: '時限で決めた架空の予定' });
+		await expect(card).toContainText('架空の講堂');
+		await expect(card.locator('.time')).toHaveCount(0);
 	});
 
 	test('公開範囲を選べる。全体に公開した予定は、ほかの人が探して加えられ、限定公開は、リンクの値でだけ開ける', async ({
