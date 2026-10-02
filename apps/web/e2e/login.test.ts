@@ -2103,3 +2103,72 @@ test.describe('このアプリについて', () => {
 		await expect(page.getByText('いまは Discord 連携を使えません。')).toBeVisible();
 	});
 });
+
+test.describe('Discord の Webhook', () => {
+	const stamp = Date.now();
+	const email = `e2e-webhook-${stamp}@fun.ac.jp`;
+	const webhookUrl = `https://discord.com/api/webhooks/123456/e2e-token-${stamp}`;
+
+	test('登録、保存、無効化、削除ができる。URL は末尾を伏せて出す', async ({ page }) => {
+		oidc.setIdentity({ sub: email, email, email_verified: true, hd: 'fun.ac.jp' });
+		await page.goto('/auth/google');
+		await page.goto('/app/settings');
+		await page.getByRole('link', { name: 'Discord の Webhook' }).click();
+		await expect(page.getByRole('heading', { level: 1, name: 'Discord の Webhook' })).toBeVisible();
+
+		// Discord の Webhook でない URL は、登録できない
+		await page.getByLabel('Webhook の URL').fill('https://example.com/hook');
+		await page.getByRole('button', { name: '登録して、テスト通知を送る' }).click();
+		await expect(page.getByRole('alert')).toContainText('Discord の Webhook の URL');
+
+		await page.getByLabel('Webhook の URL').fill(webhookUrl);
+		await page.getByLabel('名前 (任意)').first().fill('友人と共有');
+		await page.getByRole('button', { name: '登録して、テスト通知を送る' }).click();
+		await expect(page.getByRole('status')).toContainText('Webhook を登録しました');
+		const item = page.getByRole('listitem').filter({ hasText: '友人と共有' });
+		await expect(item).toContainText('https://discord.com/api/webhooks/123456/…');
+		await expect(page.getByText(`e2e-token-${stamp}`)).toHaveCount(0);
+
+		// 同じ Webhook は、二重に登録できない
+		await page.getByLabel('Webhook の URL').fill(webhookUrl);
+		await page.getByRole('button', { name: '登録して、テスト通知を送る' }).click();
+		await expect(page.getByRole('alert')).toContainText('すでに登録しています');
+
+		// 届ける通知の種類を変えて保存する。開き直しても残る
+		await item.getByLabel('補講').uncheck();
+		await item.getByRole('button', { name: '保存する' }).click();
+		await expect(page.getByRole('status')).toHaveText('保存しました。');
+		await page.reload();
+		await expect(item.getByLabel('補講')).not.toBeChecked();
+		await expect(item.getByLabel('休講')).toBeChecked();
+
+		await item.getByRole('button', { name: '無効にする' }).click();
+		await expect(item).toContainText('無効');
+		await expect(item.getByRole('button', { name: 'テスト通知を送る' })).toBeDisabled();
+		await item.getByRole('button', { name: '有効に戻す' }).click();
+		await expect(item.getByRole('button', { name: 'テスト通知を送る' })).toBeEnabled();
+
+		page.once('dialog', (dialog) => dialog.accept());
+		await item.getByRole('button', { name: '削除する' }).click();
+		await expect(item).toHaveCount(0);
+	});
+
+	test('管理者が上限を 0 にすると、新しく登録できない。戻すと登録できる', async ({ page }) => {
+		const admin = 'e2e-admin@fun.ac.jp';
+		oidc.setIdentity({ sub: admin, email: admin, email_verified: true, hd: 'fun.ac.jp' });
+		await page.goto('/auth/google');
+		await page.goto('/app/admin/webhooks');
+		await page.getByLabel(/1 人あたりの上限/).fill('0');
+		await page.getByRole('button', { name: '保存する' }).click();
+		await expect(page.getByRole('status')).toHaveText('上限を 0 個にしました。');
+
+		await page.goto('/app/settings/webhooks');
+		await expect(page.getByText('上限に達しています')).toBeVisible();
+		await expect(page.getByRole('button', { name: '登録して、テスト通知を送る' })).toHaveCount(0);
+
+		await page.goto('/app/admin/webhooks');
+		await page.getByLabel(/1 人あたりの上限/).fill('5');
+		await page.getByRole('button', { name: '保存する' }).click();
+		await expect(page.getByRole('status')).toHaveText('上限を 5 個にしました。');
+	});
+});

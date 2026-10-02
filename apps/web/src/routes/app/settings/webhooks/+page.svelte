@@ -25,6 +25,9 @@
 	} = $props();
 
 	const canAdd = $derived(data.count < data.limit);
+
+	let newUrl = $state('');
+	let newLabel = $state('');
 </script>
 
 <svelte:head>
@@ -35,13 +38,9 @@
 <div class="page">
 	<SettingsBreadcrumb current="Discord の Webhook" />
 	<h1>Discord の Webhook</h1>
-	<p>
-		休講、補講、教室変更などを、自分の Discord
-		サーバーのチャンネルに届けます。友人と共有するサーバーと、自分用の
-		サーバーで、届ける通知の種類を分けることもできます。登録できるのは、{data.limit} 個までです (いま
-		{data.count}
-		個)。
-	</p>
+	<p>休講、補講、教室変更などを、自分の Discord サーバーのチャンネルに届けます。</p>
+	<p>友人と共有するサーバーと自分用のサーバーで、届ける通知の種類を分けることもできます。</p>
+	<p>登録できるのは {data.limit} 個までです (いま {data.count} 個)。</p>
 
 	{#if form?.error}
 		<p class="error" role="alert">{form.error}</p>
@@ -108,8 +107,8 @@
 						<form
 							method="POST"
 							action="?/remove"
-							use:enhance
 							use:confirmSubmit={'この Webhook を削除します。よろしいですか?'}
+							use:enhance
 						>
 							<input type="hidden" name="id" value={webhook.id} />
 							<Button type="submit" variant="outlined"><Label>削除する</Label></Button>
@@ -124,20 +123,31 @@
 		<h2 id="add-heading">Webhook を登録する</h2>
 		{#if canAdd}
 			<ol class="steps">
-				<li>
-					Discord
-					で、通知を受け取るチャンネルの設定を開き、「連携サービス」の「ウェブフック」から、新しい
-					ウェブフックを作ります。
-				</li>
+				<li>Discord で、通知を受け取るチャンネルの設定を開きます。</li>
+				<li>「連携サービス」の「ウェブフック」から、新しいウェブフックを作ります。</li>
 				<li>「ウェブフック URL をコピー」を押して、下の欄に貼り付けます。</li>
 				<li>登録すると、テスト通知が届きます。届いたことを確かめてください。</li>
 			</ol>
-			<form method="POST" action="?/add" use:enhance class="stack">
+			<!-- 送信のあとにフォームを初期状態へ戻すと、届ける通知のチェックが外れるので、戻さずに、URL と名前だけ空にする -->
+			<form
+				method="POST"
+				action="?/add"
+				use:enhance={() =>
+					async ({ result, update }) => {
+						await update({ reset: false });
+						if (result.type === 'success') {
+							newUrl = '';
+							newLabel = '';
+						}
+					}}
+				class="stack"
+			>
 				<label class="field">
 					Webhook の URL
 					<input
 						type="url"
 						name="url"
+						bind:value={newUrl}
 						required
 						autocomplete="off"
 						spellcheck="false"
@@ -146,7 +156,13 @@
 				</label>
 				<label class="field">
 					名前 (任意)
-					<input type="text" name="label" maxlength="40" placeholder="例: 友人と共有のサーバー" />
+					<input
+						type="text"
+						name="label"
+						bind:value={newLabel}
+						maxlength="40"
+						placeholder="例: 友人と共有のサーバー"
+					/>
 				</label>
 				<fieldset>
 					<legend>届ける通知</legend>
@@ -161,15 +177,13 @@
 				>
 			</form>
 		{:else}
-			<p>
-				登録できる Webhook は {data.limit} 個までで、上限に達しています。新しく登録するには、使わないものを削除
-				してください。
-			</p>
+			<p>登録できる Webhook は {data.limit} 個までで、上限に達しています。</p>
+			<p>新しく登録するには、使わないものを削除してください。</p>
 		{/if}
 	</section>
+	<p class="meta">Webhook の URL は、暗号化して保存します。</p>
 	<p class="meta">
-		Webhook の URL は、暗号化して保存します。URL
-		を知っている人は、そのチャンネルに投稿できるので、他の人に 見せないでください。
+		URL を知っている人は、そのチャンネルに投稿できるので、他の人に見せないでください。
 	</p>
 </div>
 
