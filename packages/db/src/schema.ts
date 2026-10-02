@@ -557,10 +557,15 @@ export const notifications = sqliteTable(
 		/** 押したときに開く画面のパス */
 		link: text('link'),
 		subjectId: integer('subject_id').references(() => subjects.id, { onDelete: 'set null' }),
+		/** 同じ出来事を二重に通知しないための鍵 (例: class-change:12)。利用者ごとに一意 */
+		dedupeKey: text('dedupe_key'),
 		createdAt: createdAt(),
 		readAt: integer('read_at', { mode: 'timestamp_ms' }),
 	},
-	(table) => [index('notifications_user_created').on(table.userId, table.createdAt)],
+	(table) => [
+		index('notifications_user_created').on(table.userId, table.createdAt),
+		uniqueIndex('notifications_user_dedupe').on(table.userId, table.dedupeKey),
+	],
 );
 
 export const channels = sqliteTable(

@@ -6,6 +6,7 @@
 	import BrandLogo from '$lib/components/BrandLogo.svelte';
 	import FooterLinks from '$lib/components/FooterLinks.svelte';
 	import MaskedEmail from '$lib/components/MaskedEmail.svelte';
+	import NotificationBell from '$lib/components/NotificationBell.svelte';
 	import ThemeToggle from '$lib/components/ThemeToggle.svelte';
 	import type { ThemePreference } from '$lib/theme.ts';
 	import IconCourses from '~icons/material-symbols/menu-book-outline';
@@ -40,6 +41,7 @@
 			theme: ThemePreference;
 			about: About;
 			operator: { name: string; url: string } | null;
+			unreadNotifications: number;
 		};
 		children: Snippet;
 	} = $props();
@@ -100,6 +102,7 @@
 	<header class="top" class:hidden={headerHidden}>
 		<a class="brand" href={resolve('/app')}><BrandLogo height="1.75rem" /></a>
 		<div class="top-actions">
+			<NotificationBell unread={data.unreadNotifications} compact />
 			<ThemeToggle initial={data.theme} compact />
 		</div>
 	</header>
@@ -109,6 +112,7 @@
 		{@render navItems('side-items')}
 		<div class="account">
 			<div class="email"><MaskedEmail email={data.user.email} /></div>
+			<NotificationBell unread={data.unreadNotifications} />
 			<ThemeToggle initial={data.theme} />
 		</div>
 	</nav>
@@ -160,6 +164,11 @@
 	}
 
 	/* 左のメニューでは、画面の色のボタンを、横幅いっぱいの高さにそろえる */
+	.account :global(.bell) {
+		box-sizing: border-box;
+		width: 100%;
+	}
+
 	.account :global(.toggle) {
 		justify-content: flex-start;
 		width: 100%;

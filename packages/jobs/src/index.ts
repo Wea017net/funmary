@@ -35,3 +35,11 @@ export {
 	type DailyDigestTarget,
 	type SendDailyDigestDeps,
 } from './send-daily-digest.ts';
+export {
+	classChangeNotification,
+	createNotifyClassChangesJob,
+	createPruneNotificationsJob,
+	type ClassChangeNotificationEntry,
+	type ClassChangeNotificationSource,
+	type NotifyClassChangesDeps,
+} from './notify-class-changes.ts';

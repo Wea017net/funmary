@@ -13,6 +13,14 @@ export {
 	type Database,
 	type OpenOptions,
 } from './database.ts';
+export {
+	createNotificationStore,
+	type ClassChangeCandidate,
+	type NewNotification,
+	type NotificationKind,
+	type NotificationStore,
+	type StoredNotification,
+} from './notification-store.ts';
 export * as schema from './schema.ts';
 export { createSourceHealthStore, type SourceHealthStore } from './source-health-store.ts';
 export {

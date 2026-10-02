@@ -593,6 +593,7 @@ test.describe('スマホの幅で、画面が横にはみ出さない', () => {
 			'/app/admin/invites',
 			'/app/admin/status',
 			'/app/admin/support-invites',
+			'/app/notifications',
 			'/app/admin/discord',
 			'/app/admin/audit-log',
 			'/app/admin/slot-review',
@@ -1337,6 +1338,76 @@ test.describe('学年暦の管理', () => {
 		});
 		await page.getByRole('button', { name: '読み取る' }).click();
 		await expect(page.getByRole('alert')).toContainText('授業時間割の PDF として読めませんでした');
+	});
+});
+
+test.describe('通知欄', () => {
+	// 手元では DB が残るので、利用者と休講の授業名を毎回変える
+	const stamp = Date.now();
+	const email = `e2e-notify-${stamp}@fun.ac.jp`;
+	const lessonName = `架空の演習 (通知 ${stamp})`;
+
+	test('履修している科目の休講が通知欄に入り、ベルに未読数が出る。開くと授業の画面へ移り、既読になる', async ({
+		page,
+	}) => {
+		oidc.setIdentity({ sub: email, email, email_verified: true, hd: 'fun.ac.jp' });
+		await page.goto('/auth/google');
+		await page.goto('/app');
+		await expect(page.getByRole('link', { name: '通知', exact: true }).first()).toBeVisible();
+
+		// 履修を入れてから、そのあとに見つけた休講を入れる
+		seedSubjects((database, exerciseId) => {
+			const user = database.sqlite.prepare('SELECT id FROM users WHERE email = ?').get(email) as {
+				id: string;
+			};
+			const now = Date.now();
+			database.sqlite
+				.prepare(
+					'INSERT INTO course_registrations (user_id, subject_id, created_at) VALUES (?, ?, ?)',
+				)
+				.run(user.id, exerciseId, now - 60_000);
+			database.sqlite
+				.prepare(
+					`INSERT INTO class_changes (kind, subject_id, lesson_name, date, period, first_seen_at, last_seen_at)
+						VALUES ('cancellation', ?, ?, '2030-01-07', 2, ?, ?)`,
+				)
+				.run(exerciseId, lessonName, now, now);
+		});
+
+		// 管理者が、休講などを通知欄に入れる定期処理を今すぐ動かす
+		const admin = 'e2e-admin@fun.ac.jp';
+		oidc.setIdentity({ sub: admin, email: admin, email_verified: true, hd: 'fun.ac.jp' });
+		await page.goto('/auth/google');
+		await page.goto('/app/admin/status');
+		await page
+			.getByRole('region', { name: '今すぐ動かす' })
+			.getByRole('listitem')
+			.filter({ hasText: '休講などの通知欄への記録' })
+			.getByRole('button', { name: '動かす' })
+			.click();
+		await expect(page.getByRole('status').first()).toContainText('休講などの通知を');
+
+		oidc.setIdentity({ sub: email, email, email_verified: true, hd: 'fun.ac.jp' });
+		await page.goto('/auth/google');
+		await page.goto('/app');
+		await page.getByRole('link', { name: '通知 (未読 1 件)' }).first().click();
+		await expect(page.getByRole('heading', { level: 1, name: '通知' })).toBeVisible();
+		const item = page.getByRole('button', { name: /\[休講\] 架空の演習Ⅱ1-AB \(1\/7 2 限\)/ });
+		await expect(item).toContainText('未読');
+
+		await item.click();
+		await expect(page).toHaveURL(/\/app\/subjects\/2026\/900001$/);
+		await page.goto('/app/notifications');
+		await expect(item).not.toContainText('未読');
+		await expect(page.getByRole('link', { name: '通知', exact: true }).first()).toBeVisible();
+		await expect(page.getByRole('button', { name: 'すべて既読にする' })).toBeDisabled();
+
+		// 種類で絞り込む
+		await page
+			.getByRole('navigation', { name: '種類で絞り込む' })
+			.getByRole('link', { name: '補講' })
+			.click();
+		await expect(page.getByText('通知はまだありません。')).toBeVisible();
 	});
 });
 

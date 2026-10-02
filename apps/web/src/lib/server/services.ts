@@ -10,6 +10,7 @@ import type {
 	DiscordLinkStore,
 	FeedTokenStore,
 	HolidayStore,
+	NotificationStore,
 	PersonalSlotStore,
 	SecretBox,
 	SettingsStore,
@@ -59,6 +60,8 @@ export interface Services {
 		};
 	};
 	readonly courses: CourseStore;
+	/** 利用者の通知欄 (設計書 14.1、14.2) */
+	readonly notifications: NotificationStore;
 	/** 予定のまとめ (今日か明日の授業と予定を Discord に送るもの、#207) の、利用者ごとの設定 */
 	readonly dailyDigest: DailyDigestStore;
 	/** 利用者だけに見える、曜日と時限の書き換え */
