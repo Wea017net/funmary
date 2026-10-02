@@ -34,6 +34,16 @@ export interface DiscordRole {
 	readonly name: string;
 }
 
+/** 埋め込みのメッセージ。使う項目だけ */
+export interface DiscordEmbed {
+	readonly title?: string;
+	readonly description?: string;
+	readonly url?: string;
+	readonly color?: number;
+	/** ISO 8601 */
+	readonly timestamp?: string;
+}
+
 export interface PermissionOverwrite {
 	/** ロールか、メンバー (ユーザー) の ID */
 	readonly id: string;
@@ -62,6 +72,8 @@ export interface DiscordBot {
 	removeMemberRole(userId: string, roleId: string): Promise<void>;
 	/** メンションが効くのは、mentionRoles に挙げたロールだけにする */
 	postMessage(channelId: string, content: string, mentionRoles?: readonly string[]): Promise<void>;
+	/** 埋め込みのメッセージを送る。メンションは効かせない */
+	postEmbed(channelId: string, embed: DiscordEmbed): Promise<void>;
 	/** 利用者との DM チャンネルを開く。相手が DM を拒否していれば 403 の DiscordApiError */
 	createDm(userId: string): Promise<string>;
 	/** 親のチャンネルの下に、本人だけの非公開スレッドを作る (invitable は false 固定) */
@@ -183,6 +195,13 @@ export function createDiscordBot(options: DiscordBotOptions): DiscordBot {
 				await api.channels.createMessage(channelId, {
 					content,
 					allowed_mentions: { parse: [], roles: [...mentionRoles] },
+				});
+			}),
+		postEmbed: (channelId, embed) =>
+			guarded(async () => {
+				await api.channels.createMessage(channelId, {
+					embeds: [embed],
+					allowed_mentions: { parse: [] },
 				});
 			}),
 		createDm: (userId) => guarded(async () => (await api.users.createDM(userId)).id),

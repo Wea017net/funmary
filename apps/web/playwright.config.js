@@ -26,6 +26,8 @@ const serverEnv = {
 	ADMIN_DISCORD_WEBHOOK_URL: '',
 	DISCORD_CLIENT_ID: '',
 	DISCORD_CLIENT_SECRET: '',
+	// 本物の Discord へ送らない (Webhook のテスト通知も、送らずに送れたことにする)
+	NOTIFY_DRY_RUN: 'true',
 };
 
 export default defineConfig({

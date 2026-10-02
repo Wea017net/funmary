@@ -1,0 +1,101 @@
+// 利用者への通知を送る定期処理 (deliver-notifications) に渡す、DB と Discord への接続 (設計書 14.1、14.3)。
+// NOTIFY_DRY_RUN のときは、送らずに題だけをログに出して、送れたことにする (手元の開発で、本物の送り先に送らないため)
+import type { ChannelStore, DeliveryStore, NotificationStore, PendingDelivery } from '@funmary/db';
+import type { DeliverNotificationsDeps, DeliveryItem, DeliveryOutcome } from '@funmary/jobs';
+import type { Logger } from '@funmary/log';
+import { sendViaBot, sendViaWebhook, type DeliveryMessage, type DiscordBot } from '@funmary/notify';
+
+export interface NotificationDeliveryOptions {
+	readonly channels: ChannelStore;
+	readonly deliveries: DeliveryStore;
+	readonly notifications: NotificationStore;
+	/** Discord 連携の送り先に送る Bot。設定されていなければ null */
+	readonly bot: DiscordBot | null;
+	/** 通知のリンクを絶対の URL にするための、公開 URL の origin */
+	readonly origin: string;
+	readonly dryRun: boolean;
+	/** 管理者が Discord 連携を有効にしているか。無効の間は、連携の送り先に送らない */
+	readonly linkEnabled: () => boolean;
+	readonly log: Logger;
+	readonly fetch?: (url: string, init?: RequestInit) => Promise<Response>;
+}
+
+export function messageFor(delivery: PendingDelivery, origin: string): DeliveryMessage {
+	const { notification } = delivery;
+	return {
+		kind: notification.kind,
+		title: notification.title,
+		body: notification.body,
+		url: notification.link ? `${origin}${notification.link}` : null,
+		createdAt: notification.createdAt,
+	};
+}
+
+export function deliverNotificationsDeps(
+	options: NotificationDeliveryOptions,
+): DeliverNotificationsDeps {
+	const { channels, deliveries, notifications, bot, dryRun } = options;
+	const log = options.log.withTag('deliver');
+	// send は、claim で受け取った配信の詳細 (送り先、通知の中身) を引く
+	const pending = new Map<number, PendingDelivery>();
+
+	return {
+		prepare(now) {
+			if (options.linkEnabled()) channels.syncLinkChannels(now);
+			return deliveries.enqueueMissing(now);
+		},
+		claim(now, limit) {
+			pending.clear();
+			const linkEnabled = options.linkEnabled();
+			return deliveries
+				.claimDue(now, limit)
+				.filter((delivery) => linkEnabled || delivery.channelKind !== 'discordLink')
+				.map((delivery): DeliveryItem => {
+					pending.set(delivery.id, delivery);
+					return {
+						id: delivery.id,
+						attempts: delivery.attempts,
+						channelId: delivery.channelId,
+						userId: delivery.userId,
+						channelKind: delivery.channelKind,
+						hasTarget: delivery.target !== null,
+					};
+				});
+		},
+		async send(item): Promise<DeliveryOutcome> {
+			const delivery = pending.get(item.id);
+			if (!delivery?.target) return { status: 'rejected', reason: '送り先がありません' };
+			const message = messageFor(delivery, options.origin);
+			if (dryRun) {
+				log.info(`(送信を止めています) ${delivery.channelKind}: ${message.title}`);
+				return { status: 'sent' };
+			}
+			if (delivery.target.kind === 'webhook') {
+				return sendViaWebhook(delivery.target.url, message, {
+					...(options.fetch && { fetch: options.fetch }),
+				});
+			}
+			if (!bot) return { status: 'retry', afterMs: null, reason: 'Bot が設定されていません' };
+			return sendViaBot(bot, delivery.target.channelId, message);
+		},
+		markSent: (id, now) => deliveries.markSent(id, now),
+		markRetry: (id, plan) => deliveries.markRetry(id, plan),
+		markFailed: (id, error) => deliveries.markFailed(id, error),
+		failureStreak: (channelId) => deliveries.failureStreak(channelId),
+		disableChannel: (channelId, reason) => channels.disable(channelId, reason),
+		notifyUser: (notice, now) => {
+			notifications.insertMany([notice], now);
+		},
+	};
+}
+
+/** Webhook の登録のときと、テスト送信のときに送る文面 */
+export function testMessage(origin: string, now: Date): DeliveryMessage {
+	return {
+		kind: 'notice',
+		title: 'テスト通知: Funmary からの通知は、このチャンネルに届きます',
+		body: '休講、補講、教室変更などが、ここに届きます。',
+		url: origin,
+		createdAt: now,
+	};
+}

@@ -57,6 +57,7 @@ function fakeBot(overrides: Partial<DiscordBot> = {}): DiscordBot {
 		listChannels: () => Promise.resolve([]),
 		listRoles: () => Promise.resolve([]),
 		getChannel: () => Promise.resolve(null),
+		postEmbed: () => Promise.resolve(),
 		createRole: () => Promise.reject(new Error('unused')),
 		createChannel: () => Promise.reject(new Error('unused')),
 		addMemberRole: () => Promise.resolve(),

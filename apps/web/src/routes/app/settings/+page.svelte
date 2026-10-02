@@ -47,6 +47,12 @@
 			title: 'カレンダーの購読',
 			description: '授業の予定を、Google カレンダーや iPhone のカレンダーに入れる',
 		},
+		{
+			href: resolve('/app/settings/webhooks'),
+			icon: IconDiscord,
+			title: 'Discord の Webhook',
+			description: '休講などの通知を、自分の Discord サーバーのチャンネルに届ける',
+		},
 		...(data.discordLinkAvailable
 			? [
 					{
@@ -122,6 +128,12 @@
 				icon: IconDiscord,
 				title: 'サポートサーバーの招待',
 				description: 'Discord の招待リンクの発行、登録、公開と取り消し',
+			},
+			{
+				href: resolve('/app/admin/webhooks'),
+				icon: IconDiscord,
+				title: 'Webhook の上限',
+				description: '利用者が登録できる Discord の Webhook の個数',
 			},
 			{
 				href: resolve('/app/admin/audit-log'),

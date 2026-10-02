@@ -43,3 +43,11 @@ export {
 	type ClassChangeNotificationSource,
 	type NotifyClassChangesDeps,
 } from './notify-class-changes.ts';
+export {
+	createDeliverNotificationsJob,
+	retryDelayMs,
+	type DeliverNotificationsDeps,
+	type DeliveryItem,
+	type DeliveryOutcome,
+	type IntegrationNotice,
+} from './deliver-notifications.ts';
