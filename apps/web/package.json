@@ -37,7 +37,7 @@
 		"@sveltejs/adapter-node": "catalog:",
 		"@sveltejs/kit": "catalog:",
 		"@sveltejs/vite-plugin-svelte": "catalog:",
-		"sass": "^1.105.0",
+		"sass": "^1.105.1",
 		"svelte": "catalog:",
 		"svelte-check": "catalog:",
 		"tsdown": "^0.23.0",
