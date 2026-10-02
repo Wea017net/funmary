@@ -575,9 +575,12 @@ export const channels = sqliteTable(
 		userId: text('user_id')
 			.notNull()
 			.references(() => users.id, { onDelete: 'cascade' }),
-		/** discord は利用者が登録した Discord の Webhook、discordLink は Discord 連携 (Bot が送る) の送り先 */
-		kind: text('kind', { enum: ['discord', 'discordLink', 'push', 'email'] }).notNull(),
-		/** Webhook の URL やプッシュ通知の購読情報。暗号化する。discordLink は送り先を discord_links から引くので、中身は使わない */
+		/**
+		 * discord は利用者が登録した Discord の Webhook、generic は利用者が自分で用意した Webhook、
+		 * discordLink は Discord 連携 (Bot が送る) の送り先
+		 */
+		kind: text('kind', { enum: ['discord', 'generic', 'discordLink', 'push', 'email'] }).notNull(),
+		/** Webhook の URL (と、generic の署名の鍵) やプッシュ通知の購読情報。暗号化する。discordLink は送り先を discord_links から引くので、中身は使わない */
 		configEncrypted: text('config_encrypted').notNull(),
 		label: text('label'),
 		/** このチャネルに送る通知の種類 */

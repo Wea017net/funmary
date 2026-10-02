@@ -50,8 +50,8 @@
 		{
 			href: resolve('/app/settings/webhooks'),
 			icon: IconDiscord,
-			title: 'Discord の Webhook',
-			description: '休講などの通知を、自分の Discord サーバーのチャンネルに届ける',
+			title: 'Webhook',
+			description: '休講などの通知を、Discord のチャンネルや、自分で用意した URL に届ける',
 		},
 		...(data.discordLinkAvailable
 			? [
@@ -133,7 +133,7 @@
 				href: resolve('/app/admin/webhooks'),
 				icon: IconDiscord,
 				title: 'Webhook の上限',
-				description: '利用者が登録できる Discord の Webhook の個数',
+				description: '利用者が登録できる Webhook の個数',
 			},
 			{
 				href: resolve('/app/admin/audit-log'),

@@ -22,7 +22,7 @@ const delivery = (overrides: Partial<PendingDelivery> = {}): PendingDelivery => 
 		link: '/app/subjects/2026/100201',
 		createdAt: NOW,
 	},
-	target: { kind: 'webhook', url: 'https://discord.com/api/webhooks/1/abc' },
+	target: { kind: 'webhook', url: 'https://discord.com/api/webhooks/1/abc', signingKey: null },
 	...overrides,
 });
 
@@ -95,6 +95,26 @@ describe('通知を送る定期処理の接続', () => {
 		const [item] = deps.claim(NOW, 10);
 		await expect(deps.send(item)).resolves.toEqual({ status: 'sent' });
 		expect(fetch).toHaveBeenCalledTimes(1);
+	});
+
+	it('署名の鍵がある送り先には、Funmary 共通の JSON を署名して送る (汎用の Webhook)', async () => {
+		const fetch = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
+		const generic = delivery({
+			channelKind: 'generic',
+			target: { kind: 'webhook', url: 'https://example.com/hook', signingKey: 'whsec_abc' },
+		});
+		const { deps } = setup([generic], { fetch });
+		const [item] = deps.claim(NOW, 10);
+		await expect(deps.send(item)).resolves.toEqual({ status: 'sent' });
+		const [, init] = fetch.mock.calls[0] as [
+			string,
+			RequestInit & { headers: Record<string, string> },
+		];
+		expect(init.headers['webhook-signature']).toMatch(/^v1,/);
+		expect(JSON.parse(init.body as string)).toMatchObject({
+			id: `ntf_${generic.notification.id}`,
+			type: 'class.cancelled',
+		});
 	});
 
 	it('Discord 連携の送り先には、Bot で送る。Bot がなければ再送を待つ', async () => {

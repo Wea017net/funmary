@@ -3,7 +3,13 @@
 import type { ChannelStore, DeliveryStore, NotificationStore, PendingDelivery } from '@funmary/db';
 import type { DeliverNotificationsDeps, DeliveryItem, DeliveryOutcome } from '@funmary/jobs';
 import type { Logger } from '@funmary/log';
-import { sendViaBot, sendViaWebhook, type DeliveryMessage, type DiscordBot } from '@funmary/notify';
+import {
+	sendViaBot,
+	sendViaGenericWebhook,
+	sendViaWebhook,
+	type DeliveryMessage,
+	type DiscordBot,
+} from '@funmary/notify';
 
 export interface NotificationDeliveryOptions {
 	readonly channels: ChannelStore;
@@ -71,9 +77,16 @@ export function deliverNotificationsDeps(
 				return { status: 'sent' };
 			}
 			if (delivery.target.kind === 'webhook') {
-				return sendViaWebhook(delivery.target.url, message, {
-					...(options.fetch && { fetch: options.fetch }),
-				});
+				const fetchOption = options.fetch ? { fetch: options.fetch } : {};
+				if (delivery.target.signingKey) {
+					return sendViaGenericWebhook(
+						delivery.target.url,
+						{ ...message, id: `ntf_${delivery.notification.id}` },
+						delivery.target.signingKey,
+						fetchOption,
+					);
+				}
+				return sendViaWebhook(delivery.target.url, message, fetchOption);
 			}
 			if (!bot) return { status: 'retry', afterMs: null, reason: 'Bot が設定されていません' };
 			return sendViaBot(bot, delivery.target.channelId, message);

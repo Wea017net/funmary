@@ -54,8 +54,32 @@ export {
 	discordEmbed,
 	isDiscordWebhookUrl,
 	maskWebhookUrl,
+	retryAfterMs,
 	sendViaBot,
 	sendViaWebhook,
 	type DeliveryMessage,
 	type SendOutcome,
 } from './user-delivery.ts';
+export {
+	checkWebhookUrl,
+	createSsrfSafeAgent,
+	guardedLookup,
+	isBlockedAddress,
+	SsrfBlockedError,
+	type LookupFunction,
+	type SsrfSafeAgentOptions,
+	type UrlCheck,
+} from './ssrf-guard.ts';
+export {
+	generateSigningKey,
+	signWebhook,
+	verifyWebhookSignature,
+	type SignWebhookOptions,
+	type WebhookHeaders,
+} from './webhook-signature.ts';
+export {
+	genericWebhookBody,
+	sendViaGenericWebhook,
+	type GenericWebhookMessage,
+	type GenericWebhookOptions,
+} from './generic-webhook.ts';

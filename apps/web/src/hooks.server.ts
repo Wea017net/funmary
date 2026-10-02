@@ -49,6 +49,7 @@ import {
 	createDiscordOAuthClient,
 	createDiscordPresence,
 	parseLayout,
+	sendViaGenericWebhook,
 	sendViaWebhook,
 	type DiscordLayout,
 } from '@funmary/notify';
@@ -268,12 +269,16 @@ export const init: ServerInit = () => {
 			limit: () => readWebhookLimit(settingsStore.get(WEBHOOKS_PER_USER_KEY)),
 			setLimit: (limit: number) => settingsStore.set(WEBHOOKS_PER_USER_KEY, { limit }, new Date()),
 			// 手元の開発 (NOTIFY_DRY_RUN) では、本物の Webhook には送らず、送れたことにする
-			sendTest: (url: string) => {
+			sendTest: ({ url, signingKey }: { url: string; signingKey: string | null }) => {
 				if (result.config.notifyDryRun) {
 					logger?.withTag('deliver').info('(送信を止めています) Webhook へのテスト通知');
 					return Promise.resolve({ status: 'sent' as const });
 				}
-				return sendViaWebhook(url, testMessage(deliveryOrigin, new Date()));
+				const message = testMessage(deliveryOrigin, new Date());
+				if (signingKey) {
+					return sendViaGenericWebhook(url, { ...message, id: 'ntf_test' }, signingKey);
+				}
+				return sendViaWebhook(url, message);
 			},
 		},
 		dailyDigest: createDailyDigestStore(database),

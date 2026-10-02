@@ -1,8 +1,9 @@
-// 通知の送り先に使う Discord の Webhook の設定 (設計書 14.3)。登録、更新、テスト送信、有効と無効の切り替え、削除。
-// URL は暗号化して保存し、画面には末尾を伏せて出す。テスト送信は、Webhook の先に連続で送らないよう、利用者ごとに間をあける
+// 通知の送り先に使う Webhook の設定 (設計書 14.3、14.3.1)。Discord の Webhook と、利用者が自分で用意した
+// 汎用の Webhook の両方を扱う。登録、更新、テスト送信、有効と無効の切り替え、削除、署名の鍵の再発行。
+// URL (と署名の鍵) は暗号化して保存し、画面には末尾を伏せて出す。テスト送信は、先に連続で送らないよう、利用者ごとに間をあける
 import { fail, redirect, type Actions, type ServerLoad } from '@sveltejs/kit';
 import { DEFAULT_CHANNEL_KINDS } from '@funmary/db';
-import { maskWebhookUrl, type SendOutcome } from '@funmary/notify';
+import { generateSigningKey, maskWebhookUrl, type SendOutcome } from '@funmary/notify';
 import { CHANNEL_KIND_OPTIONS } from '$lib/server/channel-kind-form.ts';
 import { getServices } from '$lib/server/services.ts';
 import {
@@ -34,11 +35,11 @@ function failureMessage(outcome: SendOutcome): string | null {
 		case 'sent':
 			return null;
 		case 'gone':
-			return 'Webhook が見つかりません。URL が正しいか、Webhook が削除されていないかを確かめてください。';
+			return 'Webhook が見つかりません。URL が正しいか、削除されていないかを確かめてください。';
 		case 'retry':
-			return 'Discord に送れませんでした。しばらくしてから、もう一度お試しください。';
+			return '送り先に送れませんでした。しばらくしてから、もう一度お試しください。';
 		case 'rejected':
-			return 'Discord に受け付けられませんでした。URL を確かめてください。';
+			return '送り先に受け付けられませんでした。URL を確かめてください。';
 	}
 }
 
@@ -52,6 +53,7 @@ export const load: ServerLoad = ({ locals }) => {
 		kindOptions: CHANNEL_KIND_OPTIONS,
 		webhooks: list.map((webhook) => ({
 			id: webhook.id,
+			kind: webhook.kind,
 			label: webhook.label,
 			maskedUrl: maskWebhookUrl(webhook.url),
 			kinds: [...(webhook.notificationKinds ?? DEFAULT_CHANNEL_KINDS)],
@@ -79,16 +81,24 @@ export const actions: Actions = {
 		}
 		const wait = claimSend(locals.user.id, Date.now());
 		if (wait !== null) return fail(429, { error: waitMessage(wait) });
-		const problem = failureMessage(await webhooks.sendTest(parsed.url));
+		// 汎用の Webhook は、登録の前に署名の鍵を作り、テスト送信にもその鍵を使う (設計書 14.3.1)
+		const signingKey = parsed.kind === 'generic' ? generateSigningKey() : null;
+		const problem = failureMessage(await webhooks.sendTest({ url: parsed.url, signingKey }));
 		if (problem) return fail(400, { error: problem });
 		channels.addWebhook(
 			locals.user.id,
-			{ url: parsed.url, label: parsed.label, notificationKinds: parsed.kinds },
+			{
+				kind: parsed.kind,
+				url: parsed.url,
+				...(signingKey && { signingKey }),
+				label: parsed.label,
+				notificationKinds: parsed.kinds,
+			},
 			new Date(),
 		);
 		return {
-			message:
-				'Webhook を登録しました。テスト通知が、Discord のチャンネルに届いているか確かめてください。',
+			message: `Webhook を登録しました。テスト通知が、${parsed.kind === 'discord' ? 'Discord のチャンネル' : '送り先'}に届いているか確かめてください。`,
+			...(signingKey && { signingKey }),
 		};
 	},
 	/** 名前と、送る通知の種類を保存する */
@@ -129,9 +139,29 @@ export const actions: Actions = {
 		if (!current) return fail(404, { error: 'その Webhook は見つかりません。' });
 		const wait = claimSend(locals.user.id, Date.now());
 		if (wait !== null) return fail(429, { error: waitMessage(wait) });
-		const problem = failureMessage(await webhooks.sendTest(current.url));
+		const problem = failureMessage(
+			await webhooks.sendTest({ url: current.url, signingKey: current.signingKey }),
+		);
 		if (problem) return fail(400, { error: problem });
-		return { message: 'テスト通知を送りました。Discord のチャンネルを確かめてください。' };
+		return { message: 'テスト通知を送りました。送り先を確かめてください。' };
+	},
+	/** 汎用の Webhook の署名の鍵を作り直す。古い鍵はもう使えなくなる */
+	regenerateKey: async ({ request, locals }) => {
+		if (!locals.user) redirect(303, '/login');
+		const id = parseWebhookId(await request.formData());
+		if (id === null) return fail(400, { error: '入力が正しくありません。' });
+		const { channels } = getServices();
+		const current = channels.findWebhook(locals.user.id, id);
+		if (!current || current.kind !== 'generic') {
+			return fail(404, { error: 'その Webhook は見つかりません。' });
+		}
+		const signingKey = generateSigningKey();
+		channels.updateWebhook(locals.user.id, id, { signingKey });
+		return {
+			id,
+			message: '署名の鍵を作り直しました。送り先の設定も、新しい鍵に直してください。',
+			signingKey,
+		};
 	},
 	remove: async ({ request, locals }) => {
 		if (!locals.user) redirect(303, '/login');

@@ -1,6 +1,7 @@
 // 利用者への通知を Discord に送る部品 (設計書 14.3)。送り先は、利用者が登録した Webhook と、Discord 連携の Bot の 2 つ。
 // 送った結果を「送れた」「届かない」「再送する」「再送しても直らない」に分け、いつ再送するかは呼び出し側 (@funmary/jobs) が決める。
 // 失敗の理由には、Webhook の URL (秘密) を含めない
+import type { ReadableStreamReadResult } from 'node:stream/web';
 import { DiscordApiError, type DiscordBot, type DiscordEmbed } from './discord-bot.ts';
 
 export interface DeliveryMessage {
@@ -34,8 +35,14 @@ export function isDiscordWebhookUrl(url: string): boolean {
 
 /** 画面に出す形。トークンの部分を伏せる */
 export function maskWebhookUrl(url: string): string {
-	const match = /^(https:\/\/[^/]+\/api\/webhooks\/\d+\/)/.exec(url);
-	return match ? `${match[1]}…` : '…';
+	const discord = /^(https:\/\/[^/]+\/api\/webhooks\/\d+\/)/.exec(url);
+	if (discord) return `${discord[1]}…`;
+	// 汎用の Webhook の URL は形がさまざまなので、オリジン (秘密ではない) だけを見せる
+	try {
+		return `${new URL(url).origin}/…`;
+	} catch {
+		return '…';
+	}
 }
 
 /** 休講は赤、補講は緑、教室変更は黄 (設計書 14.3)。ほかは灰色 */
@@ -64,16 +71,50 @@ export interface WebhookSendOptions {
 	readonly fetch?: (url: string, init?: RequestInit) => Promise<Response>;
 }
 
+/** 本文を読む大きさの上限。相手が大きすぎる応答を返しても、読み切ろうとしない */
+const MAX_BODY_BYTES = 64 * 1024;
+
+/** 応答の本文を、大きさの上限を守って JSON として読む。形が違えば undefined */
+async function readBoundedJson(response: Response): Promise<unknown> {
+	const reader = response.body?.getReader();
+	if (!reader) return undefined;
+	const chunks: Uint8Array[] = [];
+	let total = 0;
+	try {
+		for (;;) {
+			const result: ReadableStreamReadResult<Uint8Array> = await reader.read();
+			if (result.done) break;
+			const value = result.value;
+			total += value.byteLength;
+			if (total > MAX_BODY_BYTES) {
+				await reader.cancel();
+				return undefined;
+			}
+			chunks.push(value);
+		}
+	} catch {
+		return undefined;
+	}
+	const bytes = new Uint8Array(total);
+	let offset = 0;
+	for (const chunk of chunks) {
+		bytes.set(chunk, offset);
+		offset += chunk.byteLength;
+	}
+	try {
+		return JSON.parse(new TextDecoder().decode(bytes)) as unknown;
+	} catch {
+		return undefined;
+	}
+}
+
 /** 429 の待ち時間 (ミリ秒)。Retry-After (秒) を先に、なければ本文の retry_after (秒) を見る */
-async function retryAfterMs(response: Response): Promise<number | null> {
+export async function retryAfterMs(response: Response): Promise<number | null> {
 	const header = Number(response.headers.get('retry-after'));
 	if (Number.isFinite(header) && header > 0) return Math.ceil(header * 1000);
-	try {
-		const { retry_after: seconds } = (await response.json()) as { retry_after?: unknown };
-		if (typeof seconds === 'number' && seconds > 0) return Math.ceil(seconds * 1000);
-	} catch {
-		// 本文が JSON でなければ、こちらの間隔で再送する
-	}
+	const json = await readBoundedJson(response);
+	const seconds = (json as { retry_after?: unknown } | undefined)?.retry_after;
+	if (typeof seconds === 'number' && seconds > 0) return Math.ceil(seconds * 1000);
 	return null;
 }
 

@@ -15,7 +15,7 @@ export interface DeliveryItem {
 	readonly attempts: number;
 	readonly channelId: number;
 	readonly userId: string;
-	readonly channelKind: 'discord' | 'discordLink';
+	readonly channelKind: 'discord' | 'generic' | 'discordLink';
 	/** 送り先が引けるか。Discord 連携が解除されていれば false */
 	readonly hasTarget: boolean;
 }

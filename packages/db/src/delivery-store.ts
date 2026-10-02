@@ -13,7 +13,7 @@ const ENQUEUE_WINDOW_MS = 24 * 60 * 60 * 1000;
 const STREAK_LOOKBACK = 20;
 
 export type DeliveryTarget =
-	| { readonly kind: 'webhook'; readonly url: string }
+	| { readonly kind: 'webhook'; readonly url: string; readonly signingKey: string | null }
 	| { readonly kind: 'link'; readonly channelId: string };
 
 export interface PendingDelivery {
@@ -22,7 +22,7 @@ export interface PendingDelivery {
 	readonly attempts: number;
 	readonly channelId: number;
 	readonly userId: string;
-	readonly channelKind: 'discord' | 'discordLink';
+	readonly channelKind: 'discord' | 'generic' | 'discordLink';
 	readonly notification: {
 		readonly id: number;
 		readonly kind: NotificationKind;
@@ -117,11 +117,14 @@ export function createDeliveryStore(database: Database, secretBox: SecretBox): D
 				.limit(limit)
 				.all();
 			return rows.map((row): PendingDelivery => {
-				const channelKind = row.channelKind === 'discordLink' ? 'discordLink' : 'discord';
+				const channelKind = row.channelKind as 'discord' | 'generic' | 'discordLink';
 				let target: DeliveryTarget | null = null;
-				if (channelKind === 'discord') {
-					const { url } = JSON.parse(secretBox.decrypt(row.configEncrypted)) as { url: string };
-					target = { kind: 'webhook', url };
+				if (channelKind === 'discord' || channelKind === 'generic') {
+					const { url, signingKey } = JSON.parse(secretBox.decrypt(row.configEncrypted)) as {
+						url: string;
+						signingKey?: string | null;
+					};
+					target = { kind: 'webhook', url, signingKey: signingKey ?? null };
 				} else if (row.linkChannelId !== null) {
 					target = { kind: 'link', channelId: row.linkChannelId };
 				}
