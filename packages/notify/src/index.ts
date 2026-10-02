@@ -59,3 +59,13 @@ export {
 	type DeliveryMessage,
 	type SendOutcome,
 } from './user-delivery.ts';
+export {
+	checkWebhookUrl,
+	createSsrfSafeAgent,
+	guardedLookup,
+	isBlockedAddress,
+	SsrfBlockedError,
+	type LookupFunction,
+	type SsrfSafeAgentOptions,
+	type UrlCheck,
+} from './ssrf-guard.ts';
