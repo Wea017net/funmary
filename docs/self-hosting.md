@@ -55,7 +55,7 @@ sudo chmod 750 /etc/funmary
 
 ## 3. リリースの取得と最初の配置
 
-リリースは GitHub の [Releases](https://github.com/oto-lab/funmary/releases) から、`build-<コミットのハッシュ>` の形の版を取得します (`update.sh` が自動で行うので、通常は手で取得する必要はありません)。
+リリースは GitHub の [Releases](https://github.com/funmary-app/funmary/releases) から、`build-<コミットのハッシュ>` の形の版を取得します (`update.sh` が自動で行うので、通常は手で取得する必要はありません)。
 
 ### 3.1 `update.sh` を取得する
 
@@ -63,7 +63,7 @@ sudo chmod 750 /etc/funmary
 
 ```sh
 sudo curl -fsSL -o /usr/local/sbin/funmary-update.sh \
-  https://raw.githubusercontent.com/oto-lab/funmary/main/deploy/update.sh
+  https://raw.githubusercontent.com/funmary-app/funmary/main/deploy/update.sh
 sudo chmod +x /usr/local/sbin/funmary-update.sh
 ```
 
@@ -200,7 +200,7 @@ sudo /usr/local/sbin/funmary-update.sh build-<新しいコミットのハッシ�
 
 手で前の版に戻したいときは、同じコマンドに前の版のハッシュを指定します。
 
-**任意: リリースのたびに自動で反映する** — このリポジトリを [フォーク](https://github.com/oto-lab/funmary/fork) して使っている場合は、GitHub Actions からリリースのたびに自動で反映させられます。反映専用のユーザーと、そのユーザーでしか使えない SSH の鍵を用意し、`command=` で `funmary-update` だけを実行できるように制限します。
+**任意: リリースのたびに自動で反映する** — このリポジトリを [フォーク](https://github.com/funmary-app/funmary/fork) して使っている場合は、GitHub Actions からリリースのたびに自動で反映させられます。反映専用のユーザーと、そのユーザーでしか使えない SSH の鍵を用意し、`command=` で `funmary-update` だけを実行できるように制限します。
 
 ```sh
 sudo useradd --system --shell /bin/sh funmary-deploy
@@ -294,4 +294,4 @@ sudo /usr/local/bin/funmary-admin sources status
 
 ## 困ったときは
 
-[GitHub の Issue](https://github.com/oto-lab/funmary/issues) で聞いてください。セキュリティ上の問題は、[SECURITY.md](../SECURITY.md) の方法で報告してください。
+[GitHub の Issue](https://github.com/funmary-app/funmary/issues) で聞いてください。セキュリティ上の問題は、[SECURITY.md](../SECURITY.md) の方法で報告してください。

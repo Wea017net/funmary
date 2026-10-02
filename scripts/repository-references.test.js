@@ -7,23 +7,23 @@ import { findRepositoryReferences } from './repository-references.js';
 describe('findRepositoryReferences', () => {
 	it('GitHub の URL、owner/repo の形、シェルの既定値から参照を拾う', () => {
 		const text = [
-			'https://github.com/oto-lab/funmary/issues',
+			'https://github.com/funmary-app/funmary/issues',
 			'git@github.com:otnc/funmary-mirror.git',
-			'https://raw.githubusercontent.com/oto-lab/funmary/main/deploy/update.sh',
-			'開発は [oto-lab/funmary](https://github.com/oto-lab/funmary) で',
-			"if: github.repository == 'oto-lab/funmary'",
-			'REPO="${FUNMARY_REPO:-oto-lab/funmary}"',
-			'https://contrib.rocks/image?repo=oto-lab/funmary',
+			'https://raw.githubusercontent.com/funmary-app/funmary/main/deploy/update.sh',
+			'開発は [funmary-app/funmary](https://github.com/funmary-app/funmary) で',
+			"if: github.repository == 'funmary-app/funmary'",
+			'REPO="${FUNMARY_REPO:-funmary-app/funmary}"',
+			'https://contrib.rocks/image?repo=funmary-app/funmary',
 		].join('\n');
 		expect(findRepositoryReferences(text)).toEqual([
-			'oto-lab/funmary',
+			'funmary-app/funmary',
 			'otnc/funmary-mirror',
-			'oto-lab/funmary',
-			'oto-lab/funmary',
-			'oto-lab/funmary',
-			'oto-lab/funmary',
-			'oto-lab/funmary',
-			'oto-lab/funmary',
+			'funmary-app/funmary',
+			'funmary-app/funmary',
+			'funmary-app/funmary',
+			'funmary-app/funmary',
+			'funmary-app/funmary',
+			'funmary-app/funmary',
 		]);
 	});
 
