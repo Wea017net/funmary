@@ -136,6 +136,7 @@ export {
 	DEFAULT_CHANNEL_KINDS,
 	type ChannelStatus,
 	type ChannelStore,
+	type DiscordLinkChannel,
 	type NewWebhook,
 	type StoredWebhook,
 	type WebhookChanges,

@@ -152,6 +152,20 @@ describe('Discord 連携の送り先', () => {
 		channels.syncLinkChannels(at('2026-10-01T00:00:00Z'));
 		expect(count()).toBe(0);
 	});
+
+	it('届ける通知の種類を読み書きできる。既定は null (既定の種類)。連携していない人は null', () => {
+		const a = newUser('a');
+		link(a);
+		channels.syncLinkChannels(at('2026-10-01T00:00:00Z'));
+		expect(channels.discordLinkChannel(a)).toMatchObject({ notificationKinds: null });
+		expect(channels.updateDiscordLinkKinds(a, ['makeup'])).toBe(true);
+		expect(channels.discordLinkChannel(a)).toMatchObject({ notificationKinds: ['makeup'] });
+		expect(channels.updateDiscordLinkKinds(a, null)).toBe(true);
+		expect(channels.discordLinkChannel(a)).toMatchObject({ notificationKinds: null });
+		const b = newUser('b');
+		expect(channels.discordLinkChannel(b)).toBeNull();
+		expect(channels.updateDiscordLinkKinds(b, ['makeup'])).toBe(false);
+	});
 });
 
 describe('Discord 連携の送り先の復帰', () => {
