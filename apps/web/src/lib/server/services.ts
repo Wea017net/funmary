@@ -20,9 +20,11 @@ import type {
 	UnmatchedLessonStore,
 	UserEventStore,
 } from '@funmary/db';
+import type { JobResult } from '@funmary/jobs';
 import type { AdminChannel, DiscordBot, DiscordLayout, DiscordOAuthClient } from '@funmary/notify';
 import type { BuildInfo } from './build-info.ts';
 import type { LegalInfo } from './legal.ts';
+import type { ResponseTimes } from './response-times.ts';
 import type { TimetableSources } from './user-timetable.ts';
 
 export interface Services {
@@ -74,6 +76,13 @@ export interface Services {
 	readonly holidays: HolidayStore;
 	readonly sourceHealth: SourceHealthStore;
 	readonly jobRuns: StoredJobRunStore;
+	/** サーバーの中で動いている定期処理。管理画面から今すぐ動かせる */
+	readonly jobs: {
+		readonly names: readonly string[];
+		runNow(name: string): Promise<JobResult>;
+	};
+	/** 直近 24 時間の応答時間 (サーバーのメモリにだけある) */
+	readonly responseTimes: ResponseTimes;
 	/** 利用者が全体に影響する操作をしたときの記録 (設計書、監査ログ) */
 	readonly auditLog: AuditLogStore;
 	readonly estimateHolidays: TimetableSources['estimateHolidays'];

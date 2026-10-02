@@ -1,4 +1,7 @@
 <script lang="ts">
+	import Button, { Label } from '@smui/button';
+	import { enhance } from '$app/forms';
+	import type { ResponseTimeSummary } from '$lib/server/response-times.ts';
 	import type { SourceStatusRow } from '$lib/server/source-status.ts';
 	import { SOURCE_STATE_LABELS } from '$lib/source-label.ts';
 	import SettingsBreadcrumb from '$lib/components/SettingsBreadcrumb.svelte';
@@ -12,7 +15,27 @@
 		message: string | null;
 	}
 
-	let { data }: { data: { sources: SourceStatusRow[]; runs: RunRow[] } } = $props();
+	let {
+		data,
+		form,
+	}: {
+		data: {
+			sources: SourceStatusRow[];
+			jobs: { name: string; label: string }[];
+			runs: RunRow[];
+			responseTimes: ResponseTimeSummary;
+		};
+		form: { error?: string; message?: string } | null;
+	} = $props();
+
+	/** 動かしている定期処理の名前。終わるまで、ほかのボタンも押せなくする */
+	let runningJob = $state<string | null>(null);
+
+	const percent = (value: number | null) => (value === null ? '-' : `${Math.round(value * 100)}%`);
+	const quantile = (value: number | null) => (value === null ? '2500 ms 超' : `${value} ms 以内`);
+	const maxBucket = $derived(
+		Math.max(1, ...data.responseTimes.buckets.map((bucket) => bucket.count)),
+	);
 
 	const RUN_LABELS = {
 		running: '実行中',
@@ -30,6 +53,12 @@
 <div class="page">
 	<SettingsBreadcrumb current="取得元と実行履歴" />
 	<h1>取得元と実行履歴</h1>
+
+	{#if form?.error}
+		<p class="notice error" role="alert">{form.error}</p>
+	{:else if form?.message}
+		<p class="notice" role="status">{form.message}</p>
+	{/if}
 
 	<section aria-labelledby="sources-heading">
 		<h2 id="sources-heading">取得元の状態</h2>
@@ -66,6 +95,49 @@
 		</ul>
 	</section>
 
+	<section aria-labelledby="run-now-heading">
+		<h2 id="run-now-heading">今すぐ動かす</h2>
+		<p class="muted">
+			定期処理を、決まった時刻を待たずに 1
+			回動かします。終わるまで待ちます。学生ポータルからの取得は、前の取得から 60
+			分たっていなければ、取得せずに終わります。
+		</p>
+		<ul class="jobs">
+			{#each data.jobs as job (job.name)}
+				<li>
+					<form
+						method="POST"
+						action="?/runJob"
+						use:enhance={() => {
+							runningJob = job.name;
+							return async ({ update }) => {
+								await update();
+								runningJob = null;
+							};
+						}}
+					>
+						<input type="hidden" name="job" value={job.name} />
+						<span>{job.label}</span>
+						<!-- 動いている間も、ボタンの文言と大きさは変えない -->
+						<Button
+							type="submit"
+							variant="outlined"
+							disabled={runningJob !== null}
+							aria-busy={runningJob === job.name}
+						>
+							<Label>動かす</Label>
+						</Button>
+					</form>
+				</li>
+			{/each}
+		</ul>
+		<p class="muted" aria-live="polite">
+			{runningJob
+				? `${data.jobs.find((job) => job.name === runningJob)?.label ?? ''} を動かしています`
+				: ''}
+		</p>
+	</section>
+
 	<section aria-labelledby="runs-heading">
 		<h2 id="runs-heading">定期処理の実行履歴</h2>
 		{#if data.runs.length === 0}
@@ -96,6 +168,53 @@
 					</tbody>
 				</table>
 			</div>
+		{/if}
+	</section>
+
+	<section aria-labelledby="response-heading">
+		<h2 id="response-heading">応答時間 (直近 24 時間)</h2>
+		<p class="muted">
+			画面と API の、サーバーの中の処理時間です。目標は 95% が 100 ms
+			以内です。サーバーのメモリにだけ記録するので、再起動すると消えます。
+		</p>
+		{#if data.responseTimes.count === 0}
+			<p>まだ記録がありません。</p>
+		{:else}
+			<dl>
+				<dt>件数</dt>
+				<dd class="numeric">{data.responseTimes.count} 件</dd>
+				<dt>100 ms 以内</dt>
+				<dd class="numeric">{percent(data.responseTimes.withinTarget)}</dd>
+				<dt>50% の応答</dt>
+				<dd class="numeric">{quantile(data.responseTimes.p50)}</dd>
+				<dt>95% の応答</dt>
+				<dd class="numeric">{quantile(data.responseTimes.p95)}</dd>
+				<dt>99% の応答</dt>
+				<dd class="numeric">{quantile(data.responseTimes.p99)}</dd>
+			</dl>
+			<table class="histogram">
+				<caption class="visually-hidden">応答時間の分布</caption>
+				<thead>
+					<tr>
+						<th scope="col">応答時間</th>
+						<th scope="col">件数</th>
+						<th scope="col"><span class="visually-hidden">割合</span></th>
+					</tr>
+				</thead>
+				<tbody>
+					{#each data.responseTimes.buckets as bucket (bucket.upTo)}
+						<tr>
+							<td class="numeric"
+								>{bucket.upTo === null ? '2500 ms 超' : `${bucket.upTo} ms 以内`}</td
+							>
+							<td class="numeric">{bucket.count}</td>
+							<td class="bar-cell">
+								<span class="bar" style:inline-size={`${(bucket.count / maxBucket) * 100}%`}></span>
+							</td>
+						</tr>
+					{/each}
+				</tbody>
+			</table>
 		{/if}
 	</section>
 </div>
@@ -210,6 +329,54 @@
 
 	td.numeric {
 		white-space: nowrap;
+	}
+
+	.notice {
+		padding: 0.75rem 1rem;
+		border-radius: 0.5rem;
+		background: var(--fm-surface-muted);
+		overflow-wrap: anywhere;
+
+		&.error {
+			color: var(--fm-error);
+		}
+	}
+
+	.muted {
+		color: var(--fm-text-muted);
+		font-size: 0.875rem;
+	}
+
+	.jobs {
+		margin: 0;
+		padding: 0;
+		list-style: none;
+
+		form {
+			display: flex;
+			flex-wrap: wrap;
+			align-items: center;
+			justify-content: space-between;
+			gap: 0.5rem 1rem;
+			padding: 0.5rem 0;
+			border-bottom: 1px dashed var(--fm-divider);
+		}
+	}
+
+	.histogram {
+		max-width: 32rem;
+		margin-top: 0.75rem;
+	}
+
+	.bar-cell {
+		width: 50%;
+	}
+
+	.bar {
+		display: block;
+		block-size: 0.75rem;
+		border-radius: 0.25rem;
+		background: var(--fm-primary);
 	}
 
 	.message {
