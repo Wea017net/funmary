@@ -14,6 +14,7 @@
 			kindOptions: readonly { kind: string; label: string }[];
 			webhooks: readonly {
 				id: number;
+				kind: 'discord' | 'generic';
 				label: string | null;
 				maskedUrl: string;
 				kinds: readonly string[];
@@ -21,31 +22,43 @@
 				disabledReason: string | null;
 			}[];
 		};
-		form: { error?: string; message?: string } | null;
+		form: { error?: string; message?: string; id?: number; signingKey?: string } | null;
 	} = $props();
 
 	const canAdd = $derived(data.count < data.limit);
 
+	let newKind = $state<'discord' | 'generic'>('discord');
 	let newUrl = $state('');
 	let newLabel = $state('');
+
+	const KIND_LABELS = { discord: 'Discord', generic: '汎用' } as const;
 </script>
 
 <svelte:head>
-	<title>Discord の Webhook - Funmary</title>
+	<title>Webhook - Funmary</title>
 	<meta name="robots" content="noindex" />
 </svelte:head>
 
 <div class="page">
-	<SettingsBreadcrumb current="Discord の Webhook" />
-	<h1>Discord の Webhook</h1>
-	<p>休講、補講、教室変更などを、自分の Discord サーバーのチャンネルに届けます。</p>
-	<p>友人と共有するサーバーと自分用のサーバーで、届ける通知の種類を分けることもできます。</p>
+	<SettingsBreadcrumb current="Webhook" />
+	<h1>Webhook</h1>
+	<p>
+		休講、補講、教室変更などを、自分の Discord サーバーのチャンネルか、自分で用意した URL
+		に届けます。
+	</p>
+	<p>送り先ごとに、届ける通知の種類を分けることもできます。</p>
 	<p>登録できるのは {data.limit} 個までです (いま {data.count} 個)。</p>
 
 	{#if form?.error}
 		<p class="error" role="alert">{form.error}</p>
 	{:else if form?.message}
 		<p class="message" role="status">{form.message}</p>
+	{/if}
+	{#if form?.signingKey && form.id === undefined}
+		<div class="key-box" role="status">
+			<p>署名の鍵 (今だけ表示します。コピーしてから閉じてください):</p>
+			<code>{form.signingKey}</code>
+		</div>
 	{/if}
 
 	{#if data.webhooks.length > 0}
@@ -54,6 +67,7 @@
 				<li class="webhook">
 					<h2>
 						{webhook.label ?? '名前なし'}
+						<span class="badge kind">{KIND_LABELS[webhook.kind]}</span>
 						{#if !webhook.enabled}<span class="badge">無効</span>{/if}
 					</h2>
 					<p class="meta">{webhook.maskedUrl}</p>
@@ -61,6 +75,12 @@
 						<p class="error" role="status">
 							止めました: {webhook.disabledReason}。直したら、有効に戻してください。
 						</p>
+					{/if}
+					{#if webhook.kind === 'generic' && form?.id === webhook.id && form.signingKey}
+						<div class="key-box" role="status">
+							<p>新しい署名の鍵 (今だけ表示します。コピーしてから閉じてください):</p>
+							<code>{form.signingKey}</code>
+						</div>
 					{/if}
 					<form
 						method="POST"
@@ -98,6 +118,17 @@
 								<Label>テスト通知を送る</Label>
 							</Button>
 						</form>
+						{#if webhook.kind === 'generic'}
+							<form
+								method="POST"
+								action="?/regenerateKey"
+								use:enhance
+								use:confirmSubmit={'署名の鍵を作り直します。古い鍵は使えなくなります。よろしいですか?'}
+							>
+								<input type="hidden" name="id" value={webhook.id} />
+								<Button type="submit" variant="outlined"><Label>署名の鍵を作り直す</Label></Button>
+							</form>
+						{/if}
 						<form method="POST" action="?/toggle" use:enhance>
 							<input type="hidden" name="id" value={webhook.id} />
 							<Button type="submit" variant="outlined">
@@ -122,14 +153,39 @@
 	<section aria-labelledby="add-heading">
 		<h2 id="add-heading">Webhook を登録する</h2>
 		{#if canAdd}
-			<ol class="steps">
-				<li>Discord で、通知を受け取るチャンネルの設定を開きます。</li>
-				<li>「連携サービス」の「ウェブフック」から、新しいウェブフックを作ります。</li>
-				<li>「ウェブフック URL をコピー」を押して、下の欄に貼り付けます。</li>
-				<li>登録すると、テスト通知が届きます。届いたことを確かめてください。</li>
-			</ol>
+			<fieldset class="kind-choice">
+				<legend>種類</legend>
+				<label class="check">
+					<input type="radio" name="newKind" value="discord" bind:group={newKind} form="add-form" />
+					Discord の Webhook
+				</label>
+				<label class="check">
+					<input type="radio" name="newKind" value="generic" bind:group={newKind} form="add-form" />
+					汎用の Webhook (自分で用意した URL)
+				</label>
+			</fieldset>
+			{#if newKind === 'discord'}
+				<ol class="steps">
+					<li>Discord で、通知を受け取るチャンネルの設定を開きます。</li>
+					<li>「連携サービス」の「ウェブフック」から、新しいウェブフックを作ります。</li>
+					<li>「ウェブフック URL をコピー」を押して、下の欄に貼り付けます。</li>
+					<li>登録すると、テスト通知が届きます。届いたことを確かめてください。</li>
+				</ol>
+			{:else}
+				<ol class="steps">
+					<li>
+						通知を受け取る https の URL を、自分で用意します。ポートは 443 か 8443 だけ使えます。
+					</li>
+					<li>
+						登録すると、署名の鍵を作り、Standard Webhooks
+						の形式でテスト通知を送ります。鍵は、登録した直後だけ画面に出ます。
+					</li>
+					<li>届いた本文の署名を、その鍵で確かめてください (詳しくは設計書 14.3.1)。</li>
+				</ol>
+			{/if}
 			<!-- 送信のあとにフォームを初期状態へ戻すと、届ける通知のチェックが外れるので、戻さずに、URL と名前だけ空にする -->
 			<form
+				id="add-form"
 				method="POST"
 				action="?/add"
 				use:enhance={() =>
@@ -142,6 +198,7 @@
 					}}
 				class="stack"
 			>
+				<input type="hidden" name="kind" value={newKind} />
 				<label class="field">
 					Webhook の URL
 					<input
@@ -151,7 +208,9 @@
 						required
 						autocomplete="off"
 						spellcheck="false"
-						placeholder="https://discord.com/api/webhooks/..."
+						placeholder={newKind === 'discord'
+							? 'https://discord.com/api/webhooks/...'
+							: 'https://example.com/webhooks/funmary'}
 					/>
 				</label>
 				<label class="field">
@@ -181,9 +240,9 @@
 			<p>新しく登録するには、使わないものを削除してください。</p>
 		{/if}
 	</section>
-	<p class="meta">Webhook の URL は、暗号化して保存します。</p>
+	<p class="meta">Webhook の URL (と、汎用の Webhook の署名の鍵) は、暗号化して保存します。</p>
 	<p class="meta">
-		URL を知っている人は、そのチャンネルに投稿できるので、他の人に見せないでください。
+		URL や鍵を知っている人は、その送り先に成りすませるので、他の人に見せないでください。
 	</p>
 </div>
 
@@ -225,10 +284,30 @@
 		font-weight: normal;
 	}
 
+	.badge.kind {
+		color: var(--fm-text-muted);
+	}
+
 	.meta {
 		color: var(--fm-text-muted);
 		font-size: 0.875rem;
 		overflow-wrap: anywhere;
+	}
+
+	.key-box {
+		margin: 1rem 0;
+		padding: 0.75rem 1rem;
+		border: 1px solid var(--fm-accent, currentcolor);
+		border-radius: 0.25rem;
+	}
+
+	.key-box code {
+		display: block;
+		margin-top: 0.5rem;
+		padding: 0.5rem;
+		overflow-wrap: anywhere;
+		background: var(--fm-surface-muted, rgba(128, 128, 128, 0.1));
+		border-radius: 0.25rem;
 	}
 
 	.stack {
@@ -267,6 +346,10 @@
 		padding: 0.75rem 1rem;
 		border: 1px solid var(--fm-divider);
 		border-radius: 0.5rem;
+	}
+
+	.kind-choice {
+		margin-bottom: 1rem;
 	}
 
 	.check {

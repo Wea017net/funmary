@@ -2130,17 +2130,19 @@ test.describe('このアプリについて', () => {
 	});
 });
 
-test.describe('Discord の Webhook', () => {
+test.describe('Webhook', () => {
 	const stamp = Date.now();
 	const email = `e2e-webhook-${stamp}@fun.ac.jp`;
 	const webhookUrl = `https://discord.com/api/webhooks/123456/e2e-token-${stamp}`;
 
-	test('登録、保存、無効化、削除ができる。URL は末尾を伏せて出す', async ({ page }) => {
+	test('Discord の Webhook の登録、保存、無効化、削除ができる。URL は末尾を伏せて出す', async ({
+		page,
+	}) => {
 		oidc.setIdentity({ sub: email, email, email_verified: true, hd: 'fun.ac.jp' });
 		await page.goto('/auth/google');
 		await page.goto('/app/settings');
-		await page.getByRole('link', { name: 'Discord の Webhook' }).click();
-		await expect(page.getByRole('heading', { level: 1, name: 'Discord の Webhook' })).toBeVisible();
+		await page.getByRole('link', { name: 'Webhook' }).first().click();
+		await expect(page.getByRole('heading', { level: 1, name: 'Webhook' })).toBeVisible();
 
 		// Discord の Webhook でない URL は、登録できない
 		await page.getByLabel('Webhook の URL').fill('https://example.com/hook');
@@ -2177,6 +2179,36 @@ test.describe('Discord の Webhook', () => {
 		page.once('dialog', (dialog) => dialog.accept());
 		await item.getByRole('button', { name: '削除する' }).click();
 		await expect(item).toHaveCount(0);
+	});
+
+	test('汎用の Webhook は、登録すると署名の鍵が出る。作り直すと新しい鍵が出る', async ({
+		page,
+	}) => {
+		const genericEmail = `e2e-webhook-generic-${Date.now()}@fun.ac.jp`;
+		oidc.setIdentity({
+			sub: genericEmail,
+			email: genericEmail,
+			email_verified: true,
+			hd: 'fun.ac.jp',
+		});
+		await page.goto('/auth/google');
+		await page.goto('/app/settings/webhooks');
+
+		await page.getByLabel('汎用の Webhook (自分で用意した URL)').check();
+		await page.getByLabel('Webhook の URL').fill('https://example.com/hook');
+		await page.getByLabel('名前 (任意)').first().fill('自作のスクリプト');
+		await page.getByRole('button', { name: '登録して、テスト通知を送る' }).click();
+		await expect(page.getByText('Webhook を登録しました', { exact: false })).toBeVisible();
+		const firstKey = await page.locator('.key-box code').first().textContent();
+		expect(firstKey).toMatch(/^whsec_/);
+
+		const item = page.getByRole('listitem').filter({ hasText: '自作のスクリプト' });
+		await expect(item).toContainText('汎用');
+		await item.getByRole('button', { name: '署名の鍵を作り直す' }).click();
+		await expect(page.getByText('作り直しました', { exact: false })).toBeVisible();
+		const secondKey = await page.locator('.key-box code').first().textContent();
+		expect(secondKey).toMatch(/^whsec_/);
+		expect(secondKey).not.toBe(firstKey);
 	});
 
 	test('管理者が上限を 0 にすると、新しく登録できない。戻すと登録できる', async ({ page }) => {

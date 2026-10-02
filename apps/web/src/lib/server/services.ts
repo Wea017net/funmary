@@ -69,14 +69,17 @@ export interface Services {
 	readonly courses: CourseStore;
 	/** 利用者の通知欄 (設計書 14.1、14.2) */
 	readonly notifications: NotificationStore;
-	/** 利用者が登録した通知の送り先 (Discord の Webhook) (設計書 14.3) */
+	/** 利用者が登録した通知の送り先 (Discord の Webhook、汎用の Webhook) (設計書 14.3、14.3.1) */
 	readonly channels: ChannelStore;
 	readonly webhooks: {
-		/** 1 人が登録できる Webhook の個数 (管理者が決める) */
+		/** 1 人が登録できる Webhook の個数 (管理者が決める)。discord と generic を合わせた数 */
 		limit(): number;
 		setLimit(limit: number): void;
-		/** Webhook にテスト通知を送る。NOTIFY_DRY_RUN のときは送らずに、送れたことにする */
-		sendTest(url: string): Promise<SendOutcome>;
+		/**
+		 * Webhook にテスト通知を送る。NOTIFY_DRY_RUN のときは送らずに、送れたことにする。
+		 * signingKey があれば、汎用の Webhook として Funmary 共通の JSON と署名で送る
+		 */
+		sendTest(webhook: { url: string; signingKey: string | null }): Promise<SendOutcome>;
 	};
 	/** 予定のまとめ (今日か明日の授業と予定を Discord に送るもの、#207) の、利用者ごとの設定 */
 	readonly dailyDigest: DailyDigestStore;
