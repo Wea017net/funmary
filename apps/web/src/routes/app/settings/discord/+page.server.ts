@@ -1,6 +1,7 @@
 // 利用者の Discord 連携の設定 (設計書 14.9、#163)。連携する、解除する、認可コードを受け取って完成させる。
 import { fail, redirect, type Actions, type ServerLoad } from '@sveltejs/kit';
-import type { DiscordDestination } from '@funmary/db';
+import { DEFAULT_CHANNEL_KINDS, type DiscordDestination } from '@funmary/db';
+import { CHANNEL_KIND_OPTIONS, parseChannelKinds } from '$lib/server/channel-kind-form.ts';
 import { parseDailyDigestForm } from '$lib/server/daily-digest-form.ts';
 import { completeDiscordLink, openLinkState, sealLinkState } from '$lib/server/discord-link.ts';
 import { getServices } from '$lib/server/services.ts';
@@ -36,11 +37,20 @@ export const load: ServerLoad = async ({ locals, url }) => {
 	}
 
 	const current = link.store.findByUser(locals.user.id);
+	const { channels } = getServices();
 	return {
 		configured: link.configured,
 		enabled: link.enabled(),
 		linked: current ? { destination: current.destination } : null,
 		digest: current ? dailyDigest.get(locals.user.id) : null,
+		// 届ける通知の種類 (設計書 14.7、#163)。連携していなければ null
+		kinds: current
+			? [
+					...(channels.discordLinkChannel(locals.user.id)?.notificationKinds ??
+						DEFAULT_CHANNEL_KINDS),
+				]
+			: null,
+		kindOptions: CHANNEL_KIND_OPTIONS,
 		callback,
 		supportInvite: publicInvite(readInvites(settings.get(SUPPORT_INVITES_KEY)), new Date()),
 	};
@@ -75,6 +85,18 @@ export const actions: Actions = {
 		if (!parsed.ok) return fail(400, { error: parsed.error });
 		dailyDigest.save(locals.user.id, parsed.settings, new Date());
 		return { message: '予定のまとめの設定を保存しました。' };
+	},
+	/** 届ける通知の種類を保存する (設計書 14.7、#163) */
+	kinds: async ({ request, locals }) => {
+		if (!locals.user) redirect(303, '/login');
+		const { channels, discord } = getServices();
+		if (!discord.link.store.findByUser(locals.user.id)) {
+			return fail(400, { error: '連携していません。' });
+		}
+		const kinds = parseChannelKinds(await request.formData());
+		if (!kinds) return fail(400, { error: '届ける通知の種類を、1 つ以上選んでください。' });
+		channels.updateDiscordLinkKinds(locals.user.id, kinds);
+		return { message: '届ける通知の種類を保存しました。' };
 	},
 	/** 連携を解除する。Discord に接続できなくても、必ず成功する (設計書 14.9) */
 	unlink: ({ locals }) => {

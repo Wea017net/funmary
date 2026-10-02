@@ -15,6 +15,9 @@
 			linked: { destination: 'thread' | 'dm' } | null;
 			/** 予定のまとめの設定。連携していなければ null */
 			digest: DailyDigestSettings | null;
+			/** 届ける通知の種類 (休講など)。連携していなければ null */
+			kinds: string[] | null;
+			kindOptions: readonly { kind: string; label: string }[];
 			callback: { ok: boolean; message: string } | null;
 			/** 管理者が公開にした、サポートサーバーへの招待。なければ null */
 			supportInvite: { url: string } | null;
@@ -82,6 +85,37 @@
 		>
 			<Button type="submit" variant="outlined"><Label>連携を解除する</Label></Button>
 		</form>
+
+		{#if data.kinds}
+			<section aria-labelledby="kinds-heading">
+				<h2 id="kinds-heading">届ける通知</h2>
+				<p>上の送り先に届ける、通知の種類です。</p>
+				<form
+					method="POST"
+					action="?/kinds"
+					use:enhance={() =>
+						({ update }) =>
+							update({ reset: false })}
+					class="link-form"
+				>
+					<fieldset>
+						<legend>届ける通知の種類</legend>
+						{#each data.kindOptions as option (option.kind)}
+							<label>
+								<input
+									type="checkbox"
+									name="kinds"
+									value={option.kind}
+									checked={data.kinds.includes(option.kind)}
+								/>
+								{option.label}
+							</label>
+						{/each}
+					</fieldset>
+					<Button type="submit" variant="unelevated"><Label>保存する</Label></Button>
+				</form>
+			</section>
+		{/if}
 
 		{#if data.digest}
 			<section aria-labelledby="digest-heading">

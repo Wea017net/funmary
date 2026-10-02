@@ -3,12 +3,12 @@
 import { fail, redirect, type Actions, type ServerLoad } from '@sveltejs/kit';
 import { DEFAULT_CHANNEL_KINDS } from '@funmary/db';
 import { maskWebhookUrl, type SendOutcome } from '@funmary/notify';
+import { CHANNEL_KIND_OPTIONS } from '$lib/server/channel-kind-form.ts';
 import { getServices } from '$lib/server/services.ts';
 import {
 	parseWebhookCreate,
 	parseWebhookId,
 	parseWebhookUpdate,
-	WEBHOOK_KIND_OPTIONS,
 } from '$lib/server/webhook-form.ts';
 
 /** テスト送信と登録の間隔 */
@@ -49,7 +49,7 @@ export const load: ServerLoad = ({ locals }) => {
 	return {
 		limit: webhooks.limit(),
 		count: list.length,
-		kindOptions: WEBHOOK_KIND_OPTIONS,
+		kindOptions: CHANNEL_KIND_OPTIONS,
 		webhooks: list.map((webhook) => ({
 			id: webhook.id,
 			label: webhook.label,
