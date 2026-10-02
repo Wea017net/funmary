@@ -79,7 +79,7 @@ Funmary のコードは、次の 2 つのライセンスのどちらかを選ん
 - BSD 3-Clause License ([LICENSE-BSD-3-CLAUSE](LICENSE-BSD-3-CLAUSE))
 - Apache License, Version 2.0 ([LICENSE-APACHE-2.0](LICENSE-APACHE-2.0))
 
-Funmary に送られた貢献も、特に断りがなければ、追加の条件なしに同じ 2 つのライセンスで受け取ります。
+Funmary に送られた貢献も、追加の条件なしに同じ 2 つのライセンスで受け取ります。外部の方の PR では、初めての PR のときに、このことへの同意をお願いしています (PR に案内のコメントが届きます)。
 
 ロゴとアイコンは、この 2 つのライセンスの対象外です。Funmary を宣伝、紹介する目的では改変せずに使えますが、セルフホストを含むサービスの運営に使うには許可が要ります。詳しくは [LICENSE-ASSETS](LICENSE-ASSETS) を見てください。
 
