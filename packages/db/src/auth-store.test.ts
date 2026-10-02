@@ -50,6 +50,22 @@ describe('利用者', () => {
 		expect(store.findUserById(id)).toMatchObject({ name: '山田 太郎 (更新)', role: 'admin' });
 	});
 
+	it('メールアドレスで引ける。大文字と小文字は区別しない', () => {
+		const store = createAuthStore(database);
+		const id = newUser(store);
+		expect(store.findUserByEmail('Taro@FUN.ac.jp')?.id).toBe(id);
+		expect(store.findUserByEmail('none@fun.ac.jp')).toBeNull();
+	});
+
+	it('権限の段階 (user、moderator、admin) を変えられる', () => {
+		const store = createAuthStore(database);
+		const id = newUser(store);
+		store.setRole(id, 'moderator');
+		expect(store.findUserById(id)?.role).toBe('moderator');
+		store.setRole(id, 'user');
+		expect(store.findUserById(id)?.role).toBe('user');
+	});
+
 	it('利用者を停止すると、その利用者のセッションもすべて消える', () => {
 		const store = createAuthStore(database);
 		const id = newUser(store);

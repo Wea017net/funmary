@@ -12,7 +12,7 @@ export const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
 /**
  * user (何もできない一般の利用者)、moderator (監査ログや、曜日と時限の確認待ちを見られる)、
- * admin (すべて) の 3 段階。moderator への昇格は、いまは DB を直接書き換えるしかない (#15)
+ * admin (すべて) の 3 段階。管理用コマンドの user promote で変える
  */
 export type UserRole = 'user' | 'moderator' | 'admin';
 
@@ -47,6 +47,8 @@ export type RegisterResult =
 export interface AuthStore {
 	findUserBySub(googleSub: string): AuthUser | null;
 	findUserById(id: string): AuthUser | null;
+	/** 大文字と小文字は区別しない (管理用コマンドの user が使う) */
+	findUserByEmail(email: string): AuthUser | null;
 	/** 招待コードを使わずに利用者を作る。作った利用者の ID を返す */
 	createUser(user: NewUser, now: Date): string;
 	/** 利用者の作成と、招待コードの使用を、1 つのトランザクションで行う */
@@ -54,6 +56,7 @@ export interface AuthStore {
 	recordLogin(userId: string, now: Date, update?: { name?: string | null; role?: UserRole }): void;
 	/** 停止すると、その利用者のセッションもすべて消す */
 	setStatus(userId: string, status: 'active' | 'suspended'): void;
+	setRole(userId: string, role: UserRole): void;
 
 	/** セッションを作り、Cookie に渡す ID を返す */
 	createSession(userId: string, now: Date): string;
@@ -168,6 +171,14 @@ export function createAuthStore(database: Database): AuthStore {
 			const row = db.select().from(users).where(eq(users.id, id)).get();
 			return row ? toUser(row) : null;
 		},
+		findUserByEmail(email) {
+			const row = db
+				.select()
+				.from(users)
+				.where(sql`lower(${users.email}) = ${email.toLowerCase()}`)
+				.get();
+			return row ? toUser(row) : null;
+		},
 		createUser: (user, now) => insertUser(user, now, { inviteCodeId: null }),
 		registerUser(user, invite, now) {
 			return sqlite.transaction((): RegisterResult => {
@@ -199,6 +210,9 @@ export function createAuthStore(database: Database): AuthStore {
 				})
 				.where(eq(users.id, userId))
 				.run();
+		},
+		setRole(userId, role) {
+			db.update(users).set({ role }).where(eq(users.id, userId)).run();
 		},
 		setStatus(userId, status) {
 			sqlite.transaction(() => {

@@ -15,7 +15,9 @@ export type AuditAction =
 	| 'lesson.unresolve'
 	| 'lesson.ignore'
 	| 'lesson.restore'
-	| 'slot.approve';
+	| 'slot.approve'
+	| 'user.role'
+	| 'user.status';
 
 export interface AuditLogEntry {
 	readonly id: number;
