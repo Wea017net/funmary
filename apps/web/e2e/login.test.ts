@@ -1391,6 +1391,36 @@ test.describe('取得元と実行履歴', () => {
 		await expect(first).toContainText('2 秒');
 	});
 
+	test('管理者は、定期処理を今すぐ動かせる。応答時間の分布も見られる', async ({ page }) => {
+		const email = 'e2e-admin@fun.ac.jp';
+		oidc.setIdentity({ sub: email, email, email_verified: true, hd: 'fun.ac.jp' });
+		await page.goto('/auth/google');
+		await page.goto('/app/admin/status');
+
+		// 外へ通信しない処理 (時間割の PDF の取り込みの案内) を動かす
+		await page
+			.getByRole('region', { name: '今すぐ動かす' })
+			.getByRole('listitem')
+			.filter({ hasText: '時間割の PDF の取り込みの案内' })
+			.getByRole('button', { name: '動かす' })
+			.click();
+		await expect(page.getByRole('status').first()).toContainText(
+			'時間割の PDF の取り込みの案内 を動かしました',
+		);
+		await expect(
+			page
+				.getByRole('region', { name: '定期処理の実行履歴' })
+				.getByRole('row')
+				.filter({ hasText: '時間割の PDF の取り込みの案内' })
+				.first(),
+		).toContainText('成功');
+
+		// ここまでの画面の表示で、応答時間が記録されている
+		const responses = page.getByRole('region', { name: '応答時間 (直近 24 時間)' });
+		await expect(responses).toContainText('100 ms 以内');
+		await expect(responses.getByRole('table', { name: '応答時間の分布' })).toBeVisible();
+	});
+
 	test('管理者でなければ、見つからないことにする', async ({ page }) => {
 		const email = 'e2e-not-admin@fun.ac.jp';
 		oidc.setIdentity({ sub: email, email, email_verified: true, hd: 'fun.ac.jp' });

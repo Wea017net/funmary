@@ -285,6 +285,27 @@ sudo /usr/local/bin/funmary-admin sources status
 
 学生ポータル、公開シラバス、祝日のそれぞれについて、最後に成功した時刻と、連続で失敗している回数が分かります。管理者としてログインした画面の「取得元と実行履歴」でも、同じ内容が見られます。
 
+定期処理を、決まった時刻を待たずに 1 回動かすこともできます。管理画面の「取得元と実行履歴」の「今すぐ動かす」でも動かせます (こちらはサーバーの中で動くので、同じ処理が重なりません)。予定のまとめの送信 (`send-daily-digest`) は、利用者に二重に送らないよう、管理画面からだけ動かせます。
+
+```sh
+sudo /usr/local/bin/funmary-admin job run import-syllabus
+```
+
+学生ポータルからの取得 (`scrape-portal`) は、手で動かしても、前の取得から 60 分たっていなければ取得しません。管理画面の同じページには、直近 24 時間の応答時間の分布も出ます (サーバーのメモリにだけ記録するので、再起動すると消えます)。
+
+### 4.7 利用者の管理
+
+```sh
+sudo /usr/local/bin/funmary-admin user list                                  # 一覧
+sudo /usr/local/bin/funmary-admin user promote <メールアドレス>               # 管理者にする
+sudo /usr/local/bin/funmary-admin user promote <メールアドレス> --role moderator
+sudo /usr/local/bin/funmary-admin user promote <メールアドレス> --role user   # 一般に戻す
+sudo /usr/local/bin/funmary-admin user suspend <メールアドレス>               # 利用を停止する
+sudo /usr/local/bin/funmary-admin user unsuspend <メールアドレス>             # 停止を解く
+```
+
+利用者は、一度ログインして登録を済ませている必要があります。モデレーターは、監査ログと、曜日と時限の確認待ちを見られます。利用を停止すると、その人のログイン中のセッションもすべて消えます。`ADMIN_EMAILS` にある人は、ログインのたびに管理者に戻るので、管理者から外すときは `ADMIN_EMAILS` からも外してください。権限の変更と停止は、監査ログに残り、管理用の Discord の `users` に知らせます (メールアドレスは載せません)。
+
 ## 5. 大学のサービスとのかかわり
 
 - Funmary が大学の学生ポータルに接続するのは、休講などを確かめる定期処理だけです。この定期処理は、1 日に 3 回 (日本時間 7 時、12 時、18 時) しか動かず、それより短い間隔で接続することはありません (`SOURCES_DISABLED` で個別の取得元を止めることはできますが、間隔を今より短くする設定はありません)。

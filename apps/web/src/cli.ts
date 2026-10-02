@@ -7,22 +7,33 @@ import { defineCommand, runMain } from 'citty';
 import {
 	backupDatabase,
 	createAcademicCalendarStore,
+	createAuditLogStore,
 	createAuthStore,
 	createHolidayStore,
 	createSettingsStore,
 	createSourceHealthStore,
 	createCourseStore,
+	createJobRunStore,
 	createSubjectStore,
 	createUnmatchedLessonStore,
 	openDatabase,
 	restoreDatabase,
+	type Database,
 } from '@funmary/db';
+import { createJobRunner } from '@funmary/jobs';
 // 入口 (@funmary/sources) からだと、取得の部品と依存まで cli.js にまとまるので、PDF の読み取りだけを読み込む
 import { parseTimetablePdf } from '@funmary/sources/timetable-pdf';
 import { parseAcademicCalendarPdf } from '@funmary/sources/academic-calendar-pdf';
 import { academicYearOf, jstDateTime, resolveAcademicTerms } from '@funmary/core';
 import { createLogger } from '@funmary/log';
-import { ADMIN_CHANNELS, createDiscordBot, parseLayout, type AdminChannel } from '@funmary/notify';
+import {
+	ADMIN_CHANNELS,
+	createAdminAlerter,
+	createAdminDiscordSink,
+	createDiscordBot,
+	parseLayout,
+	type AdminChannel,
+} from '@funmary/notify';
 import { sendAdminNotification } from './lib/server/admin-notify.ts';
 import { DISCORD_LAYOUT_KEY } from './lib/server/discord-admin.ts';
 import { importAcademicCalendar } from './lib/server/academic-calendar-import.ts';
@@ -30,8 +41,16 @@ import { formatCalendarImportReport, formatCalendarReport } from './lib/server/c
 import { formatSourcesReport, sourceStatuses } from './lib/server/source-status.ts';
 import { parseConfig, type Config } from './lib/server/config.ts';
 import { alignEnvFile, fillSecrets, generateSecrets } from './lib/server/env-file.ts';
+import { JOB_LABELS, SERVER_ONLY_JOBS, createJobDefinitions } from './lib/server/jobs.ts';
 import { findMigrationsFolder } from './lib/server/migrations-path.ts';
 import { importTimetable, type TimetableImportReport } from './lib/server/timetable-import.ts';
+import {
+	ROLE_LABELS,
+	changeRole,
+	changeStatus,
+	formatUserList,
+	parseRole,
+} from './lib/server/user-admin.ts';
 
 /** リリースでは cli.js の隣に migrations を置く。TypeScript のまま動かす手元にはないので、DB のパッケージの既定に任せる */
 const bundledMigrations = findMigrationsFolder(dirname(fileURLToPath(import.meta.url)));
@@ -51,6 +70,32 @@ function loadConfigOrExit(): Config {
 	console.error('環境変数に足りない値か誤りがあります。次の変数を直してください。');
 	for (const issue of result.issues) console.error(`  ${issue.name}: ${issue.message}`);
 	process.exit(1);
+}
+
+function openConfiguredDatabase(config: Config): Database {
+	return openDatabase(join(config.dataDir, 'funmary.db'), {
+		backupDir: join(config.dataDir, 'backups'),
+		...(bundledMigrations && { migrationsFolder: bundledMigrations }),
+	});
+}
+
+/** 管理用の Discord への知らせ。Bot があれば Bot、なければ Webhook に送る (サーバーと同じ) */
+function createCliAlerter(config: Config, database: Database) {
+	const bot = config.discordBot ? createDiscordBot(config.discordBot) : null;
+	const settings = createSettingsStore(database);
+	return createAdminAlerter({
+		webhookUrl: config.adminDiscordWebhookUrl,
+		...(bot
+			? {
+					discord: createAdminDiscordSink({
+						bot,
+						layout: () => parseLayout(settings.get(DISCORD_LAYOUT_KEY)),
+					}),
+				}
+			: {}),
+		dryRun: config.notifyDryRun,
+		log: createLogger({ level: 'error', format: 'text', mode: 'production' }),
+	});
 }
 
 const init = defineCommand({
@@ -568,6 +613,194 @@ const notify = defineCommand({
 	},
 });
 
+const jobRun = defineCommand({
+	meta: {
+		name: 'run',
+		description:
+			'定期処理を 1 つだけ、今すぐ動かす。サーバーとは別のプロセスで動く (管理画面の「取得元と実行履歴」からも動かせる)',
+	},
+	args: {
+		name: { type: 'positional', description: '定期処理の名前。例: scrape-portal', required: true },
+	},
+	async run({ args }) {
+		if (SERVER_ONLY_JOBS.includes(args.name)) {
+			console.error(
+				`${args.name} は、サーバーの実行と重なって二重に送らないよう、管理画面の「取得元と実行履歴」からだけ動かせます。`,
+			);
+			process.exit(1);
+		}
+		const config = loadConfigOrExit();
+		const database = openConfiguredDatabase(config);
+		try {
+			const alerter = createCliAlerter(config, database);
+			const jobs = createJobDefinitions({
+				config,
+				database,
+				alert: (alert) => alerter.send(alert),
+			});
+			if (!jobs.some((candidate) => candidate.name === args.name)) {
+				console.error(`定期処理 ${args.name} はありません。動かせるのは次のとおりです。`);
+				for (const candidate of jobs) {
+					console.error(`  ${candidate.name}  ${JOB_LABELS.get(candidate.name) ?? ''}`);
+				}
+				process.exitCode = 1;
+				return;
+			}
+			const runner = createJobRunner({
+				jobs,
+				store: createJobRunStore(database),
+				log: createLogger({ level: config.logLevel, format: 'text', mode: 'production' }),
+			});
+			const result = await runner.runNow(args.name);
+			const detail = result.message ? `: ${result.message}` : '';
+			if (result.status === 'succeeded') console.log(`成功しました${detail}`);
+			else if (result.status === 'skipped') console.log(`動かしませんでした${detail}`);
+			else console.error(`失敗しました${detail}`);
+			process.exitCode = result.status === 'failed' ? 1 : 0;
+		} finally {
+			database.close();
+		}
+	},
+});
+
+const job = defineCommand({
+	meta: { name: 'job', description: '定期処理を扱う' },
+	subCommands: { run: jobRun },
+});
+
+const userList = defineCommand({
+	meta: { name: 'list', description: '利用者の一覧 (メールアドレス、権限の段階、停止中か)' },
+	run() {
+		const config = loadConfigOrExit();
+		const database = openConfiguredDatabase(config);
+		try {
+			for (const line of formatUserList(createAuthStore(database).listUsers())) console.log(line);
+		} finally {
+			database.close();
+		}
+	},
+});
+
+const userPromote = defineCommand({
+	meta: {
+		name: 'promote',
+		description:
+			'利用者の権限の段階を変える。--role を省くと管理者にする。下げるときも --role user のように使う',
+	},
+	args: {
+		email: { type: 'positional', description: '利用者のメールアドレス', required: true },
+		role: { type: 'string', description: 'user、moderator、admin のどれか', default: 'admin' },
+	},
+	async run({ args }) {
+		const role = parseRole(args.role);
+		if (!role) {
+			console.error(`--role は user、moderator、admin のどれかにしてください: ${args.role}`);
+			process.exit(1);
+		}
+		const config = loadConfigOrExit();
+		const database = openConfiguredDatabase(config);
+		try {
+			const result = changeRole(createAuthStore(database), args.email, role, config.adminEmails);
+			if (result.kind === 'not-found') {
+				console.error(
+					`${args.email} の利用者はいません。一度ログインしてもらってから実行してください。`,
+				);
+				process.exitCode = 1;
+				return;
+			}
+			if (result.kind === 'unchanged') {
+				console.log(
+					`${result.user.email} は、すでに${ROLE_LABELS[role]}です。何も変えていません。`,
+				);
+				return;
+			}
+			const change = `権限の段階を${ROLE_LABELS[result.from]}から${ROLE_LABELS[role]}に変えました`;
+			createAuditLogStore(database).record(
+				{
+					actorId: null,
+					action: 'user.role',
+					summary: `${result.user.email} の${change} (管理用コマンド)`,
+				},
+				new Date(),
+			);
+			console.log(`${result.user.email} の${change}。`);
+			if (result.adminEmail) {
+				console.log(
+					'この人は ADMIN_EMAILS にあるので、次にログインすると管理者に戻ります。ADMIN_EMAILS からも外してください。',
+				);
+			}
+			// メールアドレスなど、個人情報は含めない (設計書 14.9)
+			await createCliAlerter(config, database).send({
+				severity: 'info',
+				title: `利用者の権限の段階を${ROLE_LABELS[role]}にしました`,
+				category: 'users',
+				key: `role:${result.user.id}:${role}:${Date.now()}`,
+			});
+		} finally {
+			database.close();
+		}
+	},
+});
+
+/** 利用の停止と再開。停止すると、その人のセッションもすべて消える */
+function defineStatusCommand(name: 'suspend' | 'unsuspend') {
+	const status = name === 'suspend' ? 'suspended' : 'active';
+	const verb = name === 'suspend' ? '停止' : '再開';
+	return defineCommand({
+		meta: {
+			name,
+			description:
+				name === 'suspend'
+					? '利用者の利用を停止する。ログイン中のセッションもすべて消える'
+					: '停止した利用者の利用を再開する',
+		},
+		args: { email: { type: 'positional', description: '利用者のメールアドレス', required: true } },
+		async run({ args }) {
+			const config = loadConfigOrExit();
+			const database = openConfiguredDatabase(config);
+			try {
+				const result = changeStatus(createAuthStore(database), args.email, status);
+				if (result.kind === 'not-found') {
+					console.error(`${args.email} の利用者はいません。`);
+					process.exitCode = 1;
+					return;
+				}
+				if (result.kind === 'unchanged') {
+					console.log(`${result.user.email} は、すでに${verb}しています。何も変えていません。`);
+					return;
+				}
+				createAuditLogStore(database).record(
+					{
+						actorId: null,
+						action: 'user.status',
+						summary: `${result.user.email} の利用を${verb}しました (管理用コマンド)`,
+					},
+					new Date(),
+				);
+				console.log(`${result.user.email} の利用を${verb}しました。`);
+				await createCliAlerter(config, database).send({
+					severity: 'info',
+					title: `利用者の利用を${verb}しました`,
+					category: 'users',
+					key: `status:${result.user.id}:${status}:${Date.now()}`,
+				});
+			} finally {
+				database.close();
+			}
+		},
+	});
+}
+
+const user = defineCommand({
+	meta: { name: 'user', description: '利用者の確認と管理' },
+	subCommands: {
+		list: userList,
+		promote: userPromote,
+		suspend: defineStatusCommand('suspend'),
+		unsuspend: defineStatusCommand('unsuspend'),
+	},
+});
+
 const main = defineCommand({
 	meta: { name: 'funmary-admin', description: 'Funmary の管理用コマンド' },
 	subCommands: {
@@ -580,6 +813,8 @@ const main = defineCommand({
 		calendar,
 		invite,
 		sources,
+		job,
+		user,
 		notify,
 	},
 });

@@ -32,24 +32,8 @@ import {
 	openDatabase,
 	type AuthStore,
 } from '@funmary/db';
-import {
-	createImportAcademicCalendarJob,
-	createImportSyllabusJob,
-	createJobRunner,
-	createImportHolidaysJob,
-	createRemindTimetableImportJob,
-	createSendDailyDigestJob,
-	createScrapePortalJob,
-	type JobDefinition,
-} from '@funmary/jobs';
-import {
-	bundledHolidays,
-	estimateHolidays,
-	fetchAcademicCalendarPdf,
-	fetchHolidays,
-	fetchPortalPage,
-	fetchSyllabusCatalog,
-} from '@funmary/sources';
+import { createJobRunner, createSendDailyDigestJob, type JobDefinition } from '@funmary/jobs';
+import { bundledHolidays, estimateHolidays } from '@funmary/sources';
 import {
 	createAdminAlerter,
 	createAdminDiscordSink,
@@ -61,8 +45,9 @@ import {
 } from '@funmary/notify';
 import { createLogger, type Logger } from '@funmary/log';
 import { parseConfig } from '$lib/server/config.ts';
-import { importAcademicCalendarPdf } from '$lib/server/academic-calendar-import.ts';
 import { findBuildInfo } from '$lib/server/build-info.ts';
+import { createJobDefinitions } from '$lib/server/jobs.ts';
+import { createResponseTimes } from '$lib/server/response-times.ts';
 import { loadCalendarFeed } from '$lib/server/calendar-feed.ts';
 import { findLegalInfo } from '$lib/server/legal.ts';
 import {
@@ -72,7 +57,6 @@ import {
 	readLinkingEnabled,
 	readPresenceEnabled,
 } from '$lib/server/discord-admin.ts';
-import { OFFICIAL_CALENDAR_KEY } from '$lib/server/official-documents.ts';
 import { legacyAppPath } from '$lib/server/legacy-path.ts';
 import { findMigrationsFolder } from '$lib/server/migrations-path.ts';
 import { getServices, setServices } from '$lib/server/services.ts';
@@ -97,6 +81,8 @@ let api: ReturnType<typeof createApi> | undefined;
 let logger: Logger | undefined;
 let authStore: AuthStore | undefined;
 let publicOrigin = DEV_ORIGIN;
+/** 応答時間の分布 (管理画面に出す)。サーバーのメモリにだけ持つ */
+const responseTimes = createResponseTimes();
 
 export const init: ServerInit = () => {
 	const result = parseConfig(env);
@@ -131,7 +117,6 @@ export const init: ServerInit = () => {
 		logger.withTag('app').warn(`途中で止まった定期処理の記録を ${interrupted} 件閉じました`);
 	jobRunStore.prune(new Date(Date.now() - JOB_RUN_RETENTION_MS));
 
-	// 定期処理。個々の処理は、取得の実装ができたところで足す
 	// 管理用の Discord の Bot (設計書 14.9)。トークンとギルドの ID があれば、Webhook より先に使う
 	const settingsStore = createSettingsStore(database);
 	const discordBot = result.config.discordBot
@@ -165,100 +150,20 @@ export const init: ServerInit = () => {
 		dryRun: result.config.notifyDryRun,
 		log: logger,
 	});
-	const jobs: JobDefinition[] = [];
 	const changeStore = createClassChangeStore(database);
 	const unmatchedStore = createUnmatchedLessonStore(database);
-	// 公開シラバスは、ログインが要らないので、ポータルのアカウントがなくても動かす
 	const subjectStore = createSubjectStore(database);
-	jobs.push(
-		createImportSyllabusJob({
-			fetchCatalog: ({ academicYear, needsDetail, signal }) =>
-				fetchSyllabusCatalog({
-					fetch: (url, init) => fetch(url, init),
-					academicYear,
-					needsDetail,
-					signal,
-				}),
-			disabledSources: result.config.sourcesDisabled,
-			health: createSourceHealthStore(database),
-			subjects: subjectStore,
-			alert: (alert) => alerter.send(alert),
-		}),
-	);
-	// 授業時間割の PDF を取り込む時期 (3 月 31 日と 8 月 31 日) を、管理用の Discord に知らせる
-	jobs.push(createRemindTimetableImportJob({ alert: (alert) => alerter.send(alert) }));
 	// 祝日は、最初は同梱の CSV を入れておき、週に 1 回、内閣府の CSV で入れ替える
 	const holidayStore = createHolidayStore(database);
 	if (holidayStore.seedBundled(bundledHolidays())) {
 		logger.withTag('app').info('同梱の祝日を入れました');
 	}
-	jobs.push(
-		createImportHolidaysJob({
-			fetchHolidays: () => fetchHolidays({ fetch: (url, init) => fetch(url, init) }),
-			disabledSources: result.config.sourcesDisabled,
-			health: createSourceHealthStore(database),
-			holidays: holidayStore,
-			alert: (alert) => alerter.send(alert),
-		}),
-	);
-	// 学年暦は、大学サイトの PDF を月に 1 回取り、変わったときだけ取り込む。手で入れた値は上書きしない
 	const academicCalendarStore = createAcademicCalendarStore(database);
-	jobs.push(
-		createImportAcademicCalendarJob({
-			fetchPdf: () => fetchAcademicCalendarPdf({ fetch: (url, init) => fetch(url, init) }),
-			importPdf: (bytes) =>
-				importAcademicCalendarPdf(
-					bytes,
-					{
-						calendar: academicCalendarStore,
-						holidays: holidayStore.list().map((holiday) => holiday.date),
-					},
-					new Date(),
-					// PDF の読み取り (pdfjs-dist) は大きいので、使うときだけ読み込む
-					async (pdf) =>
-						(await import('@funmary/sources/academic-calendar-pdf')).parseAcademicCalendarPdf(pdf),
-				),
-			recordOfficialPdf: (info) =>
-				createSettingsStore(database).set(OFFICIAL_CALENDAR_KEY, info, new Date()),
-			disabledSources: result.config.sourcesDisabled,
-			health: createSourceHealthStore(database),
-			alert: (alert) => alerter.send(alert),
-		}),
-	);
-	const portal = result.config.portal;
-	const heartbeatUrl = result.config.heartbeatUrl;
-	if (portal) {
-		const healthStore = createSourceHealthStore(database);
-		jobs.push(
-			createScrapePortalJob({
-				fetchPage: (lastAttemptAt) =>
-					fetchPortalPage({
-						fetch: (url, init) => fetch(url, init),
-						credentials: portal,
-						lastAttemptAt,
-						now: new Date(),
-					}),
-				disabledSources: result.config.sourcesDisabled,
-				health: healthStore,
-				changes: changeStore,
-				matching: {
-					unassignedLessonNames: () => changeStore.unassignedLessonNames(),
-					assignSubject: (lessonName, subjectId) =>
-						changeStore.assignSubject(lessonName, subjectId),
-					latestSubjectYear: () => subjectStore.latestYear(),
-					subjects: (academicYear) => subjectStore.list(academicYear),
-					resolvedNames: (academicYear) => unmatchedStore.resolvedNames(academicYear),
-					recordUnmatched: (academicYear, names, now) =>
-						unmatchedStore.record(academicYear, names, now),
-				},
-				alert: (alert) => alerter.send(alert),
-				// 取得のたびに、監視サービスに知らせる。決まった時刻に届かなければ、監視サービスが知らせる
-				...(heartbeatUrl && {
-					heartbeat: () => fetch(heartbeatUrl, { signal: AbortSignal.timeout(10_000) }),
-				}),
-			}),
-		);
-	}
+	const jobs: JobDefinition[] = createJobDefinitions({
+		config: result.config,
+		database,
+		alert: (alert) => alerter.send(alert),
+	});
 	// 予定のまとめは、利用者の Discord 連携 (Bot が送る) を使う。送る処理の中で getServices を呼ぶ (services はこのあと入れる)
 	if (discordBot) jobs.push(createSendDailyDigestJob(dailyDigestDeps(getServices, discordBot)));
 	const runner = createJobRunner({
@@ -340,6 +245,8 @@ export const init: ServerInit = () => {
 		holidays: holidayStore,
 		sourceHealth: createSourceHealthStore(database),
 		jobRuns: jobRunStore,
+		jobs: { names: jobs.map((job) => job.name), runNow: (name: string) => runner.runNow(name) },
+		responseTimes,
 		auditLog: createAuditLogStore(database),
 		registration: result.config.registration,
 		estimateHolidays,
@@ -428,8 +335,13 @@ export const handle: Handle = async ({ event, resolve }) => {
 				});
 	// 死活監視は 5 分ごとに来るので、info には出さない。トークンは logger が伏せる
 	const log = logger?.withTag('http');
-	const line = `${event.request.method} ${path} ${response.status} ${Math.round(performance.now() - started)} ms`;
+	const took = performance.now() - started;
+	const line = `${event.request.method} ${path} ${response.status} ${Math.round(took)} ms`;
 	if (path === '/healthz') log?.debug(line);
-	else log?.info(line);
+	else {
+		log?.info(line);
+		// 死活監視は数えない (画面と API の応答だけを見る)
+		responseTimes.record(took, new Date());
+	}
 	return response;
 };
