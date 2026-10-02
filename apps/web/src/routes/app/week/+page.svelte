@@ -107,7 +107,7 @@
 	);
 </script>
 
-{#snippet eventCard(event: EventView)}
+{#snippet eventCard(event: EventView, showTime: boolean = true)}
 	<div class="event">
 		{#if event.added}
 			<a href={resolve('/app/events/shared/[ref]', { ref: String(event.eventId) })}>{event.title}</a
@@ -115,9 +115,19 @@
 		{:else}
 			<a href={resolve('/app/events/[id]', { id: String(event.eventId) })}>{event.title}</a>
 		{/if}
-		<span class="time"
-			>{event.time}{event.continued ? ' (続き)' : ''}{event.added ? ' (加えた予定)' : ''}</span
-		>
+		{#if showTime}
+			<!-- 「予定」行は、どの時限かが行から分からないので、時刻や時限の文を出す -->
+			<span class="time"
+				>{event.time}{event.continued ? ' (続き)' : ''}{event.added ? ' (加えた予定)' : ''}</span
+			>
+		{:else if event.continued || event.added}
+			<!-- 時限の行は、行自体が時限を示しているので、時刻や時限は繰り返さない (続きと加えた予定だけ出す) -->
+			<span class="time"
+				>{event.continued ? '(続き)' : ''}{event.continued && event.added ? ' ' : ''}{event.added
+					? '(加えた予定)'
+					: ''}</span
+			>
+		{/if}
 		{#if event.location}<span class="room">{event.location}</span>{/if}
 	</div>
 {/snippet}
@@ -235,7 +245,7 @@
 						{#each row.cells as cell (cell.date)}
 							<td class={{ today: cell.date === data.today, off: offDates.has(cell.date) }}>
 								{#each cell.events as event (event.key)}
-									{@render eventCard(event)}
+									{@render eventCard(event, false)}
 								{/each}
 								{#each cell.lessons as lesson (lesson.key)}
 									<div class={['lesson', { cancelled: lesson.status === 'cancelled' }]}>
