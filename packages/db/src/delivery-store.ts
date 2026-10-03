@@ -4,7 +4,7 @@ import { and, desc, eq, inArray, isNull, lte, or } from 'drizzle-orm';
 import { DEFAULT_CHANNEL_KINDS } from './channel-store.ts';
 import type { Database } from './database.ts';
 import type { NotificationKind } from './notification-store.ts';
-import { channels, deliveries, discordLinks, notifications } from './schema.ts';
+import { channels, deliveries, discordLinks, notifications, users } from './schema.ts';
 import type { SecretBox } from './secrets.ts';
 
 /** 取りこぼしていても、これより古い通知は送らない (止まっていたあとに、古い知らせをまとめて送らないため) */
@@ -35,6 +35,20 @@ export interface PendingDelivery {
 	readonly target: DeliveryTarget | null;
 }
 
+/** 管理画面の「配信の失敗」に出す、1 件分 */
+export interface FailedDelivery {
+	readonly id: number;
+	/** 試した回数 (上限に尽きたか、送り先が止まったかの両方を含む) */
+	readonly attempts: number;
+	readonly userEmail: string;
+	readonly channelKind: 'discord' | 'generic' | 'discordLink';
+	readonly notificationKind: NotificationKind;
+	readonly title: string;
+	readonly lastError: string | null;
+	/** チャネルを止めたことで失敗にしたものは、失敗の時刻を記録していないので null */
+	readonly failedAt: Date | null;
+}
+
 export interface RetryPlan {
 	readonly attempts: number;
 	readonly nextAttemptAt: Date;
@@ -48,9 +62,11 @@ export interface DeliveryStore {
 	claimDue(now: Date, limit: number): PendingDelivery[];
 	markSent(id: number, now: Date): void;
 	markRetry(id: number, plan: RetryPlan): void;
-	markFailed(id: number, error: string): void;
+	markFailed(id: number, now: Date, error: string): void;
 	/** そのチャネルで、直近の配信が続けて失敗した数 (成功で途切れる) */
 	failureStreak(channelId: number): number;
+	/** 直近に失敗した配信。新しい順 */
+	recentFailed(limit: number): FailedDelivery[];
 }
 
 export function createDeliveryStore(database: Database, secretBox: SecretBox): DeliveryStore {
@@ -158,9 +174,9 @@ export function createDeliveryStore(database: Database, secretBox: SecretBox): D
 				.where(eq(deliveries.id, id))
 				.run();
 		},
-		markFailed(id, error) {
+		markFailed(id, now, error) {
 			db.update(deliveries)
-				.set({ status: 'failed', nextAttemptAt: null, lastError: error })
+				.set({ status: 'failed', nextAttemptAt: null, lastError: error, failedAt: now })
 				.where(eq(deliveries.id, id))
 				.run();
 		},
@@ -176,6 +192,37 @@ export function createDeliveryStore(database: Database, secretBox: SecretBox): D
 				.all();
 			const firstOk = recent.findIndex((row) => row.status === 'sent');
 			return firstOk === -1 ? recent.length : firstOk;
+		},
+		recentFailed(limit) {
+			return db
+				.select({
+					id: deliveries.id,
+					attempts: deliveries.attempts,
+					userEmail: users.email,
+					channelKind: channels.kind,
+					notificationKind: notifications.kind,
+					title: notifications.title,
+					lastError: deliveries.lastError,
+					failedAt: deliveries.failedAt,
+				})
+				.from(deliveries)
+				.innerJoin(notifications, eq(notifications.id, deliveries.notificationId))
+				.innerJoin(channels, eq(channels.id, deliveries.channelId))
+				.innerJoin(users, eq(users.id, channels.userId))
+				.where(eq(deliveries.status, 'failed'))
+				.orderBy(desc(deliveries.id))
+				.limit(limit)
+				.all()
+				.map((row): FailedDelivery => ({
+					id: row.id,
+					attempts: row.attempts,
+					userEmail: row.userEmail,
+					channelKind: row.channelKind as 'discord' | 'generic' | 'discordLink',
+					notificationKind: row.notificationKind as NotificationKind,
+					title: row.title,
+					lastError: row.lastError,
+					failedAt: row.failedAt,
+				}));
 		},
 	};
 }

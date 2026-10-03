@@ -9,6 +9,17 @@ import { sourceStatuses } from '$lib/server/source-status.ts';
 
 /** 実行履歴を出す件数 */
 const RUNS = 50;
+/** 配信の失敗を出す件数 */
+const FAILED_DELIVERIES = 50;
+
+const CHANNEL_KIND_LABELS = { discord: 'Discord', generic: '汎用', discordLink: 'Discord 連携' };
+const NOTIFICATION_KIND_LABELS = {
+	cancellation: '休講',
+	makeup: '補講',
+	roomChange: '教室変更',
+	integration: '連携の不具合',
+	notice: 'お知らせ',
+};
 
 const label = (job: string) => JOB_LABELS.get(job) ?? job;
 
@@ -19,7 +30,7 @@ const formatTime = (date: Date) => {
 
 export const load: ServerLoad = ({ locals }) => {
 	requireAdmin(locals);
-	const { sourceHealth, jobRuns, jobs, responseTimes } = getServices();
+	const { sourceHealth, jobRuns, jobs, responseTimes, deliveries } = getServices();
 	return {
 		sources: sourceStatuses(sourceHealth.list()),
 		jobs: jobs.names.map((name) => ({ name, label: label(name) })),
@@ -34,6 +45,16 @@ export const load: ServerLoad = ({ locals }) => {
 					: Math.max(0, Math.round((run.finishedAt.getTime() - run.startedAt.getTime()) / 1000)),
 			status: run.status,
 			message: run.message,
+		})),
+		failedDeliveries: deliveries.recentFailed(FAILED_DELIVERIES).map((row) => ({
+			id: row.id,
+			attempts: row.attempts,
+			userEmail: row.userEmail,
+			channelKind: CHANNEL_KIND_LABELS[row.channelKind],
+			notificationKind: NOTIFICATION_KIND_LABELS[row.notificationKind],
+			title: row.title,
+			lastError: row.lastError,
+			failedAt: row.failedAt === null ? null : formatTime(row.failedAt),
 		})),
 		responseTimes: responseTimes.summary(new Date()),
 	};

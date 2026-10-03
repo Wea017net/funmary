@@ -363,8 +363,39 @@ describe('送信待ち', () => {
 		const again = deliveries.claimDue(at('2026-10-01T00:06:00Z'), 10);
 		expect(again).toHaveLength(1);
 		expect(again[0]?.attempts).toBe(1);
-		deliveries.markFailed(second!.id, 'HTTP 500');
+		deliveries.markFailed(second!.id, at('2026-10-02T00:00:00Z'), 'HTTP 500');
 		expect(deliveries.claimDue(at('2026-10-02T00:00:00Z'), 10)).toHaveLength(0);
+		expect(deliveries.recentFailed(10)).toMatchObject([
+			{
+				userEmail: 'a@fun.ac.jp',
+				channelKind: 'discord',
+				notificationKind: 'cancellation',
+				title: '[休講] k2',
+				lastError: 'HTTP 500',
+				failedAt: at('2026-10-02T00:00:00Z'),
+			},
+		]);
+	});
+
+	it('直近に失敗した配信を、新しい順に返す。送信待ちと済みは出さない', () => {
+		const a = newUser('a');
+		channels.addWebhook(
+			a,
+			{ kind: 'discord', url: URL_A, label: null, notificationKinds: null },
+			at('2026-09-30T00:00:00Z'),
+		);
+		for (const key of ['k1', 'k2', 'k3']) notify(a, key);
+		const now = at('2026-10-01T00:01:00Z');
+		deliveries.enqueueMissing(now);
+		const [x, y, z] = deliveries.claimDue(now, 10);
+		deliveries.markSent(x!.id, now);
+		deliveries.markFailed(y!.id, at('2026-10-01T00:02:00Z'), 'HTTP 500');
+		deliveries.markFailed(z!.id, at('2026-10-01T00:03:00Z'), 'HTTP 403');
+		expect(deliveries.recentFailed(10).map((row) => row.lastError)).toEqual([
+			'HTTP 403',
+			'HTTP 500',
+		]);
+		expect(deliveries.recentFailed(1)).toHaveLength(1);
 	});
 
 	it('チャネルを止めると、送っていない分は失敗にして、もう送らない', () => {
@@ -400,10 +431,10 @@ describe('送信待ち', () => {
 		const now = at('2026-10-01T00:01:00Z');
 		deliveries.enqueueMissing(now);
 		const [x, y, z] = deliveries.claimDue(now, 10);
-		deliveries.markFailed(x!.id, 'e');
+		deliveries.markFailed(x!.id, now, 'e');
 		expect(deliveries.failureStreak(channel.id)).toBe(1);
 		deliveries.markSent(y!.id, at('2026-10-01T00:02:00Z'));
-		deliveries.markFailed(z!.id, 'e');
+		deliveries.markFailed(z!.id, now, 'e');
 		expect(deliveries.failureStreak(channel.id)).toBe(1);
 	});
 });

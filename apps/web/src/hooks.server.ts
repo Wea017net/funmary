@@ -265,6 +265,7 @@ export const init: ServerInit = () => {
 		courses: createCourseStore(database),
 		notifications: createNotificationStore(database),
 		channels: channelStore,
+		deliveries: deliveryStore,
 		webhooks: {
 			limit: () => readWebhookLimit(settingsStore.get(WEBHOOKS_PER_USER_KEY)),
 			setLimit: (limit: number) => settingsStore.set(WEBHOOKS_PER_USER_KEY, { limit }, new Date()),

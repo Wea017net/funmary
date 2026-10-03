@@ -15,6 +15,17 @@
 		message: string | null;
 	}
 
+	interface FailedDeliveryRow {
+		id: number;
+		attempts: number;
+		userEmail: string;
+		channelKind: string;
+		notificationKind: string;
+		title: string;
+		lastError: string | null;
+		failedAt: string | null;
+	}
+
 	let {
 		data,
 		form,
@@ -23,6 +34,7 @@
 			sources: SourceStatusRow[];
 			jobs: { name: string; label: string }[];
 			runs: RunRow[];
+			failedDeliveries: FailedDeliveryRow[];
 			responseTimes: ResponseTimeSummary;
 		};
 		form: { error?: string; message?: string } | null;
@@ -171,6 +183,47 @@
 		{/if}
 	</section>
 
+	<section aria-labelledby="failed-deliveries-heading">
+		<h2 id="failed-deliveries-heading">配信の失敗</h2>
+		<p class="muted">
+			利用者のチャネル (Discord の Webhook、汎用の Webhook、Discord 連携)
+			へ通知を送り、尽きるまで再送しても届かなかったものです。新しい順に出します。
+		</p>
+		{#if data.failedDeliveries.length === 0}
+			<p>まだ記録がありません。</p>
+		{:else}
+			<div class="scroll">
+				<table>
+					<thead>
+						<tr>
+							<th scope="col">失敗の時刻</th>
+							<th scope="col">利用者</th>
+							<th scope="col">送り先</th>
+							<th scope="col">通知</th>
+							<th scope="col">試した回数</th>
+							<th scope="col">理由</th>
+						</tr>
+					</thead>
+					<tbody>
+						{#each data.failedDeliveries as delivery (delivery.id)}
+							<tr>
+								<td class="numeric">{delivery.failedAt ?? '-'}</td>
+								<td>{delivery.userEmail}</td>
+								<td>{delivery.channelKind}</td>
+								<td>
+									<span class="badge">{delivery.notificationKind}</span>
+									{delivery.title}
+								</td>
+								<td class="numeric">{delivery.attempts} 回</td>
+								<td class="error-text">{delivery.lastError ?? '-'}</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			</div>
+		{/if}
+	</section>
+
 	<section aria-labelledby="response-heading">
 		<h2 id="response-heading">応答時間 (直近 24 時間)</h2>
 		<p class="muted">
@@ -301,6 +354,17 @@
 
 	.error-text {
 		color: var(--fm-error);
+		overflow-wrap: anywhere;
+	}
+
+	.badge {
+		margin-right: 0.5rem;
+		padding: 0.125rem 0.5rem;
+		border: 1px solid currentcolor;
+		border-radius: 0.25rem;
+		color: var(--fm-text-muted);
+		font-size: 0.75rem;
+		white-space: nowrap;
 	}
 
 	.scroll {

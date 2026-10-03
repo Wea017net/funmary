@@ -146,6 +146,7 @@ export {
 	createDeliveryStore,
 	type DeliveryStore,
 	type DeliveryTarget,
+	type FailedDelivery,
 	type PendingDelivery,
 	type RetryPlan,
 } from './delivery-store.ts';

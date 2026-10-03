@@ -611,6 +611,7 @@ export const deliveries = sqliteTable(
 		nextAttemptAt: integer('next_attempt_at', { mode: 'timestamp_ms' }),
 		lastError: text('last_error'),
 		sentAt: integer('sent_at', { mode: 'timestamp_ms' }),
+		failedAt: integer('failed_at', { mode: 'timestamp_ms' }),
 	},
 	(table) => [
 		// 同じ通知が同じチャネルに二重に届かないようにする
