@@ -47,8 +47,10 @@ export interface CompleteLinkDeps {
 	readonly oauth: DiscordOAuthClient;
 	readonly bot: DiscordBot | null;
 	readonly store: DiscordLinkStore;
-	/** support チャンネル (設計書 14.9) の ID。管理者が「チャンネルとロールを整える」を実行していなければ null */
-	readonly supportChannelId: string | null;
+	/** 利用者ごとの非公開スレッドの親チャンネル (設計書 14.9) の ID。管理者が「チャンネルとロールを整える」を実行していなければ null */
+	readonly linksChannelId: string | null;
+	/** 参加した利用者に付けるロール。管理者が選んでいなければ空配列 (設計書 14.9) */
+	readonly joinRoleIds: readonly string[];
 	readonly log: Pick<Logger, 'warn'>;
 }
 
@@ -59,17 +61,17 @@ const describe = (error: unknown): string =>
 const TRY_AGAIN = 'もう一度お試しください。';
 
 /** スレッドか DM を用意して、最初の案内を送る。失敗したら null (呼び出し側でエラーを出す) */
-async function prepareChannel(
+export async function prepareChannel(
 	bot: DiscordBot,
 	destination: DiscordDestination,
-	supportChannelId: string | null,
+	linksChannelId: string | null,
 	discordUserId: string,
 ): Promise<{ channelId: string } | { error: string }> {
 	if (destination === 'thread') {
-		if (!supportChannelId) {
+		if (!linksChannelId) {
 			return { error: 'サーバーの準備がまだです。管理者に伝えてください。' };
 		}
-		const threadId = await bot.createPrivateThread(supportChannelId, `link-${discordUserId}`);
+		const threadId = await bot.createPrivateThread(linksChannelId, `link-${discordUserId}`);
 		await bot.addThreadMember(threadId, discordUserId);
 		await bot.postMessage(threadId, 'Funmary と連携しました。ここに通知が届きます。');
 		return { channelId: threadId };
@@ -103,7 +105,7 @@ export async function completeDiscordLink(
 	}
 
 	try {
-		await deps.bot.addGuildMember(discordUser.id, tokens.accessToken);
+		await deps.bot.addGuildMember(discordUser.id, tokens.accessToken, deps.joinRoleIds);
 	} catch (error) {
 		deps.log.warn(`Discord 連携のサーバーへの参加に失敗しました: ${describe(error)}`);
 		return {
@@ -117,7 +119,7 @@ export async function completeDiscordLink(
 		channel = await prepareChannel(
 			deps.bot,
 			input.state.destination,
-			deps.supportChannelId,
+			deps.linksChannelId,
 			discordUser.id,
 		);
 	} catch (error) {

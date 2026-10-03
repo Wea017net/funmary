@@ -53,17 +53,26 @@ export function createDailyDigestStore(database: Database): DailyDigestStore {
 				.run();
 		},
 		listRecipients() {
-			return db
-				.select({ link: discordLinks, settings: dailyDigestSettings })
-				.from(discordLinks)
-				.leftJoin(dailyDigestSettings, eq(dailyDigestSettings.userId, discordLinks.userId))
-				.all()
-				.map(({ link, settings }) => ({
-					userId: link.userId,
-					channelId: link.channelId,
-					settings: settings ? toSettings(settings) : DEFAULT_DAILY_DIGEST_SETTINGS,
-					lastSentFor: settings?.lastSentFor ?? null,
-				}));
+			return (
+				db
+					.select({ link: discordLinks, settings: dailyDigestSettings })
+					.from(discordLinks)
+					.leftJoin(dailyDigestSettings, eq(dailyDigestSettings.userId, discordLinks.userId))
+					.all()
+					// 送り先 (スレッドか DM) が今は無い人には送れないので、省く (設計書 14.9)
+					.flatMap(({ link, settings }) =>
+						link.channelId === null
+							? []
+							: [
+									{
+										userId: link.userId,
+										channelId: link.channelId,
+										settings: settings ? toSettings(settings) : DEFAULT_DAILY_DIGEST_SETTINGS,
+										lastSentFor: settings?.lastSentFor ?? null,
+									},
+								],
+					)
+			);
 		},
 		markSent(userId, date, now) {
 			db.insert(dailyDigestSettings)

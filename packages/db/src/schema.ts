@@ -513,8 +513,11 @@ export const discordLinks = sqliteTable('discord_links', {
 	tokenExpiresAt: integer('token_expires_at', { mode: 'timestamp_ms' }).notNull(),
 	/** 通知の送り先。非公開スレッドか DM か */
 	destination: text('destination', { enum: ['thread', 'dm'] }).notNull(),
-	/** destination が thread のときの、本人だけのスレッドの ID。dm のときは DM チャンネルの ID */
-	channelId: text('channel_id').notNull(),
+	/**
+	 * destination が thread のときの、本人だけのスレッドの ID。dm のときは DM チャンネルの ID。
+	 * スレッドを完全に削除したあとなど、送り先が今は無い (再作成を待っている) 間は null
+	 */
+	channelId: text('channel_id'),
 	createdAt: createdAt(),
 });
 

@@ -82,8 +82,13 @@ export interface DiscordBot {
 	addThreadMember(threadId: string, userId: string): Promise<void>;
 	/** スレッドをアーカイブする (消しはしない)。失敗しても投げない (呼び出し側で無視してよい) */
 	archiveThread(threadId: string): Promise<void>;
-	/** OAuth のアクセストークンを使って、利用者をギルドに参加させる。既に参加済みなら何もしない */
-	addGuildMember(userId: string, accessToken: string): Promise<void>;
+	/** スレッドを完全に削除する (履歴も含めて消え、アーカイブと違って元に戻せない) */
+	deleteThread(threadId: string): Promise<void>;
+	/**
+	 * OAuth のアクセストークンを使って、利用者をギルドに参加させる。既に参加済みなら何もしない。
+	 * roleIds を渡すと、参加と同時にそのロールを付ける (Bot に「ロールの管理」が要り、Bot より上のロールは付けられない)
+	 */
+	addGuildMember(userId: string, accessToken: string, roleIds?: readonly string[]): Promise<void>;
 	/**
 	 * チャンネルへの招待を発行する。maxAgeSeconds が 0 なら無期限、maxUses が 0 なら回数の制限なし。
 	 * roleIds のロールは、招待を受けて参加した人に Discord が付ける (Bot に「ロールの管理」が要り、Bot より上のロールは付けられない)
@@ -224,10 +229,14 @@ export function createDiscordBot(options: DiscordBotOptions): DiscordBot {
 				// 消えている、権限がないなどでも、呼び出し側の処理は止めない (設計書 14.9)
 			}
 		},
+		deleteThread: (threadId) => guarded(async () => void (await api.channels.delete(threadId))),
 		// 既に参加済みなら 204 (No Content) が返るだけで、例外にはならない
-		addGuildMember: (userId, accessToken) =>
+		addGuildMember: (userId, accessToken, roleIds) =>
 			guarded(async () => {
-				await api.guilds.addMember(guildId, userId, { access_token: accessToken });
+				await api.guilds.addMember(guildId, userId, {
+					access_token: accessToken,
+					...(roleIds && roleIds.length > 0 ? { roles: [...roleIds] } : {}),
+				});
 			}),
 		createInvite: (channelId, { maxAgeSeconds, maxUses, roleIds }) =>
 			guarded(async () => {

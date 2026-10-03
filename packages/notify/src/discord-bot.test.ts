@@ -20,6 +20,7 @@ function setup(results: Record<string, unknown> = {}, fail?: () => never) {
 			createMessage: op('channels.createMessage'),
 			createThread: op('channels.createThread'),
 			edit: op('channels.edit'),
+			delete: op('channels.delete'),
 			createInvite: op('channels.createInvite'),
 		},
 		invites: { delete: op('invites.delete') },
@@ -213,5 +214,29 @@ describe('createDiscordBot', () => {
 			'222',
 			{ access_token: 'user-access-token' },
 		]);
+	});
+
+	it('roleIds を渡すと、参加と同時にロールを付ける。空なら渡さない', async () => {
+		const { bot, calls } = setup();
+		await bot.addGuildMember('222', 'user-access-token', ['444', '555']);
+		expect(calls[0]).toEqual([
+			'guilds.addMember',
+			'111',
+			'222',
+			{ access_token: 'user-access-token', roles: ['444', '555'] },
+		]);
+		await bot.addGuildMember('222', 'user-access-token', []);
+		expect(calls[1]).toEqual([
+			'guilds.addMember',
+			'111',
+			'222',
+			{ access_token: 'user-access-token' },
+		]);
+	});
+
+	it('スレッドを完全に削除する', async () => {
+		const { bot, calls } = setup();
+		await bot.deleteThread('9');
+		expect(calls[0]).toEqual(['channels.delete', '9']);
 	});
 });

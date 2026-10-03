@@ -40,7 +40,7 @@ export const CHANNEL_LABELS: Record<AdminChannel, string> = {
 	sources: '定期処理と取り込みの結果',
 	users: '新規登録、招待、退会、権限の変更',
 	subjects: '科目の登録 (シラバスにない授業)',
-	support: '利用者ごとの非公開スレッド (Discord 連携)',
+	links: '利用者ごとの非公開スレッド (Discord 連携)',
 	other: 'そのほか',
 };
 

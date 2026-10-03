@@ -8,7 +8,7 @@ export const ADMIN_CHANNELS = [
 	'sources',
 	'users',
 	'subjects',
-	'support',
+	'links',
 	'other',
 ] as const;
 export type AdminChannel = (typeof ADMIN_CHANNELS)[number];

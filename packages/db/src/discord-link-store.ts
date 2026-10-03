@@ -24,7 +24,8 @@ export interface DiscordLink {
 	readonly refreshToken: string;
 	readonly tokenExpiresAt: Date;
 	readonly destination: DiscordDestination;
-	readonly channelId: string;
+	/** スレッドを完全に削除したあとなど、送り先が今は無い間は null */
+	readonly channelId: string | null;
 	readonly createdAt: Date;
 }
 
@@ -37,6 +38,14 @@ export interface DiscordLinkStore {
 	isDiscordUserLinkedToOther(discordUserId: string, excludingUserId: string): boolean;
 	/** 紐付けを消す。消せたものがあれば true */
 	remove(userId: string): DiscordLink | null;
+	/**
+	 * 送り先 (destination と channelId) だけを変える。トークンには触れない。
+	 * channelId に null を渡すと、送り先が無い状態にする (スレッドを削除したときなど)。連携していなければ false
+	 */
+	updateChannel(
+		userId: string,
+		change: { destination: DiscordDestination; channelId: string | null },
+	): boolean;
 }
 
 export function createDiscordLinkStore(database: Database, secretBox: SecretBox): DiscordLinkStore {
@@ -97,6 +106,15 @@ export function createDiscordLinkStore(database: Database, secretBox: SecretBox)
 			if (!row) return null;
 			db.delete(discordLinks).where(eq(discordLinks.userId, userId)).run();
 			return toLink(row);
+		},
+		updateChannel(userId, change) {
+			return (
+				db
+					.update(discordLinks)
+					.set({ destination: change.destination, channelId: change.channelId })
+					.where(eq(discordLinks.userId, userId))
+					.run().changes > 0
+			);
 		},
 	};
 }
