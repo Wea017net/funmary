@@ -67,7 +67,7 @@ export function createImportSyllabusJob(deps: ImportSyllabusDeps): JobDefinition
 		// 全科目の詳細を取り直す日は、2 秒おきに 350 回ほどで、15 分ほどかかる
 		timeoutMs: 40 * 60 * 1000,
 		jitterMs: 10 * 60 * 1000,
-		async run({ now, signal }) {
+		async run({ now, signal, log }) {
 			const at = now();
 			if (isSourceDisabled(deps.disabledSources, SYLLABUS_SOURCE)) {
 				return '公開シラバスの取得は、SOURCES_DISABLED で無効にされています';
@@ -138,11 +138,20 @@ export function createImportSyllabusJob(deps: ImportSyllabusDeps): JobDefinition
 			}
 
 			const attempted = fetchedDetails + result.failedDetails;
+			if (result.failedEntries.length > 0) {
+				// 公開シラバスの授業名と失敗の理由なので、個人情報ではない。ログに残して、原因を追えるようにする
+				log.warn(
+					`公開シラバスの詳細を読めなかった科目: ${result.failedEntries
+						.map((e) => `${e.name} (${e.lessonId}): ${e.reason}`)
+						.join('、')}`,
+				);
+			}
 			if (attempted > 0 && result.failedDetails / attempted > FAILED_DETAIL_ALERT_RATIO) {
+				const names = result.failedEntries.map((e) => `${e.name} (${e.reason})`).join('、');
 				await deps.alert({
 					severity: 'warn',
 					title: '公開シラバスの詳細を読めない科目が多くなっています',
-					message: `${attempted} 件のうち ${result.failedDetails} 件を読めませんでした`,
+					message: `${attempted} 件のうち ${result.failedDetails} 件を読めませんでした: ${names}`,
 					key: 'syllabus:detail-failures',
 				});
 			}

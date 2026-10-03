@@ -125,6 +125,9 @@ describe('公開シラバスの取得', () => {
 		});
 		if (result.kind !== 'ok') throw new Error('成功するはず');
 		expect(result.failedDetails).toBe(1);
+		expect(result.failedEntries).toEqual([
+			{ lessonId: '1', name: '科目 1', reason: '授業名がありません' },
+		]);
 		expect(result.entries[0]!.detail).toBeNull();
 		expect(result.entries[1]!.detail).not.toBeNull();
 	});
