@@ -1,0 +1,1 @@
+ALTER TABLE `deliveries` ADD `failed_at` integer;

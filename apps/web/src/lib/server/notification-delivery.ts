@@ -93,7 +93,7 @@ export function deliverNotificationsDeps(
 		},
 		markSent: (id, now) => deliveries.markSent(id, now),
 		markRetry: (id, plan) => deliveries.markRetry(id, plan),
-		markFailed: (id, error) => deliveries.markFailed(id, error),
+		markFailed: (id, now, error) => deliveries.markFailed(id, now, error),
 		failureStreak: (channelId) => deliveries.failureStreak(channelId),
 		disableChannel: (channelId, reason) => channels.disable(channelId, reason),
 		notifyUser: (notice, now) => {

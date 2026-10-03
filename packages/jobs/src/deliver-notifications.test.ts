@@ -35,7 +35,7 @@ function setup(items: DeliveryItem[], outcomes: DeliveryOutcome[], streak = 0) {
 		markSent: (id) => calls.push(`sent:${id}`),
 		markRetry: (id, plan) =>
 			calls.push(`retry:${id}:${plan.attempts}:${plan.nextAttemptAt.getTime() - NOW.getTime()}`),
-		markFailed: (id, error) => calls.push(`failed:${id}:${error}`),
+		markFailed: (id, _now, error) => calls.push(`failed:${id}:${error}`),
 		failureStreak: () => streak,
 		disableChannel: (channelId, reason) => calls.push(`disable:${channelId}:${reason}`),
 		notifyUser: (notice) => notices.push(notice),

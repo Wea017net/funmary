@@ -39,7 +39,7 @@ export interface DeliverNotificationsDeps {
 	send(item: DeliveryItem): Promise<DeliveryOutcome>;
 	markSent(id: number, now: Date): void;
 	markRetry(id: number, plan: { attempts: number; nextAttemptAt: Date; error: string }): void;
-	markFailed(id: number, error: string): void;
+	markFailed(id: number, now: Date, error: string): void;
 	/** そのチャネルで、続けて失敗した数 */
 	failureStreak(channelId: number): number;
 	disableChannel(channelId: number, reason: string): void;
@@ -97,7 +97,7 @@ export function createDeliverNotificationsJob(deps: DeliverNotificationsDeps): J
 				stopped++;
 			};
 			const fail = (item: DeliveryItem, reason: string) => {
-				deps.markFailed(item.id, reason);
+				deps.markFailed(item.id, now(), reason);
 				failed++;
 				if (deps.failureStreak(item.channelId) >= STOP_AFTER_FAILURES) {
 					stopChannel(item, '続けて失敗しました', '通知を続けて送れませんでした');
@@ -110,7 +110,7 @@ export function createDeliverNotificationsJob(deps: DeliverNotificationsDeps): J
 				for (const item of items) {
 					if (signal.aborted) break;
 					if (!item.hasTarget) {
-						deps.markFailed(item.id, '送り先がありません');
+						deps.markFailed(item.id, now(), '送り先がありません');
 						failed++;
 						continue;
 					}
@@ -127,7 +127,7 @@ export function createDeliverNotificationsJob(deps: DeliverNotificationsDeps): J
 							sent++;
 							break;
 						case 'gone':
-							deps.markFailed(item.id, outcome.reason);
+							deps.markFailed(item.id, now(), outcome.reason);
 							failed++;
 							stopChannel(item, outcome.reason, outcome.reason);
 							break;

@@ -42,6 +42,7 @@ function setup(items: PendingDelivery[], options: SetupOptions = {}) {
 		markRetry: vi.fn(),
 		markFailed: vi.fn(),
 		failureStreak: vi.fn().mockReturnValue(0),
+		recentFailed: vi.fn().mockReturnValue([]),
 	};
 	const notifications = { insertMany: vi.fn() };
 	const deps = deliverNotificationsDeps({

@@ -8,6 +8,7 @@ import type {
 	ClassChangeStore,
 	CourseStore,
 	DailyDigestStore,
+	DeliveryStore,
 	DiscordLinkStore,
 	FeedTokenStore,
 	HolidayStore,
@@ -71,6 +72,8 @@ export interface Services {
 	readonly notifications: NotificationStore;
 	/** 利用者が登録した通知の送り先 (Discord の Webhook、汎用の Webhook) (設計書 14.3、14.3.1) */
 	readonly channels: ChannelStore;
+	/** 通知の送信待ちと、送れたか (設計書 14.1)。管理画面の「配信の失敗」はここから出す */
+	readonly deliveries: DeliveryStore;
 	readonly webhooks: {
 		/** 1 人が登録できる Webhook の個数 (管理者が決める)。discord と generic を合わせた数 */
 		limit(): number;
