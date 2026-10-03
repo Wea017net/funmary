@@ -12,29 +12,41 @@ const isDestination = (value: unknown): value is DiscordDestination =>
 
 export const load: ServerLoad = async ({ locals, url }) => {
 	if (!locals.user) redirect(303, '/login');
-	const { discord, dailyDigest, settings } = getServices();
+	const { discord, dailyDigest, settings, log } = getServices();
 	const { link } = discord;
 
 	const code = url.searchParams.get('code');
 	const sealedState = url.searchParams.get('state');
-	let callback: { ok: boolean; message: string } | null = null;
 	if (code && sealedState && link.oauth) {
 		const state = openLinkState(link.stateBox, sealedState, new Date());
-		if (!state || state.userId !== locals.user.id) {
-			callback = { ok: false, message: '連携の有効期限が切れました。もう一度お試しください。' };
-		} else {
-			callback = await completeDiscordLink(
-				{
-					oauth: link.oauth,
-					bot: discord.bot,
-					store: link.store,
-					supportChannelId: link.supportChannelId(),
-				},
-				{ code, state },
-				new Date(),
-			);
-		}
+		const callback =
+			!state || state.userId !== locals.user.id
+				? { ok: false, message: '連携の有効期限が切れました。もう一度お試しください。' }
+				: await completeDiscordLink(
+						{
+							oauth: link.oauth,
+							bot: discord.bot,
+							store: link.store,
+							supportChannelId: link.supportChannelId(),
+							log: log.withTag('discord-link'),
+						},
+						{ code, state },
+						new Date(),
+					);
+		// 認可コードは 1 回しか使えない。URL に残したままだと、フォームの送信などで読み直すたびに
+		// 同じコードを Discord に送り直してしまい、2 回目からは必ず失敗する。処理したらすぐ URL から消す
+		const params = new URLSearchParams({
+			linked: callback.ok ? 'ok' : 'error',
+			message: callback.message,
+		});
+		redirect(303, `${url.pathname}?${params}`);
 	}
+
+	const linkedParam = url.searchParams.get('linked');
+	const callback =
+		linkedParam === null
+			? null
+			: { ok: linkedParam === 'ok', message: url.searchParams.get('message') ?? '' };
 
 	const current = link.store.findByUser(locals.user.id);
 	const { channels } = getServices();

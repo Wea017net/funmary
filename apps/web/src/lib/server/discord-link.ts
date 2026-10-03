@@ -2,6 +2,7 @@
 // 認可コードを受け取ったあとの、ギルドへの参加、スレッドか DM の用意、紐付けの保存をまとめる。
 import type { DiscordBot, DiscordOAuthClient } from '@funmary/notify';
 import type { DiscordDestination, DiscordLinkStore, SecretBox } from '@funmary/db';
+import type { Logger } from '@funmary/log';
 
 /** state を有効とみなす時間。長く連携の画面を放っておいたら、やり直してもらう */
 const STATE_TTL_MS = 10 * 60 * 1000;
@@ -48,7 +49,12 @@ export interface CompleteLinkDeps {
 	readonly store: DiscordLinkStore;
 	/** support チャンネル (設計書 14.9) の ID。管理者が「チャンネルとロールを整える」を実行していなければ null */
 	readonly supportChannelId: string | null;
+	readonly log: Pick<Logger, 'warn'>;
 }
+
+/** エラーの中身を、秘密の値を含まない文字列にする (トークンはエラーの本文に出さない設計、discord-oauth.ts) */
+const describe = (error: unknown): string =>
+	error instanceof Error ? error.message : String(error);
 
 const TRY_AGAIN = 'もう一度お試しください。';
 
@@ -87,7 +93,8 @@ export async function completeDiscordLink(
 	try {
 		tokens = await deps.oauth.exchangeCode(input.code);
 		discordUser = await deps.oauth.fetchCurrentUser(tokens.accessToken);
-	} catch {
+	} catch (error) {
+		deps.log.warn(`Discord 連携のトークンの取得に失敗しました: ${describe(error)}`);
 		return { ok: false, message: `Discord との通信に失敗しました。${TRY_AGAIN}` };
 	}
 
@@ -97,7 +104,8 @@ export async function completeDiscordLink(
 
 	try {
 		await deps.bot.addGuildMember(discordUser.id, tokens.accessToken);
-	} catch {
+	} catch (error) {
+		deps.log.warn(`Discord 連携のサーバーへの参加に失敗しました: ${describe(error)}`);
 		return {
 			ok: false,
 			message: `サーバーへの参加を許可しなかったか、失敗しました。${TRY_AGAIN}`,
@@ -112,7 +120,8 @@ export async function completeDiscordLink(
 			deps.supportChannelId,
 			discordUser.id,
 		);
-	} catch {
+	} catch (error) {
+		deps.log.warn(`Discord 連携の送り先の用意に失敗しました: ${describe(error)}`);
 		channel = {
 			error:
 				input.state.destination === 'dm'
