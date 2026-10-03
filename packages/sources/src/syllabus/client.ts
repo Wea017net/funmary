@@ -20,6 +20,8 @@ const MAX_PAGES = 100;
 const MAX_ENTRIES = 5000;
 /** 集めた件数が、検索結果の件数のこの割合に満たなければ、失敗とみなす */
 const MIN_COLLECTED_RATIO = 0.9;
+/** 読めなかった科目を、ログと知らせに残す上限の件数 */
+const MAX_FAILED_ENTRIES = 20;
 
 export interface FetchSyllabusDeps {
 	readonly fetch: PortalFetch;
@@ -38,6 +40,13 @@ export interface SyllabusEntry {
 	readonly detail: SyllabusDetail | null;
 }
 
+/** 詳細を取りに行ったが読めなかった科目。原因を診断できるよう、授業名と理由を残す */
+export interface FailedSyllabusDetail {
+	readonly lessonId: string;
+	readonly name: string;
+	readonly reason: string;
+}
+
 export type FetchSyllabusResult =
 	| {
 			readonly kind: 'ok';
@@ -45,6 +54,8 @@ export type FetchSyllabusResult =
 			readonly entries: readonly SyllabusEntry[];
 			/** 詳細を取りに行ったが、読めなかった科目の数 */
 			readonly failedDetails: number;
+			/** 読めなかった科目。あまりに多ければ、ログを埋めないよう先頭だけ */
+			readonly failedEntries: readonly FailedSyllabusDetail[];
 	  }
 	/** 画面の年度の選択肢に、その年度がない (新年度のシラバスがまだ公開されていない) */
 	| { readonly kind: 'year-unavailable'; readonly availableYears: readonly number[] }
@@ -157,6 +168,7 @@ export async function fetchSyllabusCatalog(deps: FetchSyllabusDeps): Promise<Fet
 		}
 
 		const entries: SyllabusEntry[] = [];
+		const failedEntries: FailedSyllabusDetail[] = [];
 		let failedDetails = 0;
 		for (const row of rows.values()) {
 			if (!deps.needsDetail(row)) {
@@ -164,21 +176,24 @@ export async function fetchSyllabusCatalog(deps: FetchSyllabusDeps): Promise<Fet
 				continue;
 			}
 			const url = `${PORTAL_ORIGIN}/Lesson/Syllabus?lesson_id=${encodeURIComponent(row.lessonId)}&year=${row.year}`;
+			const fail = (reason: string) => {
+				failedDetails++;
+				if (failedEntries.length < MAX_FAILED_ENTRIES) {
+					failedEntries.push({ lessonId: row.lessonId, name: row.name, reason });
+				}
+				entries.push({ row, detail: null });
+			};
 			try {
 				const parsed = parseSyllabusDetail(await get(url));
 				if (parsed.kind === 'ok') entries.push({ row, detail: parsed.detail });
-				else {
-					failedDetails++;
-					entries.push({ row, detail: null });
-				}
+				else fail(parsed.reason);
 			} catch (error) {
 				// 中断は、そのまま止める。1 科目の通信の失敗は、数えて続ける
 				if (error instanceof Stop && error.message === '中断されました') throw error;
-				failedDetails++;
-				entries.push({ row, detail: null });
+				fail(error instanceof Error ? error.message : String(error));
 			}
 		}
-		return { kind: 'ok', year: deps.academicYear, entries, failedDetails };
+		return { kind: 'ok', year: deps.academicYear, entries, failedDetails, failedEntries };
 	} catch (error) {
 		const reason = error instanceof Error ? error.message : String(error);
 		return { kind: 'failed', message: `公開シラバスから取得できませんでした: ${reason}` };

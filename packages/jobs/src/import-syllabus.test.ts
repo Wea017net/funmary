@@ -42,7 +42,7 @@ function setup(
 ) {
 	let health = options.health ?? INITIAL_SOURCE_HEALTH;
 	const upserts: { academicYear: number; syllabusId: string; name: string; term: string }[] = [];
-	const alerts: { severity: string; title: string }[] = [];
+	const alerts: { severity: string; title: string; message?: string }[] = [];
 	const needs: ((row: SyllabusListRow) => boolean)[] = [];
 	const years: number[] = [];
 	const fetchCatalog = vi.fn<ImportSyllabusDeps['fetchCatalog']>((input) => {
@@ -53,6 +53,7 @@ function setup(
 			year: input.academicYear,
 			entries: [{ row: row('1'), detail: detail() }],
 			failedDetails: 0,
+			failedEntries: [],
 		};
 		return Promise.resolve(typeof result === 'function' ? result(input.academicYear) : result);
 	});
@@ -149,6 +150,7 @@ describe('公開シラバスの定期処理', () => {
 							year,
 							entries: [{ row: { ...row('9'), year }, detail: detail() }],
 							failedDetails: 0,
+							failedEntries: [],
 						},
 		});
 		const message = await t.job.run(t.context);
@@ -173,21 +175,30 @@ describe('公開シラバスの定期処理', () => {
 					{ row: row('2'), detail: detail() },
 				],
 				failedDetails: 0,
+				failedEntries: [],
 			},
 		});
 		await t.job.run(t.context);
 		expect(t.upserts.map((u) => u.syllabusId)).toEqual(['2']);
 	});
 
-	it('詳細の失敗が 2 割を超えたら、保存はして、管理者に知らせる', async () => {
+	it('詳細の失敗が 2 割を超えたら、保存はして、管理者に知らせる。授業名と理由を添える', async () => {
 		const entries = Array.from({ length: 10 }, (_, i) => ({
 			row: row(String(i)),
 			detail: i < 7 ? detail() : null,
 		}));
-		const t = setup({ result: { kind: 'ok', year: 2026, entries, failedDetails: 3 } });
+		const failedEntries = [
+			{ lessonId: '7', name: '科目 7', reason: '授業名がありません' },
+			{ lessonId: '8', name: '科目 8', reason: '授業名がありません' },
+			{ lessonId: '9', name: '科目 9', reason: '授業名がありません' },
+		];
+		const t = setup({
+			result: { kind: 'ok', year: 2026, entries, failedDetails: 3, failedEntries },
+		});
 		await t.job.run(t.context);
 		expect(t.upserts).toHaveLength(7);
-		expect(t.alerts.map((a) => a.severity)).toContain('warn');
+		const warning = t.alerts.find((a) => a.severity === 'warn');
+		expect(warning?.message).toContain('科目 7 (授業名がありません)');
 	});
 
 	it('取得に失敗したら、失敗を数えて例外にする', async () => {

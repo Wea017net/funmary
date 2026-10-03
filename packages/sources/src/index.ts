@@ -47,6 +47,7 @@ export {
 } from './syllabus/list.ts';
 export {
 	fetchSyllabusCatalog,
+	type FailedSyllabusDetail,
 	type FetchSyllabusDeps,
 	type FetchSyllabusResult,
 	type SyllabusEntry,
