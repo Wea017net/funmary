@@ -74,10 +74,6 @@
 	dd {
 		margin: 0.25rem 0 0;
 	}
-	.muted {
-		color: var(--fm-text-muted);
-		font-size: 0.875rem;
-	}
 	@media (display-mode: standalone) {
 		.install-guide {
 			display: none;

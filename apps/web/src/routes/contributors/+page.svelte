@@ -56,11 +56,6 @@
 		max-width: 44rem;
 	}
 
-	.muted {
-		color: var(--fm-text-muted);
-		font-size: 0.875rem;
-	}
-
 	.contributors {
 		display: grid;
 		grid-template-columns: repeat(auto-fill, minmax(5.5rem, 1fr));

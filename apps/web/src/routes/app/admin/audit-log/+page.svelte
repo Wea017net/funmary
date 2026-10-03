@@ -68,11 +68,6 @@
 		max-width: 56rem;
 	}
 
-	.muted {
-		color: var(--fm-text-muted);
-		font-size: 0.875rem;
-	}
-
 	.scroll {
 		overflow-x: auto;
 	}

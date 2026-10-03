@@ -119,11 +119,6 @@
 		margin-top: 2rem;
 	}
 
-	.muted {
-		color: var(--fm-text-muted);
-		font-size: 0.875rem;
-	}
-
 	.links {
 		margin: 0;
 		padding: 0;

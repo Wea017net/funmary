@@ -193,8 +193,4 @@
 			font-size: 0.875rem;
 		}
 	}
-
-	.muted {
-		color: var(--fm-text-muted);
-	}
 </style>

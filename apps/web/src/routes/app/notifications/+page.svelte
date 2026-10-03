@@ -104,11 +104,6 @@
 		max-width: 48rem;
 	}
 
-	.muted {
-		color: var(--fm-text-muted);
-		font-size: 0.875rem;
-	}
-
 	.filters {
 		display: flex;
 		flex-wrap: wrap;

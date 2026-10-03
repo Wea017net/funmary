@@ -261,9 +261,4 @@
 			margin: 0 0 0.5rem;
 		}
 	}
-
-	.muted {
-		color: var(--fm-text-muted);
-		font-size: 0.875rem;
-	}
 </style>

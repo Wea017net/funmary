@@ -260,11 +260,6 @@
 		min-height: 44px;
 	}
 
-	.muted {
-		color: var(--fm-text-muted);
-		font-size: 0.875rem;
-	}
-
 	.invites {
 		margin: 0;
 		padding: 0;
