@@ -40,3 +40,6 @@ allowBuilds:
   better-sqlite3: false
   esbuild: true
   simple-git-hooks: true
+
+minimumReleaseAgeExclude:
+  - '@modelcontextprotocol/sdk@1.32.0'

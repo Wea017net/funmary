@@ -1,0 +1,127 @@
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
+import {
+	createAcademicCalendarStore,
+	createAccessGrantStore,
+	createAccessTokenStore,
+	createAuthStore,
+	createClassChangeStore,
+	createCourseStore,
+	createHolidayStore,
+	createNotificationStore,
+	createPersonalSlotStore,
+	createSubjectStore,
+	openDatabase,
+	type Database,
+} from '@funmary/db';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { buildMcpServer } from './mcp-routes.ts';
+
+let dir: string;
+let database: Database;
+
+beforeEach(() => {
+	dir = mkdtempSync(join(tmpdir(), 'funmary-mcp-routes-'));
+	database = openDatabase(join(dir, 'funmary.db'), { backupDir: join(dir, 'backups') });
+});
+
+afterEach(() => {
+	database.close();
+	rmSync(dir, { recursive: true, force: true });
+});
+
+const NOW = new Date('2026-10-07T00:00:00Z');
+
+function deps() {
+	return {
+		courses: createCourseStore(database),
+		personalSlots: createPersonalSlotStore(database),
+		subjects: createSubjectStore(database),
+		classChanges: createClassChangeStore(database),
+		academicCalendar: createAcademicCalendarStore(database),
+		holidays: createHolidayStore(database),
+		estimateHolidays: () => [],
+		notifications: createNotificationStore(database),
+		accessGrants: createAccessGrantStore(database),
+		accessTokens: createAccessTokenStore(database),
+		users: createAuthStore(database),
+	};
+}
+
+async function connectedClient(server: ReturnType<typeof buildMcpServer>) {
+	const client = new Client({ name: 'test', version: '1' });
+	const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+	await Promise.all([client.connect(clientTransport), server.connect(serverTransport)]);
+	return client;
+}
+
+describe('buildMcpServer', () => {
+	it('範囲に合わせて、道具の一覧が変わる', async () => {
+		const src = deps();
+		const server = buildMcpServer(src, { userId: 'u1', scopes: ['read:lessons'] });
+		const client = await connectedClient(server);
+		const { tools } = await client.listTools();
+		expect(tools.map((tool) => tool.name).sort()).toEqual(['get_lessons', 'get_subject']);
+		expect(tools.every((tool) => tool.annotations?.readOnlyHint)).toBe(true);
+	});
+
+	it('すべての範囲を持つトークンでは、4 つの道具がそろう', async () => {
+		const src = deps();
+		const server = buildMcpServer(src, {
+			userId: 'u1',
+			scopes: ['read:lessons', 'read:changes', 'read:notifications'],
+		});
+		const client = await connectedClient(server);
+		const { tools } = await client.listTools();
+		expect(tools.map((tool) => tool.name).sort()).toEqual([
+			'get_lessons',
+			'get_subject',
+			'list_changes',
+			'list_notifications',
+		]);
+	});
+
+	it('get_lessons は、呼んだ本人の授業だけを返す', async () => {
+		const src = deps();
+		const userId = src.users.createUser(
+			{ googleSub: 'a', email: 'a@fun.ac.jp', name: null, role: 'user' },
+			NOW,
+		);
+		const server = buildMcpServer(src, { userId, scopes: ['read:lessons'] });
+		const client = await connectedClient(server);
+		const result = await client.callTool({
+			name: 'get_lessons',
+			arguments: { start: '2026-10-01', end: '2026-10-07' },
+		});
+		expect(result.structuredContent).toEqual({ lessons: [] });
+	});
+
+	it('list_notifications は、呼んだ本人の通知欄だけを返す', async () => {
+		const src = deps();
+		const userId = src.users.createUser(
+			{ googleSub: 'a', email: 'a@fun.ac.jp', name: null, role: 'user' },
+			NOW,
+		);
+		src.notifications.insertMany(
+			[
+				{
+					userId,
+					kind: 'cancellation',
+					title: '休講',
+					body: null,
+					link: null,
+					subjectId: null,
+					dedupeKey: null,
+				},
+			],
+			NOW,
+		);
+		const server = buildMcpServer(src, { userId, scopes: ['read:notifications'] });
+		const client = await connectedClient(server);
+		const result = await client.callTool({ name: 'list_notifications', arguments: {} });
+		expect(result.structuredContent).toMatchObject({ notifications: [{ title: '休講' }] });
+	});
+});
