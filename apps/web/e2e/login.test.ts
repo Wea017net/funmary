@@ -2303,3 +2303,56 @@ test.describe('Webhook', () => {
 		await expect(page.getByRole('status')).toHaveText('上限を 5 個にしました。');
 	});
 });
+
+test.describe('公開 API と MCP', () => {
+	test('個人用のアクセストークンを発行、一覧、無効化でき、API から自分の時間割を読める', async ({
+		page,
+		request,
+	}) => {
+		const email = `e2e-tokens-${Date.now()}@fun.ac.jp`;
+		oidc.setIdentity({ sub: email, email, email_verified: true, hd: 'fun.ac.jp' });
+		await page.goto('/auth/google');
+		await page.goto('/app/settings');
+		await page.getByRole('link', { name: '公開 API と MCP' }).click();
+		await expect(page.getByRole('heading', { level: 1, name: '公開 API と MCP' })).toBeVisible();
+
+		await page.getByLabel('名前 (どこで使うかのメモ)').fill('e2e のテスト');
+		await page.getByLabel('今日や週の授業').check();
+		await page.getByRole('button', { name: '発行する' }).click();
+		await expect(page.getByText('を発行しました', { exact: false })).toBeVisible();
+
+		const token = await page.locator('#new-token').inputValue();
+		expect(token).toMatch(/^fmy_/);
+
+		const item = page.getByRole('listitem').filter({ hasText: 'e2e のテスト' });
+		await expect(item).toContainText('read:lessons');
+
+		// 発行したトークンで、公開 API から自分のデータだけを読める
+		const res = await request.get('/api/v1/lessons?start=2026-10-01&end=2026-10-07', {
+			headers: { Authorization: `Bearer ${token}` },
+		});
+		expect(res.status()).toBe(200);
+		expect(await res.json()).toEqual([]);
+
+		const noToken = await request.get('/api/v1/lessons?start=2026-10-01&end=2026-10-07');
+		expect(noToken.status()).toBe(401);
+
+		page.once('dialog', (dialog) => dialog.accept());
+		await item.getByRole('button', { name: '無効にする' }).click();
+		await expect(item).toHaveCount(0);
+
+		const afterRevoke = await request.get('/api/v1/lessons?start=2026-10-01&end=2026-10-07', {
+			headers: { Authorization: `Bearer ${token}` },
+		});
+		expect(afterRevoke.status()).toBe(401);
+	});
+
+	test('/api/docs と /api/v1/openapi.json は、ログインなしで開ける', async ({ request }) => {
+		const docs = await request.get('/api/docs');
+		expect(docs.status()).toBe(200);
+		const spec = await request.get('/api/v1/openapi.json');
+		expect(spec.status()).toBe(200);
+		const body = (await spec.json()) as { openapi: string };
+		expect(body.openapi).toMatch(/^3\.1/);
+	});
+});

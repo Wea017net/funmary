@@ -449,6 +449,27 @@ export const feedTokens = sqliteTable(
 	(table) => [index('feed_tokens_user').on(table.userId)],
 );
 
+/** 公開 API と MCP サーバー向けの個人用アクセストークン (設計書 3.3)。1 人が複数を同時に持てる */
+export const accessTokens = sqliteTable(
+	'access_tokens',
+	{
+		id: integer('id').primaryKey({ autoIncrement: true }),
+		userId: text('user_id')
+			.notNull()
+			.references(() => users.id, { onDelete: 'cascade' }),
+		/** どこで使うかの、本人のためのメモ */
+		name: text('name').notNull(),
+		tokenHash: text('token_hash').notNull().unique(),
+		/** read:lessons、read:changes、read:notifications など */
+		scopes: text('scopes', { mode: 'json' }).notNull().$type<string[]>(),
+		expiresAt: integer('expires_at', { mode: 'timestamp_ms' }).notNull(),
+		createdAt: createdAt(),
+		lastUsedAt: integer('last_used_at', { mode: 'timestamp_ms' }),
+		revokedAt: integer('revoked_at', { mode: 'timestamp_ms' }),
+	},
+	(table) => [index('access_tokens_user').on(table.userId)],
+);
+
 export const shares = sqliteTable(
 	'shares',
 	{

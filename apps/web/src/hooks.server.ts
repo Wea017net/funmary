@@ -12,6 +12,7 @@ import {
 	checkHealth,
 	createAcademicCalendarStore,
 	createAccessGrantStore,
+	createAccessTokenStore,
 	createAuditLogStore,
 	createAuthStore,
 	createChannelStore,
@@ -308,6 +309,7 @@ export const init: ServerInit = () => {
 		alertAdmin: (alert: Parameters<typeof alerter.send>[0]) => alerter.send(alert),
 		log: logger,
 		feedTokens: createFeedTokenStore(database),
+		accessTokens: createAccessTokenStore(database),
 		// リリースでは、tar.gz に同梱した build-info.json を、上の階層へたどって探す
 		build: findBuildInfo(dirname(fileURLToPath(import.meta.url))),
 		// ビルドでは、scripts/copy-legal.js が写した legal/ を、上の階層へたどって探す
@@ -353,6 +355,8 @@ export const init: ServerInit = () => {
 		feed: {
 			loadFeed: (token) => loadNotificationFeed(services, token, new Date()),
 		},
+		v1: { ...services, users: services.auth },
+		mcp: { ...services, users: services.auth },
 	});
 	logger.withTag('app').info(`起動しました (${result.config.mode}、DB は ${dataDir})`);
 };

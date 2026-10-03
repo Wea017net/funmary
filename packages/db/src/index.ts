@@ -1,5 +1,13 @@
 export { backupDatabase, restoreDatabase, type BackupOptions } from './backup.ts';
 export {
+	ACCESS_TOKEN_SCOPES,
+	createAccessTokenStore,
+	type AccessTokenOwner,
+	type AccessTokenScope,
+	type AccessTokenStore,
+	type AccessTokenSummary,
+} from './access-token-store.ts';
+export {
 	createAuditLogStore,
 	type AuditAction,
 	type AuditLogEntry,

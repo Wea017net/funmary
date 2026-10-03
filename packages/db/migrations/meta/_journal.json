@@ -141,6 +141,13 @@
       "when": 1791016129412,
       "tag": "0019_clean_captain_flint",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "6",
+      "when": 1791036821432,
+      "tag": "0020_familiar_bastion",
+      "breakpoints": true
     }
   ]
 }

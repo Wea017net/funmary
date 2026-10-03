@@ -1,6 +1,6 @@
+import type { TimetableLesson } from '@funmary/api';
 import { describe, expect, it } from 'vitest';
 import { composeDailyDigest, type DailyDigestContent } from './daily-digest.ts';
-import type { TimetableLesson } from './user-timetable.ts';
 
 const lesson = (overrides: Partial<TimetableLesson>): TimetableLesson => ({
 	date: '2026-10-02',

@@ -1,7 +1,7 @@
 // 時間割の画面 (/、/week) に渡す 1 回分の授業。表示に要るものだけにする。
+import type { TimetableLesson } from '@funmary/api';
 import { DEFAULT_PERIODS, findPeriod } from '@funmary/core';
 import { subjectPathParams, type SubjectPathParams } from '../subject-path.ts';
-import type { TimetableLesson } from './user-timetable.ts';
 
 export interface LessonView {
 	readonly key: string;

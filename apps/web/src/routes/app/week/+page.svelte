@@ -10,7 +10,7 @@
 	import StatusBadge from '$lib/components/StatusBadge.svelte';
 	import type { EventView } from '$lib/server/event-view.ts';
 	import type { LessonView } from '$lib/server/lesson-view.ts';
-	import type { DayNote } from '$lib/server/user-timetable.ts';
+	import type { DayNote } from '@funmary/api';
 	import {
 		formatDate,
 		formatDayNote,

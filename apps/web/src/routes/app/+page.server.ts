@@ -1,11 +1,11 @@
 // 今日の画面 (設計書 4.4、12.1)。次の授業の時刻と教室を大きく出し、今日の授業と休講などを並べる。
 import { redirect, type ServerLoad } from '@sveltejs/kit';
+import { buildUserTimetable } from '@funmary/api';
 import { DEFAULT_PERIODS, addDays, findNextLesson, isStale, jstDateTime } from '@funmary/core';
 import { PORTAL_SOURCE } from '@funmary/jobs';
 import { getServices } from '$lib/server/services.ts';
 import { eventsOnDate } from '$lib/server/event-view.ts';
 import { toLessonView } from '$lib/server/lesson-view.ts';
-import { buildUserTimetable } from '$lib/server/user-timetable.ts';
 
 /** 次の授業を探す日数。長い休みの間は見つからなくてよい */
 const LOOKAHEAD_DAYS = 14;

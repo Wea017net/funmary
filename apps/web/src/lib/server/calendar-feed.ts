@@ -1,10 +1,14 @@
 // カレンダー購読の ICS に載せる予定 (設計書 13 章)。トークンの持ち主の時間割を、Hono の ICS の組み立てに渡す形にする。
-import type { CalendarFeed, CalendarUserEvent } from '@funmary/api';
+import {
+	buildUserTimetable,
+	type CalendarFeed,
+	type CalendarUserEvent,
+	type TimetableSources,
+} from '@funmary/api';
 import { addDays, findPeriod, jstDateTime, type UserEvent } from '@funmary/core';
 import type { AuthStore, FeedTokenStore, UserEventStore } from '@funmary/db';
 import { formatDayNote } from '$lib/timetable-label.ts';
 import { toLessonView } from './lesson-view.ts';
-import { buildUserTimetable, type TimetableSources } from './user-timetable.ts';
 
 /** 載せる期間。過去の授業も少し残し、履修を登録した次の学期の分まで届くようにする */
 const DAYS_BEFORE = 14;
