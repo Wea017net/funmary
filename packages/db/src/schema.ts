@@ -557,6 +557,10 @@ export const notifications = sqliteTable(
 		/** 押したときに開く画面のパス */
 		link: text('link'),
 		subjectId: integer('subject_id').references(() => subjects.id, { onDelete: 'set null' }),
+		/** 授業の日付 (YYYY-MM-DD)。休講などの通知のときだけ持つ。汎用 Webhook の構造化データに使う (設計書 14.3.1) */
+		date: text('date'),
+		/** 授業の時限。休講などの通知のときだけ持つ */
+		period: integer('period'),
 		/** 同じ出来事を二重に通知しないための鍵 (例: class-change:12)。利用者ごとに一意 */
 		dedupeKey: text('dedupe_key'),
 		createdAt: createdAt(),

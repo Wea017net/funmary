@@ -1,6 +1,12 @@
 // 利用者への通知を送る定期処理 (deliver-notifications) に渡す、DB と Discord への接続 (設計書 14.1、14.3)。
 // NOTIFY_DRY_RUN のときは、送らずに題だけをログに出して、送れたことにする (手元の開発で、本物の送り先に送らないため)
-import type { ChannelStore, DeliveryStore, NotificationStore, PendingDelivery } from '@funmary/db';
+import type {
+	ChannelStore,
+	DeliveryStore,
+	NotificationStore,
+	PendingDelivery,
+	SubjectStore,
+} from '@funmary/db';
 import type { DeliverNotificationsDeps, DeliveryItem, DeliveryOutcome } from '@funmary/jobs';
 import type { Logger } from '@funmary/log';
 import {
@@ -15,6 +21,8 @@ export interface NotificationDeliveryOptions {
 	readonly channels: ChannelStore;
 	readonly deliveries: DeliveryStore;
 	readonly notifications: NotificationStore;
+	/** 汎用 Webhook の構造化データ (data.subject) に使う、科目の名前を引くため */
+	readonly subjects: Pick<SubjectStore, 'findById'>;
 	/** Discord 連携の送り先に送る Bot。設定されていなければ null */
 	readonly bot: DiscordBot | null;
 	/** 通知のリンクを絶対の URL にするための、公開 URL の origin */
@@ -26,14 +34,24 @@ export interface NotificationDeliveryOptions {
 	readonly fetch?: (url: string, init?: RequestInit) => Promise<Response>;
 }
 
-export function messageFor(delivery: PendingDelivery, origin: string): DeliveryMessage {
+export function messageFor(
+	delivery: PendingDelivery,
+	origin: string,
+	subjects: Pick<SubjectStore, 'findById'>,
+): DeliveryMessage {
 	const { notification } = delivery;
+	const subject =
+		notification.subjectId !== null ? subjects.findById(notification.subjectId) : null;
+	const url = notification.link ? `${origin}${notification.link}` : null;
 	return {
 		kind: notification.kind,
 		title: notification.title,
 		body: notification.body,
-		url: notification.link ? `${origin}${notification.link}` : null,
+		url,
 		createdAt: notification.createdAt,
+		subject: subject && url ? { name: subject.name, url } : null,
+		date: notification.date,
+		period: notification.period,
 	};
 }
 
@@ -71,7 +89,7 @@ export function deliverNotificationsDeps(
 		async send(item): Promise<DeliveryOutcome> {
 			const delivery = pending.get(item.id);
 			if (!delivery?.target) return { status: 'rejected', reason: '送り先がありません' };
-			const message = messageFor(delivery, options.origin);
+			const message = messageFor(delivery, options.origin, options.subjects);
 			if (dryRun) {
 				log.info(`(送信を止めています) ${delivery.channelKind}: ${message.title}`);
 				return { status: 'sent' };

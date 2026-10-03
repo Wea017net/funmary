@@ -36,6 +36,8 @@ describe('休講などの通知の文', () => {
 			body: '講義室 A → 講義室 B',
 			link: '/app/subjects/2026/100201',
 			subjectId: 5,
+			date: '2026-10-03',
+			period: 2,
 			dedupeKey: 'class-change:12',
 		});
 		expect(
