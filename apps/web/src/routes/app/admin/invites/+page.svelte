@@ -3,6 +3,7 @@
 	import type { InviteIssuers, InviteSettings } from '@funmary/core';
 	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
+	import FormNotice from '$lib/components/FormNotice.svelte';
 	import InviteCodeList from '$lib/components/InviteCodeList.svelte';
 	import type { InviteCodeView } from '$lib/server/invites.ts';
 	import SettingsBreadcrumb from '$lib/components/SettingsBreadcrumb.svelte';
@@ -58,11 +59,7 @@
 		</p>
 	{/if}
 
-	{#if form?.error}
-		<p class="error" role="alert">{form.error}</p>
-	{:else if form?.message}
-		<p class="message" role="status">{form.message}</p>
-	{/if}
+	<FormNotice error={form?.error} message={form?.message} />
 
 	<section aria-labelledby="settings-heading">
 		<h2 id="settings-heading">発行できる人</h2>
@@ -295,16 +292,5 @@
 	.muted {
 		color: var(--fm-text-muted);
 		font-size: 0.875rem;
-	}
-
-	.message,
-	.error {
-		padding: 0.75rem 1rem;
-		border-radius: 0.5rem;
-		background: var(--fm-surface-muted);
-	}
-
-	.error {
-		color: var(--fm-error);
 	}
 </style>

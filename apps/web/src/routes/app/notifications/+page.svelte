@@ -2,6 +2,7 @@
 	import Button, { Label } from '@smui/button';
 	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
+	import FormNotice from '$lib/components/FormNotice.svelte';
 
 	type Kind = 'cancellation' | 'makeup' | 'roomChange' | 'integration' | 'notice';
 
@@ -46,11 +47,7 @@
 		履修している科目の休講、補講、教室変更などが届きます。90 日より古い通知は、自動で消えます。
 	</p>
 
-	{#if form?.error}
-		<p class="notice error" role="alert">{form.error}</p>
-	{:else if form?.message}
-		<p class="notice" role="status">{form.message}</p>
-	{/if}
+	<FormNotice error={form?.error} message={form?.message} />
 
 	<!-- eslint-disable svelte/no-navigation-without-resolve -- resolve した /app/notifications に、種類を足している -->
 	<nav aria-label="種類で絞り込む">
@@ -110,16 +107,6 @@
 	.muted {
 		color: var(--fm-text-muted);
 		font-size: 0.875rem;
-	}
-
-	.notice {
-		padding: 0.75rem 1rem;
-		border-radius: 0.5rem;
-		background: var(--fm-surface-muted);
-
-		&.error {
-			color: var(--fm-error);
-		}
 	}
 
 	.filters {

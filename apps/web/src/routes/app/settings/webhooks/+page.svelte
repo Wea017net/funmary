@@ -2,6 +2,7 @@
 	import Button, { Label } from '@smui/button';
 	import { enhance } from '$app/forms';
 	import { confirmSubmit } from '$lib/actions/confirm-submit.ts';
+	import FormNotice from '$lib/components/FormNotice.svelte';
 	import SettingsBreadcrumb from '$lib/components/SettingsBreadcrumb.svelte';
 
 	let {
@@ -49,11 +50,7 @@
 	<p>送り先ごとに、届ける通知の種類を分けることもできます。</p>
 	<p>登録できるのは {data.limit} 個までです (いま {data.count} 個)。</p>
 
-	{#if form?.error}
-		<p class="error" role="alert">{form.error}</p>
-	{:else if form?.message}
-		<p class="message" role="status">{form.message}</p>
-	{/if}
+	<FormNotice error={form?.error} message={form?.message} />
 	{#if form?.signingKey && form.id === undefined}
 		<div class="key-box" role="status">
 			<p>署名の鍵 (今だけ表示します。コピーしてから閉じてください):</p>
@@ -72,7 +69,7 @@
 					</h2>
 					<p class="meta">{webhook.maskedUrl}</p>
 					{#if !webhook.enabled && webhook.disabledReason}
-						<p class="error" role="status">
+						<p class="notice error" role="status">
 							止めました: {webhook.disabledReason}。直したら、有効に戻してください。
 						</p>
 					{/if}
@@ -275,6 +272,14 @@
 		margin-top: 0;
 	}
 
+	.notice.error {
+		padding: 0.75rem 1rem;
+		border-radius: 0.5rem;
+		background: var(--fm-surface-muted);
+		overflow-wrap: anywhere;
+		color: var(--fm-error);
+	}
+
 	.badge {
 		margin-left: 0.5rem;
 		padding: 0.125rem 0.5rem;
@@ -361,16 +366,5 @@
 
 	.steps {
 		padding-left: 1.5rem;
-	}
-
-	.message,
-	.error {
-		padding: 0.75rem 1rem;
-		border: 1px solid currentcolor;
-		border-radius: 0.25rem;
-	}
-
-	.error {
-		color: var(--fm-error);
 	}
 </style>

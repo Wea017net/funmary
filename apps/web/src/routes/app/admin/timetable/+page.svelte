@@ -3,6 +3,7 @@
 	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
 	import type { TimetableImportView } from '$lib/server/timetable-import-view.ts';
+	import FormNotice from '$lib/components/FormNotice.svelte';
 	import SettingsBreadcrumb from '$lib/components/SettingsBreadcrumb.svelte';
 
 	let {
@@ -88,9 +89,7 @@
 		を使ってください。
 	</p>
 
-	{#if form?.error}
-		<p class="error" role="alert">{form.error}</p>
-	{/if}
+	<FormNotice error={form?.error} />
 
 	{#if form?.result}
 		{@const result = form.result}
@@ -242,12 +241,5 @@
 	.muted {
 		color: var(--fm-text-muted);
 		font-size: 0.875rem;
-	}
-
-	.error {
-		padding: 0.75rem 1rem;
-		border-radius: 0.5rem;
-		background: var(--fm-surface-muted);
-		color: var(--fm-error);
 	}
 </style>

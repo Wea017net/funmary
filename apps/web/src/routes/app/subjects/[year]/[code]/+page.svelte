@@ -2,6 +2,7 @@
 	import Button, { Label } from '@smui/button';
 	import { enhance } from '$app/forms';
 	import { DEFAULT_PERIODS, TERMS } from '@funmary/core';
+	import FormNotice from '$lib/components/FormNotice.svelte';
 	import StatusBadge from '$lib/components/StatusBadge.svelte';
 	import { resolve } from '$app/paths';
 	import { formatSlot, formatTerm, WEEKDAY_LABELS } from '$lib/term-label.ts';
@@ -77,11 +78,7 @@
 		</p>
 	{/if}
 
-	{#if form?.error}
-		<p class="error" role="alert">{form.error}</p>
-	{:else if form?.message}
-		<p class="message" role="status">{form.message}</p>
-	{/if}
+	<FormNotice error={form?.error} message={form?.message} />
 
 	<dl class="summary">
 		<dt>教員</dt>
@@ -353,17 +350,6 @@
 	.note {
 		color: var(--fm-text-muted);
 		font-size: 0.875rem;
-	}
-
-	.message,
-	.error {
-		padding: 0.75rem 1rem;
-		border-radius: 0.5rem;
-		background: var(--fm-surface-muted);
-	}
-
-	.error {
-		color: var(--fm-error);
 	}
 
 	.inline {

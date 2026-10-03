@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Button, { Label } from '@smui/button';
 	import { page } from '$app/state';
+	import FormNotice from '$lib/components/FormNotice.svelte';
 	import { loginErrorMessage } from '$lib/login-error.ts';
 
 	const message = $derived(loginErrorMessage(page.url.searchParams.get('error')));
@@ -14,9 +15,7 @@
 <div class="page">
 	<h1>ログイン</h1>
 
-	{#if message}
-		<p class="error" role="alert">{message}</p>
-	{/if}
+	<FormNotice error={message} />
 
 	<p>大学の Google アカウント (@fun.ac.jp) でログインします。</p>
 	<!-- /auth は SvelteKit の画面ではなく、サーバーが処理するので、ページの遷移ではなく通常の移動にする -->
@@ -31,11 +30,5 @@
 <style>
 	.page {
 		max-width: 40rem;
-	}
-	.error {
-		padding: 0.75rem 1rem;
-		border: 1px solid currentcolor;
-		border-radius: 0.25rem;
-		color: var(--fm-error);
 	}
 </style>

@@ -3,6 +3,7 @@
 	import { enhance } from '$app/forms';
 	import { confirmSubmit } from '$lib/actions/confirm-submit.ts';
 	import { createCopyState } from '$lib/clipboard.svelte.ts';
+	import FormNotice from '$lib/components/FormNotice.svelte';
 	import SettingsBreadcrumb from '$lib/components/SettingsBreadcrumb.svelte';
 
 	let {
@@ -46,11 +47,7 @@
 	</p>
 	<p class="muted">載るのは直近 30 日、最大 50 件です。授業前のリマインダーは載りません。</p>
 
-	{#if form?.error}
-		<p class="error" role="alert">{form.error}</p>
-	{:else if form?.message}
-		<p class="message" role="status">{form.message}</p>
-	{/if}
+	<FormNotice error={form?.error} message={form?.message} />
 
 	{#if form?.issued}
 		{@const issued = form.issued}
@@ -275,18 +272,5 @@
 	.muted {
 		color: var(--fm-text-muted);
 		font-size: 0.875rem;
-	}
-
-	.message {
-		padding: 0.75rem 1rem;
-		border-radius: 0.5rem;
-		background: var(--fm-surface-muted);
-	}
-
-	.error {
-		padding: 0.75rem 1rem;
-		border: 1px solid currentcolor;
-		border-radius: 0.25rem;
-		color: var(--fm-error);
 	}
 </style>

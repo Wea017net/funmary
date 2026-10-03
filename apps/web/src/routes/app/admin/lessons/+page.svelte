@@ -4,6 +4,7 @@
 	import { resolve } from '$app/paths';
 	import { TERMS } from '@funmary/core';
 	import { formatTerm } from '$lib/term-label.ts';
+	import FormNotice from '$lib/components/FormNotice.svelte';
 	import SettingsBreadcrumb from '$lib/components/SettingsBreadcrumb.svelte';
 
 	interface Candidate {
@@ -92,11 +93,7 @@
 	<SettingsBreadcrumb current="照合できなかった授業名" />
 	<h1>照合できなかった授業名</h1>
 
-	{#if form?.error}
-		<p class="error" role="alert">{form.error}</p>
-	{:else if form?.message}
-		<p class="message" role="status">{form.message}</p>
-	{/if}
+	<FormNotice error={form?.error} message={form?.message} />
 
 	{#if data.academicYear === null}
 		<p>科目がまだ取り込まれていません。</p>
@@ -257,14 +254,5 @@
 		align-items: center;
 		gap: 0.5rem;
 		min-height: 48px;
-	}
-	.message,
-	.error {
-		padding: 0.75rem 1rem;
-		border: 1px solid currentcolor;
-		border-radius: 0.25rem;
-	}
-	.error {
-		color: var(--fm-error);
 	}
 </style>

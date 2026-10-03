@@ -4,6 +4,7 @@
 	import type { ResponseTimeSummary } from '$lib/server/response-times.ts';
 	import type { SourceStatusRow } from '$lib/server/source-status.ts';
 	import { SOURCE_STATE_LABELS } from '$lib/source-label.ts';
+	import FormNotice from '$lib/components/FormNotice.svelte';
 	import SettingsBreadcrumb from '$lib/components/SettingsBreadcrumb.svelte';
 
 	interface RunRow {
@@ -66,11 +67,7 @@
 	<SettingsBreadcrumb current="取得元と実行履歴" />
 	<h1>取得元と実行履歴</h1>
 
-	{#if form?.error}
-		<p class="notice error" role="alert">{form.error}</p>
-	{:else if form?.message}
-		<p class="notice" role="status">{form.message}</p>
-	{/if}
+	<FormNotice error={form?.error} message={form?.message} />
 
 	<section aria-labelledby="sources-heading">
 		<h2 id="sources-heading">取得元の状態</h2>
@@ -393,17 +390,6 @@
 
 	td.numeric {
 		white-space: nowrap;
-	}
-
-	.notice {
-		padding: 0.75rem 1rem;
-		border-radius: 0.5rem;
-		background: var(--fm-surface-muted);
-		overflow-wrap: anywhere;
-
-		&.error {
-			color: var(--fm-error);
-		}
 	}
 
 	.muted {

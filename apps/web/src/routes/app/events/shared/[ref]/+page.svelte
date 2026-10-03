@@ -2,6 +2,7 @@
 	import Button, { Label } from '@smui/button';
 	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
+	import FormNotice from '$lib/components/FormNotice.svelte';
 	import type { EventSummary } from '$lib/server/event-summary.ts';
 
 	let {
@@ -26,11 +27,7 @@
 	<p><a href={resolve('/app/events')}>自分の予定</a></p>
 	<h1>{data.event.title}</h1>
 
-	{#if form?.error}
-		<p class="error" role="alert">{form.error}</p>
-	{:else if form?.message}
-		<p class="message" role="status">{form.message}</p>
-	{/if}
+	<FormNotice error={form?.error} message={form?.message} />
 
 	<dl>
 		<dt>日付</dt>
@@ -82,14 +79,5 @@
 	}
 	.notes {
 		white-space: pre-wrap;
-	}
-	.message,
-	.error {
-		padding: 0.75rem 1rem;
-		border: 1px solid currentcolor;
-		border-radius: 0.25rem;
-	}
-	.error {
-		color: var(--fm-error);
 	}
 </style>

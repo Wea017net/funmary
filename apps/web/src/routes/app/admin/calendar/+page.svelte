@@ -3,6 +3,7 @@
 	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
 	import { confirmSubmit } from '$lib/actions/confirm-submit.ts';
+	import FormNotice from '$lib/components/FormNotice.svelte';
 	import YearCalendar from '$lib/components/YearCalendar.svelte';
 	import { formatTerm, WEEKDAY_LABELS } from '$lib/term-label.ts';
 	import { formatDate } from '$lib/timetable-label.ts';
@@ -90,11 +91,7 @@
 		は、入れていなければ前期か後期と同じ期間を使います。
 	</p>
 
-	{#if form?.error}
-		<p class="error" role="alert">{form.error}</p>
-	{:else if form?.message}
-		<p class="message" role="status">{form.message}</p>
-	{/if}
+	<FormNotice error={form?.error} message={form?.message} />
 
 	<section aria-labelledby="pdf-heading">
 		<h2 id="pdf-heading">PDF から取り込む</h2>
@@ -513,16 +510,5 @@
 			padding: 0.25rem 0;
 			border-bottom: 1px dashed var(--fm-divider);
 		}
-	}
-
-	.message,
-	.error {
-		padding: 0.75rem 1rem;
-		border-radius: 0.5rem;
-		background: var(--fm-surface-muted);
-	}
-
-	.error {
-		color: var(--fm-error);
 	}
 </style>
