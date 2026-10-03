@@ -9,7 +9,13 @@ import {
 	toDiscordView,
 	useBot,
 } from '$lib/server/discord-admin.ts';
+import {
+	DISCORD_JOIN_ROLE_KEY,
+	parseDiscordJoinRoleForm,
+	readDiscordJoinRole,
+} from '$lib/server/discord-join-role.ts';
 import { getServices } from '$lib/server/services.ts';
+import { SUPPORT_INVITES_KEY, readInvites } from '$lib/server/support-invites.ts';
 
 const NO_BOT =
 	'Bot が設定されていません。環境変数 DISCORD_BOT_TOKEN と DISCORD_GUILD_ID を書いて、再起動してください。';
@@ -20,9 +26,9 @@ const describeError = (error: unknown) =>
 		? error.message
 		: 'Discord に接続できませんでした。時間をおいて、もう一度お試しください。';
 
-export const load: ServerLoad = ({ locals }) => {
+export const load: ServerLoad = async ({ locals }) => {
 	requireAdmin(locals);
-	const { discord } = getServices();
+	const { discord, settings } = getServices();
 	return {
 		view: toDiscordView(discord.bot, discord.layout(), {
 			available: discord.presence.available,
@@ -32,6 +38,10 @@ export const load: ServerLoad = ({ locals }) => {
 			configured: discord.link.configured,
 			enabled: discord.link.enabled(),
 		},
+		// 参加したときに付けるロール (設計書 14.9、#163)。独自に選んだロールの選択肢に使う
+		guildRoles: discord.bot ? await discord.bot.listRoles() : [],
+		joinRole: readDiscordJoinRole(settings.get(DISCORD_JOIN_ROLE_KEY)),
+		invites: readInvites(settings.get(SUPPORT_INVITES_KEY)),
 	};
 };
 
@@ -129,6 +139,15 @@ export const actions: Actions = {
 				? '利用者の Discord 連携を有効にしました。'
 				: '利用者の Discord 連携を無効にしました。',
 		};
+	},
+	/** 参加したときに付けるロールを保存する (設計書 14.9、#163) */
+	joinRole: async ({ request, locals }) => {
+		requireAdmin(locals);
+		const { settings } = getServices();
+		const parsed = parseDiscordJoinRoleForm(await request.formData());
+		if (!parsed.ok) return fail(400, { error: parsed.error });
+		settings.set(DISCORD_JOIN_ROLE_KEY, parsed.value, new Date());
+		return { message: '参加したときに付けるロールを保存しました。' };
 	},
 	/** チャンネルに、テストのメッセージを送る */
 	test: async ({ request, locals }) => {

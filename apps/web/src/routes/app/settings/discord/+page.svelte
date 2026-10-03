@@ -12,7 +12,7 @@
 		data: {
 			configured: boolean;
 			enabled: boolean;
-			linked: { destination: 'thread' | 'dm' } | null;
+			linked: { destination: 'thread' | 'dm'; hasChannel: boolean } | null;
 			/** 予定のまとめの設定。連携していなければ null */
 			digest: DailyDigestSettings | null;
 			/** 届ける通知の種類 (休講など)。連携していなければ null */
@@ -34,6 +34,7 @@
 	let destination = $state<'thread' | 'dm'>('thread');
 	// 保存すると data が読み直されるので、保存した値に戻る
 	let timing = $derived(data.digest?.timing ?? 'evening');
+	let switchTo = $derived(data.linked?.destination ?? 'thread');
 </script>
 
 <svelte:head>
@@ -85,6 +86,63 @@
 		>
 			<Button type="submit" variant="outlined"><Label>連携を解除する</Label></Button>
 		</form>
+
+		<section aria-labelledby="destination-heading">
+			<h2 id="destination-heading">送り先の変更</h2>
+			<p>
+				連携を解除せずに、非公開スレッドと DM
+				を切り替えられます。切り替えると、新しい送り先を用意します。
+			</p>
+			<form method="POST" action="?/changeDestination" use:enhance class="link-form">
+				<fieldset>
+					<legend>送り先</legend>
+					<label>
+						<input type="radio" name="destination" value="thread" bind:group={switchTo} />
+						サポートサーバーの、あなただけの非公開スレッド
+					</label>
+					<label>
+						<input type="radio" name="destination" value="dm" bind:group={switchTo} />
+						あなたへの DM
+					</label>
+				</fieldset>
+				<Button type="submit" variant="outlined"><Label>切り替える</Label></Button>
+			</form>
+
+			{#if data.linked.destination === 'thread'}
+				<h3>スレッドの管理</h3>
+				{#if !data.linked.hasChannel}
+					<p class="meta">
+						スレッドが削除されていて、いまは通知の送り先がありません。作り直すか、DM
+						に切り替えてください。
+					</p>
+				{/if}
+				<div class="thread-actions">
+					<form method="POST" action="?/archiveThread" use:enhance>
+						<Button type="submit" variant="outlined" disabled={!data.linked.hasChannel}>
+							<Label>アーカイブする</Label>
+						</Button>
+					</form>
+					<form
+						method="POST"
+						action="?/recreateThread"
+						use:enhance
+						use:confirmSubmit={'いまのスレッドを削除して、新しいスレッドを作ります。よろしいですか?'}
+					>
+						<Button type="submit" variant="outlined"><Label>作り直す</Label></Button>
+					</form>
+					<form
+						method="POST"
+						action="?/deleteThread"
+						use:enhance
+						use:confirmSubmit={'スレッドを完全に削除します。元には戻せません。よろしいですか?'}
+					>
+						<Button type="submit" variant="outlined" disabled={!data.linked.hasChannel}>
+							<Label>削除する</Label>
+						</Button>
+					</form>
+				</div>
+			{/if}
+		</section>
 
 		{#if data.kinds}
 			<section aria-labelledby="kinds-heading">
@@ -244,6 +302,17 @@
 
 	h2 {
 		margin-top: 2rem;
+	}
+
+	h3 {
+		margin-top: 1.25rem;
+		font-size: 1rem;
+	}
+
+	.thread-actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
 	}
 
 	.custom {

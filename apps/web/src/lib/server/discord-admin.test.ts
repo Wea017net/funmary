@@ -77,7 +77,7 @@ describe('useBot と toDiscordView', () => {
 			'sources',
 			'users',
 			'subjects',
-			'support',
+			'links',
 			'other',
 		]);
 		expect(view.channels[1]).toMatchObject({ id: '55555', managed: false });

@@ -65,7 +65,7 @@ export interface Services {
 			enabled(): boolean;
 			setEnabled(enabled: boolean): void;
 			/** サポートサーバーの support チャンネルの ID。まだ整えていなければ null */
-			supportChannelId(): string | null;
+			linksChannelId(): string | null;
 		};
 	};
 	readonly courses: CourseStore;

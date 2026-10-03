@@ -95,4 +95,33 @@ describe('createDiscordLinkStore', () => {
 		expect(store.findByUser(userId)).toBeNull();
 		expect(store.remove(userId)).toBeNull();
 	});
+
+	describe('updateChannel', () => {
+		it('送り先だけを変える。トークンはそのまま', () => {
+			const { store, userId } = setup();
+			store.save(userId, input, at('2026-01-01T00:00:00Z'));
+
+			expect(store.updateChannel(userId, { destination: 'dm', channelId: 'dm-1' })).toBe(true);
+			const link = store.findByUser(userId);
+			expect(link).toMatchObject({
+				destination: 'dm',
+				channelId: 'dm-1',
+				accessToken: 'access-token',
+				discordUserId: 'discord-1',
+			});
+		});
+
+		it('channelId に null を渡すと、送り先が無い状態にする', () => {
+			const { store, userId } = setup();
+			store.save(userId, input, at('2026-01-01T00:00:00Z'));
+
+			store.updateChannel(userId, { destination: 'thread', channelId: null });
+			expect(store.findByUser(userId)).toMatchObject({ destination: 'thread', channelId: null });
+		});
+
+		it('連携していない利用者には false', () => {
+			const { store, userId } = setup();
+			expect(store.updateChannel(userId, { destination: 'dm', channelId: 'dm-1' })).toBe(false);
+		});
+	});
 });

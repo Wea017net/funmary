@@ -67,6 +67,7 @@ function fakeBot(overrides: Partial<DiscordBot> = {}): DiscordBot {
 		createPrivateThread: () => Promise.resolve('thread-1'),
 		addThreadMember: () => Promise.resolve(),
 		archiveThread: () => Promise.resolve(),
+		deleteThread: () => Promise.resolve(),
 		addGuildMember: () => Promise.resolve(),
 		createInvite: () => Promise.resolve({ code: 'abc', expiresAt: null }),
 		deleteInvite: () => Promise.resolve(),
@@ -80,6 +81,7 @@ function fakeStore(overrides: Partial<DiscordLinkStore> = {}): DiscordLinkStore 
 		findByUser: () => null,
 		isDiscordUserLinkedToOther: () => false,
 		remove: () => null,
+		updateChannel: () => false,
 		...overrides,
 	};
 }
@@ -93,7 +95,7 @@ describe('completeDiscordLink', () => {
 		const store = fakeStore({ save });
 		const bot = fakeBot();
 		const result = await completeDiscordLink(
-			{ oauth: fakeOauth(), bot, store, supportChannelId: 'support-1', log },
+			{ oauth: fakeOauth(), bot, store, linksChannelId: 'support-1', joinRoleIds: [], log },
 			{ code: 'code-1', state },
 			at('2026-01-01'),
 		);
@@ -109,11 +111,36 @@ describe('completeDiscordLink', () => {
 		);
 	});
 
+	it('joinRoleIds を渡していれば、参加のときに付ける', async () => {
+		const addGuildMember = vi.fn().mockResolvedValue(undefined);
+		const bot = fakeBot({ addGuildMember });
+		await completeDiscordLink(
+			{
+				oauth: fakeOauth(),
+				bot,
+				store: fakeStore(),
+				linksChannelId: 'support-1',
+				joinRoleIds: ['role-1'],
+				log,
+			},
+			{ code: 'code-1', state },
+			at('2026-01-01'),
+		);
+		expect(addGuildMember).toHaveBeenCalledWith('discord-1', 'at', ['role-1']);
+	});
+
 	it('DM を選んだときは、DM チャンネルを開く', async () => {
 		const save = vi.fn();
 		const store = fakeStore({ save });
 		const result = await completeDiscordLink(
-			{ oauth: fakeOauth(), bot: fakeBot(), store, supportChannelId: 'support-1', log },
+			{
+				oauth: fakeOauth(),
+				bot: fakeBot(),
+				store,
+				linksChannelId: 'support-1',
+				joinRoleIds: [],
+				log,
+			},
 			{ code: 'code-1', state: { ...state, destination: 'dm' } },
 			at('2026-01-01'),
 		);
@@ -127,7 +154,14 @@ describe('completeDiscordLink', () => {
 
 	it('Bot が設定されていなければ、失敗にする', async () => {
 		const result = await completeDiscordLink(
-			{ oauth: fakeOauth(), bot: null, store: fakeStore(), supportChannelId: 'support-1', log },
+			{
+				oauth: fakeOauth(),
+				bot: null,
+				store: fakeStore(),
+				linksChannelId: 'support-1',
+				joinRoleIds: [],
+				log,
+			},
 			{ code: 'code-1', state },
 			at('2026-01-01'),
 		);
@@ -137,7 +171,14 @@ describe('completeDiscordLink', () => {
 	it('別の利用者が同じ Discord アカウントに紐付いていれば、失敗にする', async () => {
 		const store = fakeStore({ isDiscordUserLinkedToOther: () => true });
 		const result = await completeDiscordLink(
-			{ oauth: fakeOauth(), bot: fakeBot(), store, supportChannelId: 'support-1', log },
+			{
+				oauth: fakeOauth(),
+				bot: fakeBot(),
+				store,
+				linksChannelId: 'support-1',
+				joinRoleIds: [],
+				log,
+			},
 			{ code: 'code-1', state },
 			at('2026-01-01'),
 		);
@@ -150,7 +191,7 @@ describe('completeDiscordLink', () => {
 		const store = fakeStore({ save });
 		const bot = fakeBot({ addGuildMember: () => Promise.reject(new Error('403')) });
 		const result = await completeDiscordLink(
-			{ oauth: fakeOauth(), bot, store, supportChannelId: 'support-1', log },
+			{ oauth: fakeOauth(), bot, store, linksChannelId: 'support-1', joinRoleIds: [], log },
 			{ code: 'code-1', state },
 			at('2026-01-01'),
 		);
@@ -160,7 +201,14 @@ describe('completeDiscordLink', () => {
 
 	it('support チャンネルがまだなければ、スレッドを作らず失敗にする', async () => {
 		const result = await completeDiscordLink(
-			{ oauth: fakeOauth(), bot: fakeBot(), store: fakeStore(), supportChannelId: null, log },
+			{
+				oauth: fakeOauth(),
+				bot: fakeBot(),
+				store: fakeStore(),
+				linksChannelId: null,
+				joinRoleIds: [],
+				log,
+			},
 			{ code: 'code-1', state },
 			at('2026-01-01'),
 		);
@@ -171,7 +219,14 @@ describe('completeDiscordLink', () => {
 	it('DM が開けなければ、失敗にする', async () => {
 		const bot = fakeBot({ createDm: () => Promise.reject(new Error('403')) });
 		const result = await completeDiscordLink(
-			{ oauth: fakeOauth(), bot, store: fakeStore(), supportChannelId: 'support-1', log },
+			{
+				oauth: fakeOauth(),
+				bot,
+				store: fakeStore(),
+				linksChannelId: 'support-1',
+				joinRoleIds: [],
+				log,
+			},
 			{ code: 'code-1', state: { ...state, destination: 'dm' } },
 			at('2026-01-01'),
 		);
@@ -182,7 +237,14 @@ describe('completeDiscordLink', () => {
 		log.warn.mockClear();
 		const oauth = fakeOauth({ exchangeCode: () => Promise.reject(new Error('400')) });
 		const result = await completeDiscordLink(
-			{ oauth, bot: fakeBot(), store: fakeStore(), supportChannelId: 'support-1', log },
+			{
+				oauth,
+				bot: fakeBot(),
+				store: fakeStore(),
+				linksChannelId: 'support-1',
+				joinRoleIds: [],
+				log,
+			},
 			{ code: 'code-1', state },
 			at('2026-01-01'),
 		);

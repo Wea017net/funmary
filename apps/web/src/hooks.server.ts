@@ -261,7 +261,7 @@ export const init: ServerInit = () => {
 				enabled: linkingEnabled,
 				setEnabled: (enabled: boolean) =>
 					settingsStore.set(DISCORD_LINKING_KEY, { enabled }, new Date()),
-				supportChannelId: () => readDiscordLayout().channels.support?.id ?? null,
+				linksChannelId: () => readDiscordLayout().channels.links?.id ?? null,
 			},
 		},
 		courses: createCourseStore(database),

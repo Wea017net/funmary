@@ -3,14 +3,24 @@
 	import { enhance } from '$app/forms';
 	import SettingsBreadcrumb from '$lib/components/SettingsBreadcrumb.svelte';
 	import type { DiscordAdminView, DiscordRow } from '$lib/server/discord-admin.ts';
+	import type { DiscordJoinRoleSetting } from '$lib/server/discord-join-role.ts';
+	import type { SupportInvite } from '$lib/server/support-invites.ts';
 
 	let {
 		data,
 		form,
 	}: {
-		data: { view: DiscordAdminView; link: { configured: boolean; enabled: boolean } };
+		data: {
+			view: DiscordAdminView;
+			link: { configured: boolean; enabled: boolean };
+			guildRoles: { id: string; name: string }[];
+			joinRole: DiscordJoinRoleSetting;
+			invites: SupportInvite[];
+		};
 		form: { error?: string; message?: string } | null;
 	} = $props();
+
+	let joinRoleMode = $derived(data.joinRole.mode);
 </script>
 
 {#snippet rows(kind: 'channel' | 'role', items: readonly DiscordRow[])}
@@ -143,6 +153,68 @@
 						<Label>{data.link.enabled ? '連携を無効にする' : '連携を有効にする'}</Label>
 					</Button>
 				</form>
+
+				<h3>参加したときに付けるロール</h3>
+				<p class="meta">
+					OAuth2 の連携でサーバーに参加したときに、Discord
+					のロールを付けられます。登録済みの招待リンクの「参加した人に付けるロール」とは別の設定です。
+				</p>
+				<form method="POST" action="?/joinRole" use:enhance class="join-role">
+					<fieldset>
+						<legend>付け方</legend>
+						<label>
+							<input type="radio" name="mode" value="none" bind:group={joinRoleMode} />
+							付けない
+						</label>
+						<label>
+							<input type="radio" name="mode" value="custom" bind:group={joinRoleMode} />
+							独自に選んだロールを付ける
+						</label>
+						<label>
+							<input type="radio" name="mode" value="invite" bind:group={joinRoleMode} />
+							登録済みの招待リンクと同じロールを付ける
+						</label>
+					</fieldset>
+					{#if joinRoleMode === 'custom'}
+						<fieldset>
+							<legend>付けるロール</legend>
+							{#each data.guildRoles as role (role.id)}
+								<label>
+									<input
+										type="checkbox"
+										name="roleIds"
+										value={role.id}
+										checked={data.joinRole.mode === 'custom' &&
+											data.joinRole.roleIds.includes(role.id)}
+									/>
+									{role.name}
+								</label>
+							{:else}
+								<p class="meta">サーバーにロールがありません。</p>
+							{/each}
+						</fieldset>
+					{:else if joinRoleMode === 'invite'}
+						<label>
+							招待リンク
+							<select name="inviteId" required>
+								{#each data.invites as invite (invite.id)}
+									<option
+										value={invite.id}
+										selected={data.joinRole.mode === 'invite' &&
+											data.joinRole.inviteId === invite.id}
+									>
+										{invite.code}{invite.note ? ` (${invite.note})` : ''} — {invite.roles
+											.map((r) => r.name)
+											.join('、') || 'ロールなし'}
+									</option>
+								{:else}
+									<option value="" disabled>登録済みの招待リンクがありません</option>
+								{/each}
+							</select>
+						</label>
+					{/if}
+					<Button type="submit" variant="unelevated"><Label>保存する</Label></Button>
+				</form>
 			{/if}
 		</section>
 	{/if}
@@ -257,6 +329,34 @@
 			gap: 0.25rem;
 			font-size: 0.875rem;
 		}
+	}
+	.join-role {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 1rem;
+		margin-top: 0.75rem;
+	}
+	.join-role fieldset {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+		margin: 0;
+		padding: 0.75rem 1rem;
+		border: 1px solid var(--fm-divider);
+		border-radius: 0.5rem;
+	}
+	.join-role fieldset label {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		min-height: 44px;
+	}
+	.join-role > label {
+		display: flex;
+		flex-direction: column;
+		gap: 0.25rem;
+		font-size: 0.875rem;
 	}
 	.actions {
 		display: flex;

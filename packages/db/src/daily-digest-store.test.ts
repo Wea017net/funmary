@@ -100,6 +100,18 @@ describe('createDailyDigestStore', () => {
 		]);
 	});
 
+	it('送り先 (スレッドか DM) が今は無い人には送らない', () => {
+		const { store, createUser, link } = setup();
+		const linked = createUser('linked');
+		const noChannel = createUser('no-channel');
+		link(linked, 'dm-1');
+		link(noChannel, 'dm-2');
+		const links = createDiscordLinkStore(database, createSecretBox(generateEncryptionKey()));
+		links.updateChannel(noChannel, { destination: 'thread', channelId: null });
+
+		expect(store.listRecipients().map((r) => r.userId)).toEqual([linked]);
+	});
+
 	it('設定を保存していなくても、送った日を記録でき、設定は既定のまま', () => {
 		const { store, createUser, link } = setup();
 		const userId = createUser('a');
