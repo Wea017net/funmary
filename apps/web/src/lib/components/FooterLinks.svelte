@@ -9,6 +9,8 @@
 
 <p class="footer-links">
 	<a href={resolve('/about')}>このアプリについて</a>
+	<a href={resolve('/terms')}>利用規約</a>
+	<a href={resolve('/privacy')}>プライバシーポリシー</a>
 	<!-- eslint-disable svelte/no-navigation-without-resolve -- 外部サイトへのリンク -->
 	<a href={REPOSITORY_URL} target="_blank" rel="noopener noreferrer">ソースコード (GitHub)</a>
 	{#if operator}

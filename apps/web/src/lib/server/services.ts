@@ -24,6 +24,7 @@ import type {
 	UserEventStore,
 } from '@funmary/db';
 import type { JobResult } from '@funmary/jobs';
+import type { Logger } from '@funmary/log';
 import type {
 	AdminChannel,
 	DiscordBot,
@@ -136,6 +137,8 @@ export interface Services {
 		/** 送るチャンネル (設計書 14.9)。省くと、error は errors、それ以外は sources */
 		category?: AdminChannel;
 	}) => Promise<unknown>;
+	/** サーバーのログ。個人情報や秘密の値を含まない内容だけを書き込む (設計書 4.6) */
+	readonly log: Logger;
 }
 
 let services: Services | undefined;

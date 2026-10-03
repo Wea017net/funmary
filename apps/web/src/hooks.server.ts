@@ -306,6 +306,7 @@ export const init: ServerInit = () => {
 		brandDir: result.config.brandDir ?? null,
 		contactEmail: result.config.contactEmail ?? null,
 		alertAdmin: (alert: Parameters<typeof alerter.send>[0]) => alerter.send(alert),
+		log: logger,
 		feedTokens: createFeedTokenStore(database),
 		// リリースでは、tar.gz に同梱した build-info.json を、上の階層へたどって探す
 		build: findBuildInfo(dirname(fileURLToPath(import.meta.url))),

@@ -1955,6 +1955,11 @@ test.describe('スマホの上部バーと、フッターのリンク', () => {
 		await expect(link).toHaveAttribute('href', REPOSITORY_URL);
 		await expect(link).toHaveAttribute('target', '_blank');
 		await expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+		await expect(page.getByRole('link', { name: '利用規約' })).toHaveAttribute('href', '/terms');
+		await expect(page.getByRole('link', { name: 'プライバシーポリシー' })).toHaveAttribute(
+			'href',
+			'/privacy',
+		);
 
 		await loginAs(page);
 		await expect(page.getByRole('link', { name: 'ソースコード (GitHub)' })).toBeVisible();
