@@ -59,19 +59,20 @@ export function createDailyDigestStore(database: Database): DailyDigestStore {
 					.from(discordLinks)
 					.leftJoin(dailyDigestSettings, eq(dailyDigestSettings.userId, discordLinks.userId))
 					.all()
-					// 送り先 (スレッドか DM) が今は無い人には送れないので、省く (設計書 14.9)
-					.flatMap(({ link, settings }) =>
-						link.channelId === null
+					// 送り先 (スレッドか DM) が今は無い人には送れないので、省く。両方あれば、スレッドを優先する (設計書 14.9)
+					.flatMap(({ link, settings }) => {
+						const channelId = link.threadChannelId ?? link.dmChannelId;
+						return channelId === null
 							? []
 							: [
 									{
 										userId: link.userId,
-										channelId: link.channelId,
+										channelId,
 										settings: settings ? toSettings(settings) : DEFAULT_DAILY_DIGEST_SETTINGS,
 										lastSentFor: settings?.lastSentFor ?? null,
 									},
-								],
-					)
+								];
+					})
 			);
 		},
 		markSent(userId, date, now) {

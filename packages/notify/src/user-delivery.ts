@@ -166,9 +166,10 @@ export async function sendViaBot(
 	bot: Pick<DiscordBot, 'postEmbed'>,
 	channelId: string,
 	message: DeliveryMessage,
+	mentionUserId?: string,
 ): Promise<SendOutcome> {
 	try {
-		await bot.postEmbed(channelId, discordEmbed(message));
+		await bot.postEmbed(channelId, discordEmbed(message), mentionUserId);
 		return { status: 'sent' };
 	} catch (error) {
 		if (error instanceof DiscordApiError) {

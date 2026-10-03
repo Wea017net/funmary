@@ -66,8 +66,9 @@ function link(userId: string, destination: 'dm' | 'thread' = 'dm', channelId = '
 			accessToken: 't',
 			refreshToken: 'r',
 			tokenExpiresAt: at('2026-12-01T00:00:00Z'),
-			destination,
-			channelId,
+			threadChannelId: destination === 'thread' ? channelId : null,
+			dmChannelId: destination === 'dm' ? channelId : null,
+			kindSettings: {},
 		},
 		at('2026-09-30T00:00:00Z'),
 	);
@@ -252,8 +253,9 @@ describe('Discord 連携の送り先の復帰', () => {
 				accessToken: 't',
 				refreshToken: 'r',
 				tokenExpiresAt: at('2026-12-01T00:00:00Z'),
-				destination: 'dm',
-				channelId: '1000',
+				threadChannelId: null,
+				dmChannelId: '1000',
+				kindSettings: {},
 			},
 			at('2026-10-03T00:00:00Z'),
 		);
@@ -336,9 +338,41 @@ describe('送信待ち', () => {
 		notify(a, 'k1');
 		const now = at('2026-10-01T00:01:00Z');
 		deliveries.enqueueMissing(now);
-		expect(deliveries.claimDue(now, 10)[0]?.target).toEqual({ kind: 'link', channelId: '777' });
+		expect(deliveries.claimDue(now, 10)[0]?.target).toEqual({
+			kind: 'link',
+			destinations: [{ channelId: '777', mentionUserId: null }],
+		});
 		createDiscordLinkStore(database, secretBox).remove(a);
 		expect(deliveries.claimDue(now, 10)[0]?.target).toBeNull();
+	});
+
+	it('種類ごとの設定で、両方に送ったり、メンションしたりできる (#163)', () => {
+		const a = newUser('a');
+		const links = createDiscordLinkStore(database, secretBox);
+		links.save(
+			a,
+			{
+				discordUserId: 'd-a',
+				accessToken: 't',
+				refreshToken: 'r',
+				tokenExpiresAt: at('2026-12-01T00:00:00Z'),
+				threadChannelId: 'thread-1',
+				dmChannelId: 'dm-1',
+				kindSettings: { cancellation: { destination: 'both', mention: true } },
+			},
+			at('2026-09-30T00:00:00Z'),
+		);
+		channels.syncLinkChannels(at('2026-09-30T00:00:00Z'));
+		notify(a, 'k1');
+		const now = at('2026-10-01T00:01:00Z');
+		deliveries.enqueueMissing(now);
+		expect(deliveries.claimDue(now, 10)[0]?.target).toEqual({
+			kind: 'link',
+			destinations: [
+				{ channelId: 'thread-1', mentionUserId: 'd-a' },
+				{ channelId: 'dm-1', mentionUserId: 'd-a' },
+			],
+		});
 	});
 
 	it('送れたら済みにし、再送は次の時刻まで待ち、尽きたら失敗にする', () => {

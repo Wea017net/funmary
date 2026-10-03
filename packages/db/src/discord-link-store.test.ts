@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createAuthStore } from './auth-store.ts';
 import { openDatabase, type Database } from './database.ts';
-import { createDiscordLinkStore } from './discord-link-store.ts';
+import { createDiscordLinkStore, kindSetting } from './discord-link-store.ts';
 import { createSecretBox, generateEncryptionKey } from './secrets.ts';
 
 let dir: string;
@@ -27,8 +27,9 @@ const input = {
 	accessToken: 'access-token',
 	refreshToken: 'refresh-token',
 	tokenExpiresAt: at('2026-01-01T01:00:00Z'),
-	destination: 'thread' as const,
-	channelId: 'channel-1',
+	threadChannelId: 'channel-1',
+	dmChannelId: null,
+	kindSettings: {},
 };
 
 function setup() {
@@ -50,8 +51,8 @@ describe('createDiscordLinkStore', () => {
 		expect(link?.discordUserId).toBe('discord-1');
 		expect(link?.accessToken).toBe('access-token');
 		expect(link?.refreshToken).toBe('refresh-token');
-		expect(link?.destination).toBe('thread');
-		expect(link?.channelId).toBe('channel-1');
+		expect(link?.threadChannelId).toBe('channel-1');
+		expect(link?.dmChannelId).toBeNull();
 	});
 
 	it('紐付けがない利用者は null', () => {
@@ -64,13 +65,13 @@ describe('createDiscordLinkStore', () => {
 		store.save(userId, input, at('2026-01-01T00:00:00Z'));
 		store.save(
 			userId,
-			{ ...input, discordUserId: 'discord-2', channelId: 'channel-2' },
+			{ ...input, discordUserId: 'discord-2', threadChannelId: 'channel-2' },
 			at('2026-01-02T00:00:00Z'),
 		);
 
 		const link = store.findByUser(userId);
 		expect(link?.discordUserId).toBe('discord-2');
-		expect(link?.channelId).toBe('channel-2');
+		expect(link?.threadChannelId).toBe('channel-2');
 	});
 
 	it('別の利用者が同じ Discord アカウントに紐付いていれば true を返す', () => {
@@ -96,32 +97,59 @@ describe('createDiscordLinkStore', () => {
 		expect(store.remove(userId)).toBeNull();
 	});
 
-	describe('updateChannel', () => {
-		it('送り先だけを変える。トークンはそのまま', () => {
+	describe('setChannel', () => {
+		it('片方のチャンネルだけを変える。トークンやもう片方には触れない', () => {
 			const { store, userId } = setup();
 			store.save(userId, input, at('2026-01-01T00:00:00Z'));
 
-			expect(store.updateChannel(userId, { destination: 'dm', channelId: 'dm-1' })).toBe(true);
+			expect(store.setChannel(userId, 'dm', 'dm-1')).toBe(true);
 			const link = store.findByUser(userId);
 			expect(link).toMatchObject({
-				destination: 'dm',
-				channelId: 'dm-1',
+				threadChannelId: 'channel-1',
+				dmChannelId: 'dm-1',
 				accessToken: 'access-token',
 				discordUserId: 'discord-1',
 			});
 		});
 
-		it('channelId に null を渡すと、送り先が無い状態にする', () => {
+		it('null を渡すと、その送り先が無い状態にする', () => {
 			const { store, userId } = setup();
 			store.save(userId, input, at('2026-01-01T00:00:00Z'));
 
-			store.updateChannel(userId, { destination: 'thread', channelId: null });
-			expect(store.findByUser(userId)).toMatchObject({ destination: 'thread', channelId: null });
+			store.setChannel(userId, 'thread', null);
+			expect(store.findByUser(userId)).toMatchObject({ threadChannelId: null });
 		});
 
 		it('連携していない利用者には false', () => {
 			const { store, userId } = setup();
-			expect(store.updateChannel(userId, { destination: 'dm', channelId: 'dm-1' })).toBe(false);
+			expect(store.setChannel(userId, 'dm', 'dm-1')).toBe(false);
+		});
+	});
+
+	describe('setKindSettings', () => {
+		it('通知の種類ごとの設定を、まとめて置き換える', () => {
+			const { store, userId } = setup();
+			store.save(userId, input, at('2026-01-01T00:00:00Z'));
+
+			const settings = {
+				cancellation: { destination: 'dm' as const, mention: true },
+				makeup: { destination: 'both' as const, mention: false },
+			};
+			expect(store.setKindSettings(userId, settings)).toBe(true);
+			const link = store.findByUser(userId);
+			expect(kindSetting(link!.kindSettings, 'cancellation')).toEqual({
+				destination: 'dm',
+				mention: true,
+			});
+			expect(kindSetting(link!.kindSettings, 'roomChange')).toEqual({
+				destination: 'thread',
+				mention: false,
+			});
+		});
+
+		it('連携していない利用者には false', () => {
+			const { store, userId } = setup();
+			expect(store.setKindSettings(userId, {})).toBe(false);
 		});
 	});
 });

@@ -1,20 +1,36 @@
 // 利用者の Discord アカウントと Funmary のアカウントの紐付け (設計書 14.9)。
 // トークンは SecretBox で暗号化して保存し、読み出すときだけ復号する。
+// 本人だけのスレッドと DM は、両方を同時に持てる (通知の種類ごとに送り先を振り分けられるようにするため、#163)
 import { eq } from 'drizzle-orm';
 import type { Database } from './database.ts';
+import type { NotificationKind } from './notification-store.ts';
 import { discordLinks } from './schema.ts';
 import type { SecretBox } from './secrets.ts';
 
-export type DiscordDestination = 'thread' | 'dm';
+/** 1 つの送り先 (thread か dm)。both は、スレッドと DM の両方に送る */
+export type DiscordDestination = 'thread' | 'dm' | 'both';
+
+export interface DiscordLinkKindSetting {
+	readonly destination: DiscordDestination;
+	readonly mention: boolean;
+}
+
+/** 設定していない種類は、スレッド、メンション無しとみなす */
+export const DEFAULT_KIND_SETTING: DiscordLinkKindSetting = {
+	destination: 'thread',
+	mention: false,
+};
+
+export type DiscordLinkKindSettings = Partial<Record<NotificationKind, DiscordLinkKindSetting>>;
 
 export interface DiscordLinkInput {
 	readonly discordUserId: string;
 	readonly accessToken: string;
 	readonly refreshToken: string;
 	readonly tokenExpiresAt: Date;
-	readonly destination: DiscordDestination;
-	/** destination が thread ならスレッドの ID、dm なら DM チャンネルの ID */
-	readonly channelId: string;
+	readonly threadChannelId: string | null;
+	readonly dmChannelId: string | null;
+	readonly kindSettings: DiscordLinkKindSettings;
 }
 
 export interface DiscordLink {
@@ -23,10 +39,37 @@ export interface DiscordLink {
 	readonly accessToken: string;
 	readonly refreshToken: string;
 	readonly tokenExpiresAt: Date;
-	readonly destination: DiscordDestination;
-	/** スレッドを完全に削除したあとなど、送り先が今は無い間は null */
-	readonly channelId: string | null;
+	/** 本人だけのスレッドの ID。用意していない、完全に削除したあとは null */
+	readonly threadChannelId: string | null;
+	/** DM チャンネルの ID。用意していない間は null */
+	readonly dmChannelId: string | null;
+	readonly kindSettings: DiscordLinkKindSettings;
 	readonly createdAt: Date;
+}
+
+/** 保存された値を読む。形が違う種類や項目は無視する */
+export function parseKindSettings(value: unknown): DiscordLinkKindSettings {
+	if (typeof value !== 'object' || value === null) return {};
+	const result: Record<string, DiscordLinkKindSetting> = {};
+	for (const [kind, raw] of Object.entries(value as Record<string, unknown>)) {
+		if (typeof raw !== 'object' || raw === null) continue;
+		const { destination, mention } = raw as Record<string, unknown>;
+		if (
+			(destination === 'thread' || destination === 'dm' || destination === 'both') &&
+			typeof mention === 'boolean'
+		) {
+			result[kind] = { destination, mention };
+		}
+	}
+	return result;
+}
+
+/** その種類の設定。無ければ既定 (スレッド、メンション無し) */
+export function kindSetting(
+	settings: DiscordLinkKindSettings,
+	kind: NotificationKind,
+): DiscordLinkKindSetting {
+	return settings[kind] ?? DEFAULT_KIND_SETTING;
 }
 
 export interface DiscordLinkStore {
@@ -39,13 +82,12 @@ export interface DiscordLinkStore {
 	/** 紐付けを消す。消せたものがあれば true */
 	remove(userId: string): DiscordLink | null;
 	/**
-	 * 送り先 (destination と channelId) だけを変える。トークンには触れない。
-	 * channelId に null を渡すと、送り先が無い状態にする (スレッドを削除したときなど)。連携していなければ false
+	 * スレッドか DM の、片方のチャンネル ID だけを変える。トークンや、もう片方には触れない。
+	 * null を渡すと、そちらの送り先が無い状態にする (スレッドを削除したときなど)。連携していなければ false
 	 */
-	updateChannel(
-		userId: string,
-		change: { destination: DiscordDestination; channelId: string | null },
-	): boolean;
+	setChannel(userId: string, which: 'thread' | 'dm', channelId: string | null): boolean;
+	/** 通知の種類ごとの送り先とメンションを、まとめて置き換える。連携していなければ false */
+	setKindSettings(userId: string, settings: DiscordLinkKindSettings): boolean;
 }
 
 export function createDiscordLinkStore(database: Database, secretBox: SecretBox): DiscordLinkStore {
@@ -57,36 +99,27 @@ export function createDiscordLinkStore(database: Database, secretBox: SecretBox)
 		accessToken: secretBox.decrypt(row.accessTokenEncrypted),
 		refreshToken: secretBox.decrypt(row.refreshTokenEncrypted),
 		tokenExpiresAt: row.tokenExpiresAt,
-		destination: row.destination,
-		channelId: row.channelId,
+		threadChannelId: row.threadChannelId,
+		dmChannelId: row.dmChannelId,
+		kindSettings: parseKindSettings(row.kindSettings),
 		createdAt: row.createdAt,
 	});
 
 	return {
 		save(userId, input, now) {
+			const values = {
+				discordUserId: input.discordUserId,
+				accessTokenEncrypted: secretBox.encrypt(input.accessToken),
+				refreshTokenEncrypted: secretBox.encrypt(input.refreshToken),
+				tokenExpiresAt: input.tokenExpiresAt,
+				threadChannelId: input.threadChannelId,
+				dmChannelId: input.dmChannelId,
+				kindSettings: input.kindSettings,
+				createdAt: now,
+			};
 			db.insert(discordLinks)
-				.values({
-					userId,
-					discordUserId: input.discordUserId,
-					accessTokenEncrypted: secretBox.encrypt(input.accessToken),
-					refreshTokenEncrypted: secretBox.encrypt(input.refreshToken),
-					tokenExpiresAt: input.tokenExpiresAt,
-					destination: input.destination,
-					channelId: input.channelId,
-					createdAt: now,
-				})
-				.onConflictDoUpdate({
-					target: discordLinks.userId,
-					set: {
-						discordUserId: input.discordUserId,
-						accessTokenEncrypted: secretBox.encrypt(input.accessToken),
-						refreshTokenEncrypted: secretBox.encrypt(input.refreshToken),
-						tokenExpiresAt: input.tokenExpiresAt,
-						destination: input.destination,
-						channelId: input.channelId,
-						createdAt: now,
-					},
-				})
+				.values({ userId, ...values })
+				.onConflictDoUpdate({ target: discordLinks.userId, set: values })
 				.run();
 		},
 		findByUser(userId) {
@@ -107,11 +140,18 @@ export function createDiscordLinkStore(database: Database, secretBox: SecretBox)
 			db.delete(discordLinks).where(eq(discordLinks.userId, userId)).run();
 			return toLink(row);
 		},
-		updateChannel(userId, change) {
+		setChannel(userId, which, channelId) {
+			const column =
+				which === 'thread' ? { threadChannelId: channelId } : { dmChannelId: channelId };
+			return (
+				db.update(discordLinks).set(column).where(eq(discordLinks.userId, userId)).run().changes > 0
+			);
+		},
+		setKindSettings(userId, settings) {
 			return (
 				db
 					.update(discordLinks)
-					.set({ destination: change.destination, channelId: change.channelId })
+					.set({ kindSettings: settings })
 					.where(eq(discordLinks.userId, userId))
 					.run().changes > 0
 			);

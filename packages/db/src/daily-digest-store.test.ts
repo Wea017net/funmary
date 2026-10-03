@@ -40,8 +40,9 @@ function setup() {
 				accessToken: 'access',
 				refreshToken: 'refresh',
 				tokenExpiresAt: at('2026-02-01T00:00:00Z'),
-				destination: 'dm',
-				channelId,
+				threadChannelId: null,
+				dmChannelId: channelId,
+				kindSettings: {},
 			},
 			at('2026-01-01T00:00:00Z'),
 		);
@@ -107,7 +108,7 @@ describe('createDailyDigestStore', () => {
 		link(linked, 'dm-1');
 		link(noChannel, 'dm-2');
 		const links = createDiscordLinkStore(database, createSecretBox(generateEncryptionKey()));
-		links.updateChannel(noChannel, { destination: 'thread', channelId: null });
+		links.setChannel(noChannel, 'dm', null);
 
 		expect(store.listRecipients().map((r) => r.userId)).toEqual([linked]);
 	});

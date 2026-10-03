@@ -122,9 +122,14 @@ export {
 } from './access-grant-store.ts';
 export {
 	createDiscordLinkStore,
+	kindSetting,
+	parseKindSettings,
+	DEFAULT_KIND_SETTING,
 	type DiscordDestination,
 	type DiscordLink,
 	type DiscordLinkInput,
+	type DiscordLinkKindSetting,
+	type DiscordLinkKindSettings,
 	type DiscordLinkStore,
 } from './discord-link-store.ts';
 export {
