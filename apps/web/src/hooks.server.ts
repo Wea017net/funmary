@@ -59,6 +59,7 @@ import { findBuildInfo } from '$lib/server/build-info.ts';
 import { createJobDefinitions } from '$lib/server/jobs.ts';
 import { createResponseTimes } from '$lib/server/response-times.ts';
 import { loadCalendarFeed } from '$lib/server/calendar-feed.ts';
+import { loadNotificationFeed } from '$lib/server/notification-feed.ts';
 import { findLegalInfo } from '$lib/server/legal.ts';
 import {
 	DISCORD_LAYOUT_KEY,
@@ -346,6 +347,9 @@ export const init: ServerInit = () => {
 		calendar: {
 			loadFeed: (token) => loadCalendarFeed(services, token, new Date()),
 			uidDomain: new URL(publicOrigin).hostname,
+		},
+		feed: {
+			loadFeed: (token) => loadNotificationFeed(services, token, new Date()),
 		},
 	});
 	logger.withTag('app').info(`起動しました (${result.config.mode}、DB は ${dataDir})`);

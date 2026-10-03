@@ -3,6 +3,7 @@ import { Hono } from 'hono';
 import { createAuthRoutes, type AuthRoutesDeps } from './auth-routes.ts';
 import { createCalendarRoutes, type CalendarRoutesDeps } from './calendar-routes.ts';
 import { errorResponse } from './error-page.ts';
+import { createFeedRoutes, type FeedRoutesDeps } from './feed-routes.ts';
 
 export interface ApiDeps {
 	/** 処理の途中で例外が出たときに呼ぶ。画面には内部の情報を出さず、ここで記録する */
@@ -11,6 +12,8 @@ export interface ApiDeps {
 	readonly auth?: AuthRoutesDeps;
 	/** カレンダー購読の ICS。ないときは、その口を開けない */
 	readonly calendar?: CalendarRoutesDeps;
+	/** 通知のフィード (RSS、Atom、JSON Feed)。ないときは、その口を開けない */
+	readonly feed?: FeedRoutesDeps;
 	/** DB に読み書きできるか。例外を投げたときも、読み書きできないとみなす */
 	readonly checkHealth: () => boolean;
 }
@@ -24,6 +27,7 @@ export function createApi(deps: ApiDeps): Hono {
 	app.notFound((c) => errorResponse(c, 404));
 	if (deps.auth) app.route('/', createAuthRoutes(deps.auth));
 	if (deps.calendar) app.route('/', createCalendarRoutes(deps.calendar));
+	if (deps.feed) app.route('/', createFeedRoutes(deps.feed));
 
 	// 外部の監視サービスが 5 分ごとに見る。中身は "動いているか" だけにし、内部の情報は出さない
 	app.get('/healthz', (c) => {

@@ -9,6 +9,7 @@
 	import IconChevron from '~icons/material-symbols/chevron-right';
 	import IconContributors from '~icons/material-symbols/groups-outline';
 	import IconDiscord from '~icons/material-symbols/forum-outline';
+	import IconFeed from '~icons/material-symbols/rss-feed';
 	import IconHistory from '~icons/material-symbols/monitor-heart-outline';
 	import IconInvite from '~icons/material-symbols/person-add-outline';
 	import IconLicense from '~icons/material-symbols/policy-outline';
@@ -52,6 +53,12 @@
 			icon: IconDiscord,
 			title: 'Webhook',
 			description: '休講などの通知を、Discord のチャンネルや、自分で用意した URL に届ける',
+		},
+		{
+			href: resolve('/app/settings/feed'),
+			icon: IconFeed,
+			title: 'お知らせのフィード',
+			description: '休講などの通知を、RSS リーダーで受け取る',
 		},
 		...(data.discordLinkAvailable
 			? [

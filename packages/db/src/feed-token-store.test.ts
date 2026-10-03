@@ -38,7 +38,11 @@ describe('ICS とフィードの URL のトークン', () => {
 		const token = store.issue(id, 'calendar', t0);
 		expect(token).toMatch(/^[\w-]{43}$/);
 		expect(store.findOwner('calendar', token)).toMatchObject({ userId: id });
-		expect(store.current(id, 'calendar')).toEqual({ createdAt: t0, lastUsedAt: null });
+		expect(store.current(id, 'calendar')).toEqual({
+			createdAt: t0,
+			lastUsedAt: null,
+			options: null,
+		});
 		const rows = database.db.select().from(feedTokens).all();
 		expect(rows.map((row) => row.tokenHash)).not.toContain(token);
 	});
@@ -97,5 +101,22 @@ describe('ICS とフィードの URL のトークン', () => {
 		expect(store.current(id, 'calendar')?.lastUsedAt).toEqual(later(10 * 60 * 1000));
 		store.markUsed(owner.id, later(2 * HOUR));
 		expect(store.current(id, 'calendar')?.lastUsedAt).toEqual(later(2 * HOUR));
+	});
+
+	it('追加の設定を読み書きできる。再発行で消え、取り消したトークンには書き込めない', () => {
+		const { id } = addUser('a@fun.ac.jp');
+		const store = createFeedTokenStore(database);
+		const token = store.issue(id, 'feed', t0);
+		expect(store.findOwner('feed', token)?.options).toBeNull();
+
+		expect(store.setOptions(id, 'feed', { kinds: ['makeup'] })).toBe(true);
+		expect(store.current(id, 'feed')?.options).toEqual({ kinds: ['makeup'] });
+		expect(store.findOwner('feed', token)?.options).toEqual({ kinds: ['makeup'] });
+
+		store.issue(id, 'feed', later(HOUR));
+		expect(store.current(id, 'feed')?.options).toBeNull();
+
+		store.revoke(id, 'feed', later(2 * HOUR));
+		expect(store.setOptions(id, 'feed', { kinds: ['makeup'] })).toBe(false);
 	});
 });
