@@ -77,6 +77,8 @@ export interface DiscordLinkStore {
 	save(userId: string, input: DiscordLinkInput, now: Date): void;
 	/** 利用者の紐付け。なければ null */
 	findByUser(userId: string): DiscordLink | null;
+	/** Discord のユーザー ID から、紐付けた利用者を引く (スラッシュコマンドの呼び出し元の特定)。なければ null */
+	findByDiscordUserId(discordUserId: string): DiscordLink | null;
 	/** その Discord アカウントに、別の利用者が既に紐付いていれば true (乗っ取り防止) */
 	isDiscordUserLinkedToOther(discordUserId: string, excludingUserId: string): boolean;
 	/** 紐付けを消す。消せたものがあれば true */
@@ -124,6 +126,14 @@ export function createDiscordLinkStore(database: Database, secretBox: SecretBox)
 		},
 		findByUser(userId) {
 			const row = db.select().from(discordLinks).where(eq(discordLinks.userId, userId)).get();
+			return row ? toLink(row) : null;
+		},
+		findByDiscordUserId(discordUserId) {
+			const row = db
+				.select()
+				.from(discordLinks)
+				.where(eq(discordLinks.discordUserId, discordUserId))
+				.get();
 			return row ? toLink(row) : null;
 		},
 		isDiscordUserLinkedToOther(discordUserId, excludingUserId) {

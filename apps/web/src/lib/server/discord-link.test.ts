@@ -79,6 +79,7 @@ function fakeStore(overrides: Partial<DiscordLinkStore> = {}): DiscordLinkStore 
 	return {
 		save: vi.fn(),
 		findByUser: () => null,
+		findByDiscordUserId: () => null,
 		isDiscordUserLinkedToOther: () => false,
 		remove: () => null,
 		setChannel: () => false,

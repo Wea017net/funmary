@@ -40,3 +40,7 @@ export { createV1Routes, type V1RoutesDeps } from './v1/routes.ts';
 export { requireScope, v1Auth, type V1AuthDeps, type V1AuthVariables } from './v1/auth.ts';
 export { createOpenApiRoutes } from './v1/openapi.ts';
 export { createMcpRoutes, type McpRoutesDeps } from './mcp-routes.ts';
+export {
+	createDiscordInteractionRoutes,
+	type DiscordInteractionsDeps,
+} from './discord/interactions.ts';

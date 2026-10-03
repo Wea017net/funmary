@@ -60,6 +60,14 @@ describe('createDiscordLinkStore', () => {
 		expect(store.findByUser(userId)).toBeNull();
 	});
 
+	it('Discord のユーザー ID から、紐付けた利用者を引ける。知らない ID なら null', () => {
+		const { store, userId } = setup();
+		store.save(userId, input, at('2026-01-01T00:00:00Z'));
+
+		expect(store.findByDiscordUserId('discord-1')?.userId).toBe(userId);
+		expect(store.findByDiscordUserId('unknown')).toBeNull();
+	});
+
 	it('同じ利用者に保存し直すと、前の紐付けを置き換える (付け替え)', () => {
 		const { store, userId } = setup();
 		store.save(userId, input, at('2026-01-01T00:00:00Z'));

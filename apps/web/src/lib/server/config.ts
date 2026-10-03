@@ -44,6 +44,8 @@ export interface Config {
 	 * OAuth2 タブにある Client ID と Client Secret。両方あるときだけある
 	 */
 	readonly discordOAuth: { readonly clientId: string; readonly clientSecret: string } | undefined;
+	/** スラッシュコマンドの署名を確かめる公開鍵 (16 進数)。なければ、コマンドの受け口を開けない */
+	readonly discordPublicKey: string | undefined;
 	readonly notifyDryRun: boolean;
 	readonly heartbeatUrl: string | undefined;
 	readonly logLevel: 'debug' | 'info' | 'warn' | 'error';
@@ -239,6 +241,12 @@ function envSchema(mode: Mode) {
 		DISCORD_CLIENT_SECRET: v.optional(
 			v.pipe(v.string(), v.minLength(10, 'Discord の Client Secret を、そのまま書いてください')),
 		),
+		DISCORD_PUBLIC_KEY: v.optional(
+			v.pipe(
+				v.string(),
+				v.regex(/^[0-9a-f]{64}$/i, 'Discord の公開鍵を、16 進数の 64 文字で書いてください'),
+			),
+		),
 		NOTIFY_DRY_RUN: v.optional(
 			v.pipe(
 				v.picklist(['true', 'false'], 'true か false を書いてください'),
@@ -371,6 +379,7 @@ export function parseConfig(env: Readonly<Record<string, string | undefined>>): 
 				e.DISCORD_CLIENT_ID !== undefined && e.DISCORD_CLIENT_SECRET !== undefined
 					? { clientId: e.DISCORD_CLIENT_ID, clientSecret: e.DISCORD_CLIENT_SECRET }
 					: undefined,
+			discordPublicKey: e.DISCORD_PUBLIC_KEY,
 			notifyDryRun: e.NOTIFY_DRY_RUN ?? mode === 'development',
 			heartbeatUrl: e.HEARTBEAT_URL,
 			logLevel: e.LOG_LEVEL,

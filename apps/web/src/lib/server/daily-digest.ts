@@ -25,7 +25,7 @@ export interface DailyDigestContent {
 }
 
 /** Discord の Markdown として効く記号の前に \ を置く */
-function plain(text: string): string {
+export function plain(text: string): string {
 	return text.replace(/[\\*_`~|>#[\]()-]/g, (char) => `\\${char}`);
 }
 

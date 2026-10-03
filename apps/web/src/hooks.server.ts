@@ -60,6 +60,7 @@ import { findBuildInfo } from '$lib/server/build-info.ts';
 import { createJobDefinitions } from '$lib/server/jobs.ts';
 import { createResponseTimes } from '$lib/server/response-times.ts';
 import { loadCalendarFeed } from '$lib/server/calendar-feed.ts';
+import { answerCommand } from '$lib/server/discord-commands.ts';
 import { loadNotificationFeed } from '$lib/server/notification-feed.ts';
 import { findLegalInfo } from '$lib/server/legal.ts';
 import {
@@ -78,7 +79,7 @@ import { readWebhookLimit, WEBHOOKS_PER_USER_KEY } from '$lib/server/webhook-lim
 import { parseThemePreference, THEME_COOKIE } from '$lib/theme.ts';
 
 /** Hono に渡すパス。これ自身か、この下のパスが対象になる */
-const API_PATHS = ['/api', '/auth', '/cal', '/feed', '/healthz', '/mcp', '/signup'];
+const API_PATHS = ['/api', '/auth', '/cal', '/discord', '/feed', '/healthz', '/mcp', '/signup'];
 
 /** ログイン用の Google の OAuth クライアントを、開発サーバーで試すときの公開 URL */
 const DEV_ORIGIN = 'http://localhost:5173';
@@ -357,6 +358,16 @@ export const init: ServerInit = () => {
 		},
 		v1: { ...services, users: services.auth },
 		mcp: { ...services, users: services.auth },
+		// 公開鍵がなければ、Discord の署名を確かめられないので、受け口を開けない
+		...(result.config.discordPublicKey
+			? {
+					discordInteractions: {
+						publicKeyHex: result.config.discordPublicKey,
+						answer: (command: string, discordUserId: string, now: Date) =>
+							answerCommand(services, command, discordUserId, now),
+					},
+				}
+			: {}),
 	});
 	logger.withTag('app').info(`起動しました (${result.config.mode}、DB は ${dataDir})`);
 };
