@@ -3,6 +3,7 @@
 	import { enhance } from '$app/forms';
 	import { confirmSubmit } from '$lib/actions/confirm-submit.ts';
 	import { createCopyState } from '$lib/clipboard.svelte.ts';
+	import CopyField from '$lib/components/CopyField.svelte';
 	import FormNotice from '$lib/components/FormNotice.svelte';
 	import SettingsBreadcrumb from '$lib/components/SettingsBreadcrumb.svelte';
 
@@ -24,13 +25,6 @@
 	} = $props();
 
 	const copyState = createCopyState();
-	let urlField: HTMLInputElement | undefined = $state();
-
-	async function copyUrl(url: string) {
-		const ok = await copyState.copy(url);
-		// コピーできないときは、欄を選んで、手でコピーしてもらう
-		if (!ok) urlField?.select();
-	}
 </script>
 
 <svelte:head>
@@ -58,45 +52,14 @@
 				を知っている人は誰でもあなたの通知を見られるので、人に教えないでください。
 			</p>
 
-			<label for="feed-url-rss">RSS (RSS 2.0)</label>
-			<div class="copy-row">
-				<input
-					id="feed-url-rss"
-					bind:this={urlField}
-					readonly
-					value={issued.rss}
-					onfocus={(event) => event.currentTarget.select()}
-				/>
-				<Button type="button" variant="outlined" onclick={() => copyUrl(issued.rss)}>
-					<Label>コピー</Label>
-				</Button>
-			</div>
-
-			<label for="feed-url-atom">Atom (Atom 1.0)</label>
-			<div class="copy-row">
-				<input
-					id="feed-url-atom"
-					readonly
-					value={issued.atom}
-					onfocus={(event) => event.currentTarget.select()}
-				/>
-				<Button type="button" variant="outlined" onclick={() => copyUrl(issued.atom)}>
-					<Label>コピー</Label>
-				</Button>
-			</div>
-
-			<label for="feed-url-json">JSON Feed (JSON Feed 1.1)</label>
-			<div class="copy-row">
-				<input
-					id="feed-url-json"
-					readonly
-					value={issued.json}
-					onfocus={(event) => event.currentTarget.select()}
-				/>
-				<Button type="button" variant="outlined" onclick={() => copyUrl(issued.json)}>
-					<Label>コピー</Label>
-				</Button>
-			</div>
+			<CopyField id="feed-url-rss" label="RSS (RSS 2.0)" value={issued.rss} {copyState} />
+			<CopyField id="feed-url-atom" label="Atom (Atom 1.0)" value={issued.atom} {copyState} />
+			<CopyField
+				id="feed-url-json"
+				label="JSON Feed (JSON Feed 1.1)"
+				value={issued.json}
+				{copyState}
+			/>
 			<p class="muted" role="status">{copyState.copied ? 'コピーしました。' : ''}</p>
 		</section>
 	{/if}
@@ -199,12 +162,6 @@
 		h2 {
 			margin-top: 0;
 		}
-
-		label {
-			display: block;
-			margin-top: 1rem;
-			font-size: 0.875rem;
-		}
 	}
 
 	.kinds-form {
@@ -236,23 +193,6 @@
 		display: flex;
 		flex-wrap: wrap;
 		gap: 0.5rem;
-	}
-
-	.copy-row {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.5rem;
-		margin-top: 0.25rem;
-
-		input {
-			flex: 1 1 10rem;
-			min-width: 0;
-			min-height: 40px;
-			padding: 0 0.5rem;
-			font: inherit;
-			font-family: ui-monospace, monospace;
-			font-size: 0.875rem;
-		}
 	}
 
 	/* スマホの幅でも日時が折り返さないよう、項目名の下に値を置く */

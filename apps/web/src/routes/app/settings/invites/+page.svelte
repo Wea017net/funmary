@@ -3,6 +3,7 @@
 	import type { InviteIssuance } from '@funmary/core';
 	import { enhance } from '$app/forms';
 	import { createCopyState } from '$lib/clipboard.svelte.ts';
+	import CopyField from '$lib/components/CopyField.svelte';
 	import FormNotice from '$lib/components/FormNotice.svelte';
 	import InviteCodeList from '$lib/components/InviteCodeList.svelte';
 	import SettingsBreadcrumb from '$lib/components/SettingsBreadcrumb.svelte';
@@ -25,13 +26,6 @@
 	} = $props();
 
 	const copyState = createCopyState();
-	let urlField: HTMLInputElement | undefined = $state();
-
-	async function copyUrl(url: string) {
-		const ok = await copyState.copy(url);
-		// コピーできないときは、欄を選んで、手でコピーしてもらう
-		if (!ok) urlField?.select();
-	}
 
 	const canIssue = $derived(data.issuance.kind === 'admin' || data.issuance.kind === 'member');
 </script>
@@ -62,19 +56,14 @@
 		<section class="issued" aria-labelledby="issued-heading">
 			<h2 id="issued-heading">招待コードを発行しました</h2>
 			<p>この画面を離れると、もう出せません。登録の URL を、渡したい人に送ってください。</p>
-			<label for="invite-url">登録の URL</label>
-			<div class="copy-row">
-				<input
-					id="invite-url"
-					bind:this={urlField}
-					readonly
-					value={issued.url}
-					onfocus={(event) => event.currentTarget.select()}
-				/>
-				<Button type="button" variant="unelevated" onclick={() => copyUrl(issued.url)}>
-					<Label>コピー</Label>
-				</Button>
-			</div>
+			<CopyField
+				id="invite-url"
+				label="登録の URL"
+				value={issued.url}
+				{copyState}
+				variant="unelevated"
+				flexBasis="16rem"
+			/>
 			<p class="muted" role="status">{copyState.copied ? 'コピーしました。' : ''}</p>
 			<p class="muted">
 				コード: <code>{issued.code}</code>{#if issued.expiresAt}
@@ -148,27 +137,6 @@
 
 		h2 {
 			margin-top: 0;
-		}
-
-		label {
-			font-size: 0.875rem;
-		}
-	}
-
-	.copy-row {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.5rem;
-		margin-top: 0.25rem;
-
-		input {
-			flex: 1 1 16rem;
-			min-width: 0;
-			min-height: 40px;
-			padding: 0 0.5rem;
-			font: inherit;
-			font-family: ui-monospace, monospace;
-			font-size: 0.875rem;
 		}
 	}
 

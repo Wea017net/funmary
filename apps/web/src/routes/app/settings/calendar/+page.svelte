@@ -4,6 +4,7 @@
 	import { resolve } from '$app/paths';
 	import { confirmSubmit } from '$lib/actions/confirm-submit.ts';
 	import { createCopyState } from '$lib/clipboard.svelte.ts';
+	import CopyField from '$lib/components/CopyField.svelte';
 	import FormNotice from '$lib/components/FormNotice.svelte';
 	import SettingsBreadcrumb from '$lib/components/SettingsBreadcrumb.svelte';
 
@@ -26,13 +27,6 @@
 	} = $props();
 
 	const copyState = createCopyState();
-	let urlField: HTMLInputElement | undefined = $state();
-
-	async function copyUrl(url: string) {
-		const ok = await copyState.copy(url);
-		// コピーできないときは、欄を選んで、手でコピーしてもらう
-		if (!ok) urlField?.select();
-	}
 </script>
 
 <svelte:head>
@@ -84,19 +78,7 @@
 				の Google カレンダーの「他のカレンダー」の「URL で追加」に貼ってください。
 			</p>
 
-			<label for="calendar-url">購読の URL</label>
-			<div class="copy-row">
-				<input
-					id="calendar-url"
-					bind:this={urlField}
-					readonly
-					value={issued.url}
-					onfocus={(event) => event.currentTarget.select()}
-				/>
-				<Button type="button" variant="outlined" onclick={() => copyUrl(issued.url)}>
-					<Label>コピー</Label>
-				</Button>
-			</div>
+			<CopyField id="calendar-url" label="購読の URL" value={issued.url} {copyState} />
 			<p class="muted" role="status">{copyState.copied ? 'コピーしました。' : ''}</p>
 
 			<div class="qr">
@@ -199,12 +181,6 @@
 			margin-bottom: 0.5rem;
 			font-size: 1rem;
 		}
-
-		label {
-			display: block;
-			margin-top: 1rem;
-			font-size: 0.875rem;
-		}
 	}
 
 	.add-links,
@@ -212,23 +188,6 @@
 		display: flex;
 		flex-wrap: wrap;
 		gap: 0.5rem;
-	}
-
-	.copy-row {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.5rem;
-		margin-top: 0.25rem;
-
-		input {
-			flex: 1 1 10rem;
-			min-width: 0;
-			min-height: 40px;
-			padding: 0 0.5rem;
-			font: inherit;
-			font-family: ui-monospace, monospace;
-			font-size: 0.875rem;
-		}
 	}
 
 	.qr {
