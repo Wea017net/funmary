@@ -83,3 +83,8 @@ export {
 	type GenericWebhookMessage,
 	type GenericWebhookOptions,
 } from './generic-webhook.ts';
+export {
+	SLASH_COMMANDS,
+	commandPayloads,
+	registerSlashCommands,
+} from './discord-slash-commands.ts';

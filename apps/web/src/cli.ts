@@ -32,6 +32,7 @@ import {
 	createAdminDiscordSink,
 	createDiscordBot,
 	parseLayout,
+	registerSlashCommands,
 	type AdminChannel,
 } from '@funmary/notify';
 import { sendAdminNotification } from './lib/server/admin-notify.ts';
@@ -801,9 +802,40 @@ const user = defineCommand({
 	},
 });
 
+const discordCommands = defineCommand({
+	meta: {
+		name: 'commands',
+		description:
+			'Discord のスラッシュコマンドを登録する (DISCORD_BOT_TOKEN と DISCORD_CLIENT_ID が要る。反映は最大 1 時間)',
+	},
+	async run() {
+		const config = loadConfigOrExit();
+		if (!config.discordBot || !config.discordOAuth) {
+			console.error('DISCORD_BOT_TOKEN と DISCORD_CLIENT_ID を設定してください');
+			process.exit(2);
+		}
+		try {
+			const count = await registerSlashCommands({
+				token: config.discordBot.token,
+				applicationId: config.discordOAuth.clientId,
+			});
+			console.log(`${count} 個のコマンドを登録しました (反映は最大 1 時間)`);
+		} catch (error) {
+			console.error(error instanceof Error ? error.message : 'コマンドを登録できませんでした');
+			process.exitCode = 1;
+		}
+	},
+});
+
+const discord = defineCommand({
+	meta: { name: 'discord', description: 'Discord の設定を管理する' },
+	subCommands: { commands: discordCommands },
+});
+
 const main = defineCommand({
 	meta: { name: 'funmary-admin', description: 'Funmary の管理用コマンド' },
 	subCommands: {
+		discord,
 		init,
 		'align-env': alignEnv,
 		migrate,
