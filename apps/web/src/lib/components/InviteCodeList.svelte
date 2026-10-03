@@ -65,8 +65,4 @@
 		font-variant-numeric: tabular-nums;
 		overflow-wrap: anywhere;
 	}
-
-	.muted {
-		color: var(--fm-text-muted);
-	}
 </style>

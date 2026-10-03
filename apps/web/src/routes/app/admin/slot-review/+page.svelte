@@ -111,11 +111,6 @@
 		max-width: 44rem;
 	}
 
-	.muted {
-		color: var(--fm-text-muted);
-		font-size: 0.875rem;
-	}
-
 	section {
 		margin-top: 2rem;
 	}

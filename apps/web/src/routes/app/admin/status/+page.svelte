@@ -392,11 +392,6 @@
 		white-space: nowrap;
 	}
 
-	.muted {
-		color: var(--fm-text-muted);
-		font-size: 0.875rem;
-	}
-
 	.jobs {
 		margin: 0;
 		padding: 0;

@@ -376,11 +376,6 @@
 	}
 
 	.description,
-	.muted {
-		color: var(--fm-text-muted);
-		font-size: 0.875rem;
-	}
-
 	.description.attention {
 		color: var(--fm-primary);
 		font-weight: 700;
