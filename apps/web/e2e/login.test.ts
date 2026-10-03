@@ -561,6 +561,7 @@ test.describe('スマホの幅で、画面が横にはみ出さない', () => {
 			'/app/settings',
 			'/app/settings/calendar',
 			'/app/settings/discord',
+			'/app/settings/feed',
 			'/app/settings/invites',
 			'/about',
 			'/license',
@@ -2013,6 +2014,51 @@ test.describe('カレンダーの購読', () => {
 		await page.getByRole('button', { name: '無効にする' }).click();
 		await expect(page.getByRole('status').first()).toHaveText(/購読の URL を無効にしました/);
 		expect((await page.request.get(second)).status()).toBe(404);
+		await expect(page.getByRole('button', { name: '購読の URL を発行する' })).toBeVisible();
+	});
+});
+
+test.describe('お知らせのフィード', () => {
+	// E2E の DB は実行をまたいで残るので、実行ごとに別の人にする
+	const email = `e2e-feed-${Date.now()}@fun.ac.jp`;
+
+	test('購読の URL を発行して RSS、Atom、JSON Feed を取れ、載せる種類を絞れる', async ({
+		page,
+	}) => {
+		oidc.setIdentity({ sub: email, email, email_verified: true, hd: 'fun.ac.jp' });
+		await page.goto('/auth/google');
+		await page.goto('/app/settings/feed');
+
+		await page.getByRole('button', { name: '購読の URL を発行する' }).click();
+		const rss = await page.getByLabel('RSS (RSS 2.0)').inputValue();
+		const atom = await page.getByLabel('Atom (Atom 1.0)').inputValue();
+		const json = await page.getByLabel('JSON Feed (JSON Feed 1.1)').inputValue();
+		expect(rss).toMatch(/\/feed\/[\w-]{43}\/rss\.xml$/);
+		expect(atom).toMatch(/\/feed\/[\w-]{43}\/atom\.xml$/);
+		expect(json).toMatch(/\/feed\/[\w-]{43}\/feed\.json$/);
+
+		const rssResponse = await page.request.get(rss);
+		expect(rssResponse.status()).toBe(200);
+		expect(rssResponse.headers()['content-type']).toContain('xml');
+		expect(rssResponse.headers()['x-robots-tag']).toBe('noindex');
+		expect(await rssResponse.text()).toContain('<rss');
+		expect((await page.request.get(atom)).status()).toBe(200);
+		expect((await page.request.get(json)).status()).toBe(200);
+
+		// 開き直すと URL はもう出ず、載せる種類の設定が出る
+		await page.reload();
+		await expect(page.getByLabel('RSS (RSS 2.0)')).toHaveCount(0);
+		await page.getByLabel('補講').uncheck();
+		await page.getByRole('button', { name: '保存する' }).click();
+		await expect(page.getByRole('status').first()).toHaveText(/載せる通知の種類を保存しました/);
+		await page.reload();
+		await expect(page.getByLabel('補講')).not.toBeChecked();
+		await expect(page.getByLabel('休講')).toBeChecked();
+
+		page.once('dialog', (dialog) => dialog.accept());
+		await page.getByRole('button', { name: '無効にする' }).click();
+		await expect(page.getByRole('status').first()).toHaveText(/購読の URL を無効にしました/);
+		expect((await page.request.get(rss)).status()).toBe(404);
 		await expect(page.getByRole('button', { name: '購読の URL を発行する' })).toBeVisible();
 	});
 });

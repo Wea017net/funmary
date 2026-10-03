@@ -111,6 +111,7 @@ export { createSettingsStore, type SettingsStore } from './settings-store.ts';
 export {
 	createFeedTokenStore,
 	type FeedTokenKind,
+	type FeedTokenOptions,
 	type FeedTokenStore,
 } from './feed-token-store.ts';
 export {

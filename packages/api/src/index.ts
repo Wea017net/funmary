@@ -16,3 +16,5 @@ export {
 	type CalendarUserEvent,
 	type IcsOptions,
 } from './ics.ts';
+export { createFeedRoutes, type FeedRoutesDeps } from './feed-routes.ts';
+export type { FeedInput, FeedItem } from 'hono-feed';

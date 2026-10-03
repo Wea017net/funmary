@@ -10,6 +10,7 @@
 	"dependencies": {
 		"@funmary/auth": "workspace:*",
 		"hono": "catalog:",
+		"hono-feed": "^1.1.0",
 		"hono-rate-limiter": "^0.5.4",
 		"ical.js": "catalog:"
 	},

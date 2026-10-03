@@ -395,6 +395,9 @@ importers:
       hono:
         specifier: 'catalog:'
         version: 4.13.12
+      hono-feed:
+        specifier: ^1.1.0
+        version: 1.1.0(hono@4.13.12)
       hono-rate-limiter:
         specifier: ^0.5.4
         version: 0.5.4(hono@4.13.12)
@@ -2752,6 +2755,12 @@ packages:
 
   hastscript@9.0.1:
     resolution: {integrity: sha512-g7df9rMFX/SPi34tyGCyUBREQoKkapwdY/T04Qn9TDWfHhAYt4/I0gMVirzK5wEzeUqIjEB+LXC/ypb7Aqno5w==}
+
+  hono-feed@1.1.0:
+    resolution: {integrity: sha512-tEMf+fW6ZOMa8DW5qyltJlKtOYP8krNrnrKG8R0pdmw1XSxkKkX8HddRBSReOsGQAFS/STEyc0pNktoS5nO+cw==}
+    engines: {node: '>=20'}
+    peerDependencies:
+      hono: '>=4.0.0'
 
   hono-rate-limiter@0.5.4:
     resolution: {integrity: sha512-P3/cscAmz1hA+MuM+Hn9gP/EyO2zWv2aXIFkVYuLZkPzrPa4oaWdVCS94vyDlsNBgeMnE/Hr2+LznIKQxrF0ng==}
@@ -5502,6 +5511,10 @@ snapshots:
       hast-util-parse-selector: 4.0.0
       property-information: 7.2.0
       space-separated-tokens: 2.0.2
+
+  hono-feed@1.1.0(hono@4.13.12):
+    dependencies:
+      hono: 4.13.12
 
   hono-rate-limiter@0.5.4(hono@4.13.12):
     dependencies:

@@ -10,17 +10,28 @@ export type FeedTokenKind = 'calendar' | 'feed';
 /** 使った日時を書き込む間隔。取りに来るたびに書き込まないようにする */
 const MARK_USED_INTERVAL_MS = 60 * 60 * 1000;
 
+/** 載せる予定や通知の種類など、トークンごとの追加の設定。中身はトークンの種類ごとに決める */
+export type FeedTokenOptions = Record<string, unknown>;
+
 export interface FeedTokenStore {
 	/** 新しいトークンを発行して返す。同じ種類の前のトークンは使えなくなる */
 	issue(userId: string, kind: FeedTokenKind, now: Date): string;
 	/** 有効なトークンの持ち主。取り消し済み、知らないトークン、停止した利用者なら null */
-	findOwner(kind: FeedTokenKind, token: string): { id: number; userId: string } | null;
+	findOwner(
+		kind: FeedTokenKind,
+		token: string,
+	): { id: number; userId: string; options: FeedTokenOptions | null } | null;
 	/** 前に書き込んでから 1 時間以上たっていれば、使った日時を書き込む */
 	markUsed(id: number, now: Date): void;
-	/** 有効なトークンの発行日時と、最後に使った日時。なければ null */
-	current(userId: string, kind: FeedTokenKind): { createdAt: Date; lastUsedAt: Date | null } | null;
+	/** 有効なトークンの発行日時、最後に使った日時、追加の設定。なければ null */
+	current(
+		userId: string,
+		kind: FeedTokenKind,
+	): { createdAt: Date; lastUsedAt: Date | null; options: FeedTokenOptions | null } | null;
 	/** 有効なトークンを取り消す。取り消したものがあれば true */
 	revoke(userId: string, kind: FeedTokenKind, now: Date): boolean;
+	/** 有効なトークンの追加の設定を変える。変えたものがあれば true */
+	setOptions(userId: string, kind: FeedTokenKind, options: FeedTokenOptions | null): boolean;
 }
 
 export function createFeedTokenStore(database: Database): FeedTokenStore {
@@ -43,7 +54,7 @@ export function createFeedTokenStore(database: Database): FeedTokenStore {
 		},
 		findOwner(kind, token) {
 			const row = db
-				.select({ id: feedTokens.id, userId: feedTokens.userId })
+				.select({ id: feedTokens.id, userId: feedTokens.userId, options: feedTokens.options })
 				.from(feedTokens)
 				.innerJoin(users, eq(users.id, feedTokens.userId))
 				.where(
@@ -71,7 +82,11 @@ export function createFeedTokenStore(database: Database): FeedTokenStore {
 		},
 		current(userId, kind) {
 			const row = db
-				.select({ createdAt: feedTokens.createdAt, lastUsedAt: feedTokens.lastUsedAt })
+				.select({
+					createdAt: feedTokens.createdAt,
+					lastUsedAt: feedTokens.lastUsedAt,
+					options: feedTokens.options,
+				})
 				.from(feedTokens)
 				.where(active(userId, kind))
 				.get();
@@ -79,6 +94,9 @@ export function createFeedTokenStore(database: Database): FeedTokenStore {
 		},
 		revoke(userId, kind, now) {
 			return revokeActive(userId, kind, now) > 0;
+		},
+		setOptions(userId, kind, options) {
+			return db.update(feedTokens).set({ options }).where(active(userId, kind)).run().changes > 0;
 		},
 	};
 }
