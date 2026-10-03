@@ -22,13 +22,21 @@ export interface GenericWebhookMessage extends DeliveryMessage {
 	readonly id: string;
 }
 
-/** Funmary 共通の JSON の形にする (設計書 14.3.1) */
+/** Funmary 共通の JSON の形にする (設計書 14.3.1)。data には、人が読む題と本文に加えて、
+ * 機械的に読める構造化データ (subject、date、period) を、休講などの通知のときだけ足す */
 export function genericWebhookBody(message: GenericWebhookMessage): string {
 	return JSON.stringify({
 		id: message.id,
 		type: TYPE_NAMES[message.kind] ?? message.kind,
 		createdAt: message.createdAt.toISOString(),
-		data: { title: message.title, body: message.body, url: message.url },
+		data: {
+			title: message.title,
+			body: message.body,
+			url: message.url,
+			...(message.subject ? { subject: message.subject } : {}),
+			...(message.date ? { date: message.date } : {}),
+			...(message.period != null ? { period: message.period } : {}),
+		},
 	});
 }
 

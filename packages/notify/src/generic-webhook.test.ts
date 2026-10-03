@@ -40,6 +40,31 @@ describe('genericWebhookBody', () => {
 		};
 		expect(body.type).toBe('something-new');
 	});
+
+	it('休講などの構造化データ (subject、date、period) があれば、data に添える (設計書 14.3.1)', () => {
+		const body = JSON.parse(
+			genericWebhookBody({
+				...message,
+				subject: { name: '情報処理演習', url: message.url! },
+				date: '2026-10-03',
+				period: 2,
+			}),
+		) as Record<string, unknown>;
+		expect(body).toMatchObject({
+			data: {
+				subject: { name: '情報処理演習', url: message.url },
+				date: '2026-10-03',
+				period: 2,
+			},
+		});
+	});
+
+	it('構造化データがなければ、data に入れない', () => {
+		const body = JSON.parse(genericWebhookBody(message)) as { data: Record<string, unknown> };
+		expect(body.data).not.toHaveProperty('subject');
+		expect(body.data).not.toHaveProperty('date');
+		expect(body.data).not.toHaveProperty('period');
+	});
 });
 
 describe('sendViaGenericWebhook', () => {

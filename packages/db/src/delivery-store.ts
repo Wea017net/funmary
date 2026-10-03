@@ -29,6 +29,11 @@ export interface PendingDelivery {
 		readonly title: string;
 		readonly body: string | null;
 		readonly link: string | null;
+		readonly subjectId: number | null;
+		/** 授業の日付 (YYYY-MM-DD)。休講などの通知のときだけ持つ。汎用 Webhook の構造化データに使う */
+		readonly date: string | null;
+		/** 授業の時限。休講などの通知のときだけ持つ */
+		readonly period: number | null;
 		readonly createdAt: Date;
 	};
 	/** 送り先。Discord 連携が解除されていて、送り先が引けないときは null */
@@ -156,6 +161,9 @@ export function createDeliveryStore(database: Database, secretBox: SecretBox): D
 						title: row.notification.title,
 						body: row.notification.body,
 						link: row.notification.link,
+						subjectId: row.notification.subjectId,
+						date: row.notification.date,
+						period: row.notification.period,
 						createdAt: row.notification.createdAt,
 					},
 					target,

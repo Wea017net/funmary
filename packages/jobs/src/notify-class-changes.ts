@@ -24,6 +24,8 @@ export interface ClassChangeNotificationEntry {
 	readonly body: string | null;
 	readonly link: string;
 	readonly subjectId: number;
+	readonly date: string;
+	readonly period: number;
 	readonly dedupeKey: string;
 }
 
@@ -47,6 +49,8 @@ export function classChangeNotification(
 		body,
 		link: `/app/subjects/${source.academicYear}/${encodeURIComponent(source.syllabusId)}`,
 		subjectId: source.subjectId,
+		date: source.date,
+		period: source.period,
 		dedupeKey: `class-change:${source.classChangeId}`,
 	};
 }

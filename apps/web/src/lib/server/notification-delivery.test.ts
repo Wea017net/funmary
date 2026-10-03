@@ -20,6 +20,9 @@ const delivery = (overrides: Partial<PendingDelivery> = {}): PendingDelivery => 
 		title: '[休講] 情報処理演習 (10/3 2 限)',
 		body: null,
 		link: '/app/subjects/2026/100201',
+		subjectId: 42,
+		date: '2026-10-03',
+		period: 2,
 		createdAt: NOW,
 	},
 	target: { kind: 'webhook', url: 'https://discord.com/api/webhooks/1/abc', signingKey: null },
@@ -45,10 +48,12 @@ function setup(items: PendingDelivery[], options: SetupOptions = {}) {
 		recentFailed: vi.fn().mockReturnValue([]),
 	};
 	const notifications = { insertMany: vi.fn() };
+	const subjects = { findById: vi.fn().mockReturnValue({ name: '情報処理演習' }) };
 	const deps = deliverNotificationsDeps({
 		channels: channels as never,
 		deliveries: deliveries,
 		notifications: notifications as never,
+		subjects,
 		bot: options.bot ?? null,
 		origin: ORIGIN,
 		dryRun: options.dryRun ?? false,
@@ -60,12 +65,38 @@ function setup(items: PendingDelivery[], options: SetupOptions = {}) {
 }
 
 describe('通知の文面', () => {
+	const subjects = { findById: vi.fn().mockReturnValue({ name: '情報処理演習' }) };
+
 	it('リンクを絶対の URL にする', () => {
-		expect(messageFor(delivery(), ORIGIN).url).toBe(`${ORIGIN}/app/subjects/2026/100201`);
+		expect(messageFor(delivery(), ORIGIN, subjects).url).toBe(`${ORIGIN}/app/subjects/2026/100201`);
 		expect(
-			messageFor(delivery({ notification: { ...delivery().notification, link: null } }), ORIGIN)
-				.url,
+			messageFor(
+				delivery({ notification: { ...delivery().notification, link: null } }),
+				ORIGIN,
+				subjects,
+			).url,
 		).toBeNull();
+	});
+
+	it('科目があれば、構造化データ (subject、date、period) を添える (設計書 14.3.1)', () => {
+		const message = messageFor(delivery(), ORIGIN, subjects);
+		expect(subjects.findById).toHaveBeenCalledWith(42);
+		expect(message.subject).toEqual({
+			name: '情報処理演習',
+			url: `${ORIGIN}/app/subjects/2026/100201`,
+		});
+		expect(message.date).toBe('2026-10-03');
+		expect(message.period).toBe(2);
+	});
+
+	it('科目がない通知 (お知らせなど) には、構造化データを添えない', () => {
+		const noSubjects = { findById: vi.fn() };
+		const notice = delivery({
+			notification: { ...delivery().notification, subjectId: null, date: null, period: null },
+		});
+		const message = messageFor(notice, ORIGIN, noSubjects);
+		expect(noSubjects.findById).not.toHaveBeenCalled();
+		expect(message.subject).toBeNull();
 	});
 });
 

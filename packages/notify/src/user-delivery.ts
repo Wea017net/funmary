@@ -11,6 +11,10 @@ export interface DeliveryMessage {
 	/** 押したときに開く、絶対の URL */
 	readonly url: string | null;
 	readonly createdAt: Date;
+	/** 休講などの通知のときだけ持つ、構造化データ (設計書 14.3.1)。汎用 Webhook の data に使う。Discord の埋め込みには使わない */
+	readonly subject?: { readonly name: string; readonly url: string } | null;
+	readonly date?: string | null;
+	readonly period?: number | null;
 }
 
 export type SendOutcome =

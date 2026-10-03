@@ -189,6 +189,7 @@ export const init: ServerInit = () => {
 				channels: channelStore,
 				deliveries: deliveryStore,
 				notifications: createNotificationStore(database),
+				subjects: subjectStore,
 				bot: discordBot,
 				origin: deliveryOrigin,
 				dryRun: result.config.notifyDryRun,

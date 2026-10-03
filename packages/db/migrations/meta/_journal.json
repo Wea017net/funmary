@@ -113,6 +113,13 @@
       "when": 1790993309016,
       "tag": "0015_first_secret_warriors",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "6",
+      "when": 1790997917543,
+      "tag": "0016_special_quasar",
+      "breakpoints": true
     }
   ]
 }

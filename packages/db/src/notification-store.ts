@@ -15,11 +15,17 @@ export interface NewNotification {
 	/** 押したときに開く画面のパス */
 	readonly link: string | null;
 	readonly subjectId: number | null;
+	/** 授業の日付 (YYYY-MM-DD)。休講などの通知のときだけ持つ。省くと null */
+	readonly date?: string | null;
+	/** 授業の時限。休講などの通知のときだけ持つ。省くと null */
+	readonly period?: number | null;
 	readonly dedupeKey: string | null;
 }
 
-export interface StoredNotification extends Omit<NewNotification, 'userId'> {
+export interface StoredNotification extends Omit<NewNotification, 'userId' | 'date' | 'period'> {
 	readonly id: number;
+	readonly date: string | null;
+	readonly period: number | null;
 	readonly createdAt: Date;
 	readonly readAt: Date | null;
 }
@@ -64,6 +70,8 @@ const toNotification = (row: Row): StoredNotification => ({
 	body: row.body,
 	link: row.link,
 	subjectId: row.subjectId,
+	date: row.date,
+	period: row.period,
 	dedupeKey: row.dedupeKey,
 	createdAt: row.createdAt,
 	readAt: row.readAt,
