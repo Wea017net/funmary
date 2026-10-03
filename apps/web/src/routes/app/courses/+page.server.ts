@@ -1,17 +1,13 @@
 // 履修科目の登録 (設計書 12.1)。科目を探して登録し、曜日と時限が分からない科目には、利用者が手で枠を足す。
 // 枠は科目ごとに共有するので、既にある枠は上書きしない。教室が食い違えば、管理者に知らせる。
 import { fail, redirect, type Actions, type ServerLoad } from '@sveltejs/kit';
-import { jstDateTime, resolveAcademicTerms } from '@funmary/core';
+import { isSubjectSearchable, jstDateTime, resolveAcademicTerms } from '@funmary/core';
 import { parseSlotForm, parseSubjectId } from '$lib/server/course-form.ts';
 import { getServices } from '$lib/server/services.ts';
 import { alertSlotConflicts, alertSlotSubmission } from '$lib/server/slot-conflicts.ts';
 import { readSlotSharingMode } from '$lib/server/slot-permission.ts';
 import { alertSubjectPublished } from '$lib/server/subject-notify.ts';
-import {
-	findSameName,
-	isSubjectSearchable,
-	parseUserSubjectForm,
-} from '$lib/server/user-subject.ts';
+import { findSameName, parseUserSubjectForm } from '$lib/server/user-subject.ts';
 import { subjectPathParams } from '$lib/subject-path.ts';
 import { searchSubjects } from '$lib/subject-search.ts';
 
