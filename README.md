@@ -66,7 +66,8 @@ funmary/
 
 ## 著者
 
-otoneko. a.k.a. marron. https://github.com/otnc
+- otoneko. a.k.a. marron. https://github.com/otnc
+- Oto Lab https://github.com/oto-lab
 
 ## 貢献者
 
