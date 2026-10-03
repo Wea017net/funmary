@@ -3,6 +3,7 @@
 import { and, desc, eq, inArray, isNull, lte, or } from 'drizzle-orm';
 import { DEFAULT_CHANNEL_KINDS } from './channel-store.ts';
 import type { Database } from './database.ts';
+import { kindSetting, parseKindSettings } from './discord-link-store.ts';
 import type { NotificationKind } from './notification-store.ts';
 import { channels, deliveries, discordLinks, notifications, users } from './schema.ts';
 import type { SecretBox } from './secrets.ts';
@@ -12,9 +13,16 @@ const ENQUEUE_WINDOW_MS = 24 * 60 * 60 * 1000;
 /** 続けて失敗した数を数える最大の件数 */
 const STREAK_LOOKBACK = 20;
 
+/** Discord 連携の送り先。both なら 2 件になる (設計書 14.9、#163) */
+export interface LinkDestination {
+	readonly channelId: string;
+	/** メンションする相手の Discord のユーザー ID。しなければ null */
+	readonly mentionUserId: string | null;
+}
+
 export type DeliveryTarget =
 	| { readonly kind: 'webhook'; readonly url: string; readonly signingKey: string | null }
-	| { readonly kind: 'link'; readonly channelId: string };
+	| { readonly kind: 'link'; readonly destinations: readonly LinkDestination[] };
 
 export interface PendingDelivery {
 	readonly id: number;
@@ -121,7 +129,10 @@ export function createDeliveryStore(database: Database, secretBox: SecretBox): D
 					channelKind: channels.kind,
 					configEncrypted: channels.configEncrypted,
 					notification: notifications,
-					linkChannelId: discordLinks.channelId,
+					linkThreadChannelId: discordLinks.threadChannelId,
+					linkDmChannelId: discordLinks.dmChannelId,
+					linkKindSettings: discordLinks.kindSettings,
+					linkDiscordUserId: discordLinks.discordUserId,
 				})
 				.from(deliveries)
 				.innerJoin(notifications, eq(notifications.id, deliveries.notificationId))
@@ -146,8 +157,24 @@ export function createDeliveryStore(database: Database, secretBox: SecretBox): D
 						signingKey?: string | null;
 					};
 					target = { kind: 'webhook', url, signingKey: signingKey ?? null };
-				} else if (row.linkChannelId !== null) {
-					target = { kind: 'link', channelId: row.linkChannelId };
+				} else if (row.linkDiscordUserId !== null) {
+					const kind = row.notification.kind as NotificationKind;
+					const setting = kindSetting(parseKindSettings(row.linkKindSettings), kind);
+					const mentionUserId = setting.mention ? row.linkDiscordUserId : null;
+					const destinations: LinkDestination[] = [];
+					if (
+						(setting.destination === 'thread' || setting.destination === 'both') &&
+						row.linkThreadChannelId !== null
+					) {
+						destinations.push({ channelId: row.linkThreadChannelId, mentionUserId });
+					}
+					if (
+						(setting.destination === 'dm' || setting.destination === 'both') &&
+						row.linkDmChannelId !== null
+					) {
+						destinations.push({ channelId: row.linkDmChannelId, mentionUserId });
+					}
+					if (destinations.length > 0) target = { kind: 'link', destinations };
 				}
 				return {
 					id: row.id,

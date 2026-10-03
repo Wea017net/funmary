@@ -145,7 +145,14 @@ describe('sendViaBot', () => {
 		expect(postEmbed).toHaveBeenCalledWith(
 			'777',
 			expect.objectContaining({ title: message.title }),
+			undefined,
 		);
+	});
+
+	it('mentionUserId を渡すと、そのまま postEmbed に渡す', async () => {
+		const postEmbed = vi.fn().mockResolvedValue(undefined);
+		await sendViaBot(botWith(postEmbed), '777', message, 'discord-1');
+		expect(postEmbed).toHaveBeenCalledWith('777', expect.anything(), 'discord-1');
 	});
 
 	it('送り先がなくなった (404、403) とみなす', async () => {

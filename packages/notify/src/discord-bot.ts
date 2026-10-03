@@ -72,8 +72,8 @@ export interface DiscordBot {
 	removeMemberRole(userId: string, roleId: string): Promise<void>;
 	/** メンションが効くのは、mentionRoles に挙げたロールだけにする */
 	postMessage(channelId: string, content: string, mentionRoles?: readonly string[]): Promise<void>;
-	/** 埋め込みのメッセージを送る。メンションは効かせない */
-	postEmbed(channelId: string, embed: DiscordEmbed): Promise<void>;
+	/** 埋め込みのメッセージを送る。mentionUserId を渡すと、その利用者だけにメンションする (既定は効かせない) */
+	postEmbed(channelId: string, embed: DiscordEmbed, mentionUserId?: string): Promise<void>;
 	/** 利用者との DM チャンネルを開く。相手が DM を拒否していれば 403 の DiscordApiError */
 	createDm(userId: string): Promise<string>;
 	/** 親のチャンネルの下に、本人だけの非公開スレッドを作る (invitable は false 固定) */
@@ -202,11 +202,12 @@ export function createDiscordBot(options: DiscordBotOptions): DiscordBot {
 					allowed_mentions: { parse: [], roles: [...mentionRoles] },
 				});
 			}),
-		postEmbed: (channelId, embed) =>
+		postEmbed: (channelId, embed, mentionUserId) =>
 			guarded(async () => {
 				await api.channels.createMessage(channelId, {
+					...(mentionUserId ? { content: `<@${mentionUserId}>` } : {}),
 					embeds: [embed],
-					allowed_mentions: { parse: [] },
+					allowed_mentions: mentionUserId ? { users: [mentionUserId] } : { parse: [] },
 				});
 			}),
 		createDm: (userId) => guarded(async () => (await api.users.createDM(userId)).id),

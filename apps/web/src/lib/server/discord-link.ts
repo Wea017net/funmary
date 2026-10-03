@@ -1,15 +1,23 @@
 // 利用者の Discord 連携 (設計書 14.9、#163)。OAuth の途中経過 (state) の封印と、
 // 認可コードを受け取ったあとの、ギルドへの参加、スレッドか DM の用意、紐付けの保存をまとめる。
 import type { DiscordBot, DiscordOAuthClient } from '@funmary/notify';
-import type { DiscordDestination, DiscordLinkStore, SecretBox } from '@funmary/db';
+import {
+	DEFAULT_CHANNEL_KINDS,
+	type DiscordLinkKindSettings,
+	type DiscordLinkStore,
+	type SecretBox,
+} from '@funmary/db';
 import type { Logger } from '@funmary/log';
 
 /** state を有効とみなす時間。長く連携の画面を放っておいたら、やり直してもらう */
 const STATE_TTL_MS = 10 * 60 * 1000;
 
+/** 連携するときの、最初の 1 つだけの送り先。種類ごとの振り分け (both を含む) は、連携したあとに設定する */
+export type InitialDestination = 'thread' | 'dm';
+
 export interface DiscordLinkState {
 	readonly userId: string;
-	readonly destination: DiscordDestination;
+	readonly destination: InitialDestination;
 	readonly startedAt: number;
 }
 
@@ -63,7 +71,7 @@ const TRY_AGAIN = 'もう一度お試しください。';
 /** スレッドか DM を用意して、最初の案内を送る。失敗したら null (呼び出し側でエラーを出す) */
 export async function prepareChannel(
 	bot: DiscordBot,
-	destination: DiscordDestination,
+	destination: InitialDestination,
 	linksChannelId: string | null,
 	discordUserId: string,
 ): Promise<{ channelId: string } | { error: string }> {
@@ -79,6 +87,22 @@ export async function prepareChannel(
 	const dmChannelId = await bot.createDm(discordUserId);
 	await bot.postMessage(dmChannelId, 'Funmary と連携しました。ここに通知が届きます。');
 	return { channelId: dmChannelId };
+}
+
+/**
+ * 種類ごとの送り先の設定で、その送り先 (thread か dm) のチャンネルがまだ無ければ用意する。
+ * もう有れば、そのまま返す (#163)
+ */
+export async function ensureChannel(
+	bot: DiscordBot,
+	linksChannelId: string | null,
+	discordUserId: string,
+	destination: InitialDestination,
+	existing: { readonly threadChannelId: string | null; readonly dmChannelId: string | null },
+): Promise<{ channelId: string } | { error: string }> {
+	const have = destination === 'thread' ? existing.threadChannelId : existing.dmChannelId;
+	if (have) return { channelId: have };
+	return prepareChannel(bot, destination, linksChannelId, discordUserId);
 }
 
 /** 認可コードを受け取ったあとの処理。成功したら紐付けを保存する */
@@ -133,6 +157,13 @@ export async function completeDiscordLink(
 	}
 	if ('error' in channel) return { ok: false, message: channel.error };
 
+	// 届ける種類ごとの設定は、まず選んだ送り先にそろえる (まとめて設定、#163)。あとで種類ごとに変えられる
+	const kindSettings: DiscordLinkKindSettings = Object.fromEntries(
+		DEFAULT_CHANNEL_KINDS.map((kind) => [
+			kind,
+			{ destination: input.state.destination, mention: false },
+		]),
+	);
 	deps.store.save(
 		input.state.userId,
 		{
@@ -140,8 +171,9 @@ export async function completeDiscordLink(
 			accessToken: tokens.accessToken,
 			refreshToken: tokens.refreshToken,
 			tokenExpiresAt: tokens.expiresAt,
-			destination: input.state.destination,
-			channelId: channel.channelId,
+			threadChannelId: input.state.destination === 'thread' ? channel.channelId : null,
+			dmChannelId: input.state.destination === 'dm' ? channel.channelId : null,
+			kindSettings,
 		},
 		now,
 	);

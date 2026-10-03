@@ -153,7 +153,7 @@ describe('通知を送る定期処理の接続', () => {
 		const postEmbed = vi.fn().mockResolvedValue(undefined);
 		const link = delivery({
 			channelKind: 'discordLink',
-			target: { kind: 'link', channelId: '777' },
+			target: { kind: 'link', destinations: [{ channelId: '777', mentionUserId: null }] },
 		});
 		const withBot = setup([link], { bot: { postEmbed } as unknown as DiscordBot });
 		await expect(withBot.deps.send(withBot.deps.claim(NOW, 10)[0])).resolves.toEqual({
@@ -162,11 +162,31 @@ describe('通知を送る定期処理の接続', () => {
 		expect(postEmbed).toHaveBeenCalledWith(
 			'777',
 			expect.objectContaining({ title: link.notification.title }),
+			undefined,
 		);
 		const noBot = setup([link]);
 		await expect(noBot.deps.send(noBot.deps.claim(NOW, 10)[0])).resolves.toMatchObject({
 			status: 'retry',
 		});
+	});
+
+	it('両方 (スレッドと DM) に送る設定なら、2 件に送る。メンションする相手も渡す', async () => {
+		const postEmbed = vi.fn().mockResolvedValue(undefined);
+		const both = delivery({
+			channelKind: 'discordLink',
+			target: {
+				kind: 'link',
+				destinations: [
+					{ channelId: 'thread-1', mentionUserId: 'discord-1' },
+					{ channelId: 'dm-1', mentionUserId: null },
+				],
+			},
+		});
+		const { deps } = setup([both], { bot: { postEmbed } as unknown as DiscordBot });
+		await expect(deps.send(deps.claim(NOW, 10)[0])).resolves.toEqual({ status: 'sent' });
+		expect(postEmbed).toHaveBeenCalledTimes(2);
+		expect(postEmbed).toHaveBeenCalledWith('thread-1', expect.anything(), 'discord-1');
+		expect(postEmbed).toHaveBeenCalledWith('dm-1', expect.anything(), undefined);
 	});
 
 	it('NOTIFY_DRY_RUN のときは、送らずに送れたことにする', async () => {

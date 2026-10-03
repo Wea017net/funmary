@@ -1,13 +1,21 @@
 // 利用者の Discord 連携の設定 (設計書 14.9、#163)。連携する、解除する、認可コードを受け取って完成させる。
 import { fail, redirect, type Actions, type ServerLoad } from '@sveltejs/kit';
-import { DEFAULT_CHANNEL_KINDS, type DiscordDestination } from '@funmary/db';
+import {
+	DEFAULT_CHANNEL_KINDS,
+	kindSetting,
+	type DiscordDestination,
+	type DiscordLink,
+	type DiscordLinkKindSettings,
+} from '@funmary/db';
 import { CHANNEL_KIND_OPTIONS, parseChannelKinds } from '$lib/server/channel-kind-form.ts';
 import { parseDailyDigestForm } from '$lib/server/daily-digest-form.ts';
 import {
 	completeDiscordLink,
+	ensureChannel,
 	openLinkState,
 	prepareChannel,
 	sealLinkState,
+	type InitialDestination,
 } from '$lib/server/discord-link.ts';
 import {
 	DISCORD_JOIN_ROLE_KEY,
@@ -17,13 +25,14 @@ import {
 import { getServices } from '$lib/server/services.ts';
 import { SUPPORT_INVITES_KEY, publicInvite, readInvites } from '$lib/server/support-invites.ts';
 
-const isDestination = (value: unknown): value is DiscordDestination =>
+const isInitialDestination = (value: unknown): value is InitialDestination =>
 	value === 'thread' || value === 'dm';
 
-const DESTINATION_LABEL: Record<DiscordDestination, string> = { thread: 'スレッド', dm: 'DM' };
+const isDestinationChoice = (value: unknown): value is DiscordDestination =>
+	value === 'thread' || value === 'dm' || value === 'both';
 
 /** 失敗の中身をログに残し、画面向けの文を返す */
-function describePrepareFailure(error: unknown, destination: DiscordDestination): string {
+function describePrepareFailure(error: unknown, destination: InitialDestination): string {
 	getServices()
 		.log.withTag('discord-link')
 		.warn(
@@ -32,6 +41,42 @@ function describePrepareFailure(error: unknown, destination: DiscordDestination)
 	return destination === 'dm'
 		? 'DM を開けませんでした。サーバーのメンバーからの DM を許可しているか確かめてください。もう一度お試しください。'
 		: 'スレッドの用意に失敗しました。もう一度お試しください。';
+}
+
+/**
+ * 種類ごとの送り先の設定を保存する。使う送り先 (スレッドか DM) のチャンネルがまだ無ければ、先に用意する
+ */
+async function applyKindSettings(
+	current: DiscordLink,
+	settings: DiscordLinkKindSettings,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+	const { discord } = getServices();
+	const { link } = discord;
+	if (!discord.bot) return { ok: false, error: 'Bot が設定されていません。' };
+	const needs = (destination: InitialDestination) =>
+		Object.values(settings).some(
+			(s) => s?.destination === destination || s?.destination === 'both',
+		);
+
+	for (const destination of ['thread', 'dm'] as const) {
+		const have = destination === 'thread' ? current.threadChannelId : current.dmChannelId;
+		if (!needs(destination) || have) continue;
+		try {
+			const prepared = await ensureChannel(
+				discord.bot,
+				link.linksChannelId(),
+				current.discordUserId,
+				destination,
+				current,
+			);
+			if ('error' in prepared) return { ok: false, error: prepared.error };
+			link.store.setChannel(current.userId, destination, prepared.channelId);
+		} catch (error) {
+			return { ok: false, error: describePrepareFailure(error, destination) };
+		}
+	}
+	link.store.setKindSettings(current.userId, settings);
+	return { ok: true };
 }
 
 export const load: ServerLoad = async ({ locals, url }) => {
@@ -85,7 +130,7 @@ export const load: ServerLoad = async ({ locals, url }) => {
 		configured: link.configured,
 		enabled: link.enabled(),
 		linked: current
-			? { destination: current.destination, hasChannel: current.channelId !== null }
+			? { hasThread: current.threadChannelId !== null, hasDm: current.dmChannelId !== null }
 			: null,
 		digest: current ? dailyDigest.get(locals.user.id) : null,
 		// 届ける通知の種類 (設計書 14.7、#163)。連携していなければ null
@@ -96,6 +141,14 @@ export const load: ServerLoad = async ({ locals, url }) => {
 				]
 			: null,
 		kindOptions: CHANNEL_KIND_OPTIONS,
+		// 種類ごとの送り先とメンション (設計書 14.9、#163)。連携していなければ null
+		routing: current
+			? CHANNEL_KIND_OPTIONS.map((option) => ({
+					kind: option.kind,
+					label: option.label,
+					...kindSetting(current.kindSettings, option.kind),
+				}))
+			: null,
 		callback,
 		supportInvite: publicInvite(invites, new Date()),
 	};
@@ -112,7 +165,7 @@ export const actions: Actions = {
 		}
 		const form = await request.formData();
 		const destination = form.get('destination');
-		if (!isDestination(destination)) return fail(400, { error: '入力が足りません。' });
+		if (!isInitialDestination(destination)) return fail(400, { error: '入力が足りません。' });
 		const sealed = sealLinkState(link.stateBox, {
 			userId: locals.user.id,
 			destination,
@@ -143,6 +196,40 @@ export const actions: Actions = {
 		channels.updateDiscordLinkKinds(locals.user.id, kinds);
 		return { message: '届ける通知の種類を保存しました。' };
 	},
+	/** 種類ごとに、送り先 (スレッド/DM/両方) とメンションを決める (設計書 14.9、#163) */
+	routing: async ({ request, locals }) => {
+		if (!locals.user) redirect(303, '/login');
+		const { discord } = getServices();
+		const current = discord.link.store.findByUser(locals.user.id);
+		if (!current) return fail(400, { error: '連携していません。' });
+		const form = await request.formData();
+		const settings: DiscordLinkKindSettings = {};
+		for (const option of CHANNEL_KIND_OPTIONS) {
+			const destination = form.get(`destination_${option.kind}`);
+			if (!isDestinationChoice(destination)) return fail(400, { error: '入力が足りません。' });
+			settings[option.kind] = { destination, mention: form.get(`mention_${option.kind}`) === 'on' };
+		}
+		const result = await applyKindSettings(current, settings);
+		if (!result.ok) return fail(502, { error: result.error });
+		return { message: '通知の送り先を保存しました。' };
+	},
+	/** すべての種類に、同じ送り先とメンションを、まとめて適用する */
+	routingAll: async ({ request, locals }) => {
+		if (!locals.user) redirect(303, '/login');
+		const { discord } = getServices();
+		const current = discord.link.store.findByUser(locals.user.id);
+		if (!current) return fail(400, { error: '連携していません。' });
+		const form = await request.formData();
+		const destination = form.get('destination');
+		if (!isDestinationChoice(destination)) return fail(400, { error: '入力が足りません。' });
+		const mention = form.get('mention') === 'on';
+		const settings: DiscordLinkKindSettings = Object.fromEntries(
+			CHANNEL_KIND_OPTIONS.map((option) => [option.kind, { destination, mention }]),
+		);
+		const result = await applyKindSettings(current, settings);
+		if (!result.ok) return fail(502, { error: result.error });
+		return { message: 'すべての種類に、まとめて適用しました。' };
+	},
 	/** 連携を解除する。Discord に接続できなくても、必ず成功する (設計書 14.9) */
 	unlink: ({ locals }) => {
 		if (!locals.user) redirect(303, '/login');
@@ -151,44 +238,10 @@ export const actions: Actions = {
 		const removed = link.store.remove(locals.user.id);
 		if (!removed) return fail(400, { error: '連携していません。' });
 		if (discord.bot) {
-			if (removed.destination === 'thread' && removed.channelId) {
-				void discord.bot.archiveThread(removed.channelId);
-			}
+			if (removed.threadChannelId) void discord.bot.archiveThread(removed.threadChannelId);
 			if (link.oauth) void link.oauth.revoke(removed.accessToken);
 		}
 		return { message: 'Discord との連携を解除しました。' };
-	},
-	/** 送り先 (スレッドか DM) を切り替える。今までの送り先がスレッドなら、アーカイブする (設計書 14.9) */
-	changeDestination: async ({ request, locals }) => {
-		if (!locals.user) redirect(303, '/login');
-		const { discord } = getServices();
-		const { link } = discord;
-		const current = link.store.findByUser(locals.user.id);
-		if (!current) return fail(400, { error: '連携していません。' });
-		if (!discord.bot) return fail(400, { error: 'Bot が設定されていません。' });
-		const destination = (await request.formData()).get('destination');
-		if (!isDestination(destination)) return fail(400, { error: '入力が足りません。' });
-		if (destination === current.destination && current.channelId) {
-			return fail(400, { error: `すでに${DESTINATION_LABEL[destination]}です。` });
-		}
-		let prepared: { channelId: string } | { error: string };
-		try {
-			prepared = await prepareChannel(
-				discord.bot,
-				destination,
-				link.linksChannelId(),
-				current.discordUserId,
-			);
-		} catch (error) {
-			prepared = { error: describePrepareFailure(error, destination) };
-		}
-		if ('error' in prepared) return fail(502, { error: prepared.error });
-		// 古いスレッドはもう要らないので、アーカイブする (履歴を残すかどうかは利用者の判断に任せ、消しはしない)
-		if (current.destination === 'thread' && current.channelId && destination !== 'thread') {
-			void discord.bot.archiveThread(current.channelId);
-		}
-		link.store.updateChannel(locals.user.id, { destination, channelId: prepared.channelId });
-		return { message: `${DESTINATION_LABEL[destination]}に切り替えました。` };
 	},
 	/** いまのスレッドをアーカイブする (消しはしない)。次に通知が届くと、自動でアーカイブが解ける */
 	archiveThread: async ({ locals }) => {
@@ -196,34 +249,30 @@ export const actions: Actions = {
 		const { discord } = getServices();
 		const current = discord.link.store.findByUser(locals.user.id);
 		if (!current) return fail(400, { error: '連携していません。' });
-		if (current.destination !== 'thread' || !current.channelId) {
-			return fail(400, { error: 'スレッドの送り先ではありません。' });
-		}
+		if (!current.threadChannelId) return fail(400, { error: 'スレッドがありません。' });
 		if (!discord.bot) return fail(400, { error: 'Bot が設定されていません。' });
-		await discord.bot.archiveThread(current.channelId);
+		await discord.bot.archiveThread(current.threadChannelId);
 		return {
 			message: 'スレッドをアーカイブしました。次に通知が届くと、自動でアーカイブが解けます。',
 		};
 	},
-	/** いまのスレッドを完全に削除する。新しい送り先は、あらためて選んでもらう */
+	/** いまのスレッドを完全に削除する。種類ごとの設定でスレッドを使っていれば、あらためて用意が要る */
 	deleteThread: async ({ locals }) => {
 		if (!locals.user) redirect(303, '/login');
 		const { discord } = getServices();
 		const current = discord.link.store.findByUser(locals.user.id);
 		if (!current) return fail(400, { error: '連携していません。' });
-		if (current.destination !== 'thread' || !current.channelId) {
-			return fail(400, { error: 'スレッドの送り先ではありません。' });
-		}
+		if (!current.threadChannelId) return fail(400, { error: 'スレッドがありません。' });
 		if (!discord.bot) return fail(400, { error: 'Bot が設定されていません。' });
 		try {
-			await discord.bot.deleteThread(current.channelId);
+			await discord.bot.deleteThread(current.threadChannelId);
 		} catch (error) {
 			return fail(502, { error: describePrepareFailure(error, 'thread') });
 		}
-		discord.link.store.updateChannel(locals.user.id, { destination: 'thread', channelId: null });
+		discord.link.store.setChannel(locals.user.id, 'thread', null);
 		return {
 			message:
-				'スレッドを削除しました。通知を受け取るには、スレッドを作り直すか、DM に切り替えてください。',
+				'スレッドを削除しました。スレッドを使う種類の設定があれば、送り先の設定を保存し直すと作り直されます。',
 		};
 	},
 	/** いまのスレッドを削除して、新しいスレッドを作る */
@@ -233,9 +282,6 @@ export const actions: Actions = {
 		const { link } = discord;
 		const current = link.store.findByUser(locals.user.id);
 		if (!current) return fail(400, { error: '連携していません。' });
-		if (current.destination !== 'thread') {
-			return fail(400, { error: 'スレッドの送り先ではありません。' });
-		}
 		if (!discord.bot) return fail(400, { error: 'Bot が設定されていません。' });
 		let prepared: { channelId: string } | { error: string };
 		try {
@@ -249,14 +295,11 @@ export const actions: Actions = {
 			prepared = { error: describePrepareFailure(error, 'thread') };
 		}
 		if ('error' in prepared) return fail(502, { error: prepared.error });
-		if (current.channelId) {
-			const oldChannelId = current.channelId;
+		if (current.threadChannelId) {
+			const oldChannelId = current.threadChannelId;
 			void discord.bot.deleteThread(oldChannelId).catch(() => {});
 		}
-		link.store.updateChannel(locals.user.id, {
-			destination: 'thread',
-			channelId: prepared.channelId,
-		});
+		link.store.setChannel(locals.user.id, 'thread', prepared.channelId);
 		return { message: '新しいスレッドを作りました。' };
 	},
 };

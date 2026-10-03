@@ -5,6 +5,8 @@
 	import { DAILY_DIGEST_STEP_MINUTES, type DailyDigestSettings } from '@funmary/core';
 	import SettingsBreadcrumb from '$lib/components/SettingsBreadcrumb.svelte';
 
+	type Destination = 'thread' | 'dm' | 'both';
+
 	let {
 		data,
 		form,
@@ -12,12 +14,14 @@
 		data: {
 			configured: boolean;
 			enabled: boolean;
-			linked: { destination: 'thread' | 'dm'; hasChannel: boolean } | null;
+			linked: { hasThread: boolean; hasDm: boolean } | null;
 			/** 予定のまとめの設定。連携していなければ null */
 			digest: DailyDigestSettings | null;
 			/** 届ける通知の種類 (休講など)。連携していなければ null */
 			kinds: string[] | null;
 			kindOptions: readonly { kind: string; label: string }[];
+			/** 種類ごとの送り先とメンション。連携していなければ null */
+			routing: { kind: string; label: string; destination: Destination; mention: boolean }[] | null;
 			callback: { ok: boolean; message: string } | null;
 			/** 管理者が公開にした、サポートサーバーへの招待。なければ null */
 			supportInvite: { url: string } | null;
@@ -31,10 +35,12 @@
 		pad(index * DAILY_DIGEST_STEP_MINUTES),
 	);
 
-	let destination = $state<'thread' | 'dm'>('thread');
+	let initialDestination = $state<'thread' | 'dm'>('thread');
 	// 保存すると data が読み直されるので、保存した値に戻る
 	let timing = $derived(data.digest?.timing ?? 'evening');
-	let switchTo = $derived(data.linked?.destination ?? 'thread');
+
+	let bulkDestination = $state<Destination>('thread');
+	let bulkMention = $state(false);
 </script>
 
 <svelte:head>
@@ -71,9 +77,8 @@
 		<p>いまは、管理者が Discord 連携を無効にしています。</p>
 	{:else if data.linked}
 		<p>
-			Discord と連携しています。通知の送り先は、{data.linked.destination === 'thread'
-				? 'サポートサーバーの、あなただけの非公開スレッド'
-				: 'あなたへの DM'} です。
+			Discord と連携しています。下の「通知の送り先」で、種類ごとに非公開スレッドか DM (または両方)
+			を選べます。
 		</p>
 		<p class="meta">
 			別の Discord アカウントに付け替えたいときは、いったん解除してから、もう一度連携してください。
@@ -87,62 +92,122 @@
 			<Button type="submit" variant="outlined"><Label>連携を解除する</Label></Button>
 		</form>
 
-		<section aria-labelledby="destination-heading">
-			<h2 id="destination-heading">送り先の変更</h2>
-			<p>
-				連携を解除せずに、非公開スレッドと DM
-				を切り替えられます。切り替えると、新しい送り先を用意します。
-			</p>
-			<form method="POST" action="?/changeDestination" use:enhance class="link-form">
-				<fieldset>
-					<legend>送り先</legend>
-					<label>
-						<input type="radio" name="destination" value="thread" bind:group={switchTo} />
-						サポートサーバーの、あなただけの非公開スレッド
-					</label>
-					<label>
-						<input type="radio" name="destination" value="dm" bind:group={switchTo} />
-						あなたへの DM
-					</label>
-				</fieldset>
-				<Button type="submit" variant="outlined"><Label>切り替える</Label></Button>
-			</form>
-
-			{#if data.linked.destination === 'thread'}
-				<h3>スレッドの管理</h3>
-				{#if !data.linked.hasChannel}
-					<p class="meta">
-						スレッドが削除されていて、いまは通知の送り先がありません。作り直すか、DM
-						に切り替えてください。
-					</p>
-				{/if}
-				<div class="thread-actions">
-					<form method="POST" action="?/archiveThread" use:enhance>
-						<Button type="submit" variant="outlined" disabled={!data.linked.hasChannel}>
-							<Label>アーカイブする</Label>
-						</Button>
-					</form>
-					<form
-						method="POST"
-						action="?/recreateThread"
-						use:enhance
-						use:confirmSubmit={'いまのスレッドを削除して、新しいスレッドを作ります。よろしいですか?'}
-					>
-						<Button type="submit" variant="outlined"><Label>作り直す</Label></Button>
-					</form>
-					<form
-						method="POST"
-						action="?/deleteThread"
-						use:enhance
-						use:confirmSubmit={'スレッドを完全に削除します。元には戻せません。よろしいですか?'}
-					>
-						<Button type="submit" variant="outlined" disabled={!data.linked.hasChannel}>
-							<Label>削除する</Label>
-						</Button>
-					</form>
-				</div>
+		<section aria-labelledby="thread-heading">
+			<h2 id="thread-heading">スレッドの管理</h2>
+			{#if !data.linked.hasThread}
+				<p class="meta">
+					まだ非公開スレッドがありません。下の「通知の送り先」でスレッドを使う設定にすると、自動で作られます。「作り直す」でも、いますぐ作れます。
+				</p>
 			{/if}
+			<div class="thread-actions">
+				<form method="POST" action="?/archiveThread" use:enhance>
+					<Button type="submit" variant="outlined" disabled={!data.linked.hasThread}>
+						<Label>アーカイブする</Label>
+					</Button>
+				</form>
+				<form
+					method="POST"
+					action="?/recreateThread"
+					use:enhance
+					use:confirmSubmit={data.linked.hasThread
+						? 'いまのスレッドを削除して、新しいスレッドを作ります。よろしいですか?'
+						: '新しいスレッドを作ります。よろしいですか?'}
+				>
+					<Button type="submit" variant="outlined"><Label>作り直す</Label></Button>
+				</form>
+				<form
+					method="POST"
+					action="?/deleteThread"
+					use:enhance
+					use:confirmSubmit={'スレッドを完全に削除します。元には戻せません。よろしいですか?'}
+				>
+					<Button type="submit" variant="outlined" disabled={!data.linked.hasThread}>
+						<Label>削除する</Label>
+					</Button>
+				</form>
+			</div>
 		</section>
+
+		{#if data.routing}
+			<section aria-labelledby="routing-heading">
+				<h2 id="routing-heading">通知の送り先</h2>
+				<p>
+					通知の種類ごとに、送り先 (非公開スレッド、DM、または両方) と、メンションするかを選べます。
+				</p>
+
+				<h3>まとめて適用する</h3>
+				<form method="POST" action="?/routingAll" use:enhance class="link-form">
+					<fieldset>
+						<legend>送り先</legend>
+						<label>
+							<input type="radio" name="destination" value="thread" bind:group={bulkDestination} />
+							非公開スレッド
+						</label>
+						<label>
+							<input type="radio" name="destination" value="dm" bind:group={bulkDestination} />
+							DM
+						</label>
+						<label>
+							<input type="radio" name="destination" value="both" bind:group={bulkDestination} />
+							両方
+						</label>
+					</fieldset>
+					<label>
+						<input type="checkbox" name="mention" bind:checked={bulkMention} />
+						メンションする
+					</label>
+					<Button type="submit" variant="outlined"><Label>すべての種類に適用する</Label></Button>
+				</form>
+
+				<h3>種類ごとの設定</h3>
+				<form
+					method="POST"
+					action="?/routing"
+					use:enhance={() =>
+						({ update }) =>
+							update({ reset: false })}
+					class="link-form"
+				>
+					{#each data.routing as row (row.kind)}
+						<fieldset>
+							<legend>{row.label}</legend>
+							<label>
+								<input
+									type="radio"
+									name="destination_{row.kind}"
+									value="thread"
+									checked={row.destination === 'thread'}
+								/>
+								非公開スレッド
+							</label>
+							<label>
+								<input
+									type="radio"
+									name="destination_{row.kind}"
+									value="dm"
+									checked={row.destination === 'dm'}
+								/>
+								DM
+							</label>
+							<label>
+								<input
+									type="radio"
+									name="destination_{row.kind}"
+									value="both"
+									checked={row.destination === 'both'}
+								/>
+								両方
+							</label>
+							<label>
+								<input type="checkbox" name="mention_{row.kind}" checked={row.mention} />
+								メンションする
+							</label>
+						</fieldset>
+					{/each}
+					<Button type="submit" variant="unelevated"><Label>保存する</Label></Button>
+				</form>
+			</section>
+		{/if}
 
 		{#if data.kinds}
 			<section aria-labelledby="kinds-heading">
@@ -254,17 +319,18 @@
 	{:else}
 		<p>
 			Discord のアカウントを紐付け、休講などの通知を、Funmary
-			のサポートサーバーの非公開スレッドか、DM で受け取れるようにします。
+			のサポートサーバーの非公開スレッドか、DM
+			で受け取れるようにします。連携したあとに、通知の種類ごとの送り先も選べます。
 		</p>
 		<form method="POST" action="?/link" use:enhance class="link-form">
 			<fieldset>
-				<legend>通知の送り先</legend>
+				<legend>はじめの送り先</legend>
 				<label>
-					<input type="radio" name="destination" value="thread" bind:group={destination} />
+					<input type="radio" name="destination" value="thread" bind:group={initialDestination} />
 					サポートサーバーの、あなただけの非公開スレッド
 				</label>
 				<label>
-					<input type="radio" name="destination" value="dm" bind:group={destination} />
+					<input type="radio" name="destination" value="dm" bind:group={initialDestination} />
 					あなたへの DM (サーバーのメンバーからの DM を許可している必要があります)
 				</label>
 			</fieldset>

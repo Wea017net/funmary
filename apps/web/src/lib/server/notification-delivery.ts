@@ -107,7 +107,19 @@ export function deliverNotificationsDeps(
 				return sendViaWebhook(delivery.target.url, message, fetchOption);
 			}
 			if (!bot) return { status: 'retry', afterMs: null, reason: 'Bot が設定されていません' };
-			return sendViaBot(bot, delivery.target.channelId, message);
+			// both (スレッドと DM の両方) なら、2 件に送る。片方だけ失敗したら再送し、両方に送り直す
+			// (届いた方には重複が届くが、害はない。設計書 14.9、#163)
+			const outcomes = await Promise.all(
+				delivery.target.destinations.map((destination) =>
+					sendViaBot(bot, destination.channelId, message, destination.mentionUserId ?? undefined),
+				),
+			);
+			if (outcomes.every((outcome) => outcome.status === 'sent')) return { status: 'sent' };
+			return (
+				outcomes.find((outcome) => outcome.status === 'retry') ??
+				outcomes.find((outcome) => outcome.status !== 'sent') ??
+				outcomes[0]
+			);
 		},
 		markSent: (id, now) => deliveries.markSent(id, now),
 		markRetry: (id, plan) => deliveries.markRetry(id, plan),

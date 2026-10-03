@@ -133,6 +133,28 @@ describe('createDiscordBot', () => {
 		]);
 	});
 
+	it('埋め込みを送る。既定ではメンションを効かせない', async () => {
+		const { bot, calls } = setup();
+		const embed = { title: 't', color: 1 };
+		await bot.postEmbed('5', embed);
+		expect(calls[0]).toEqual([
+			'channels.createMessage',
+			'5',
+			{ embeds: [embed], allowed_mentions: { parse: [] } },
+		]);
+	});
+
+	it('mentionUserId を渡すと、その利用者だけにメンションする', async () => {
+		const { bot, calls } = setup();
+		const embed = { title: 't', color: 1 };
+		await bot.postEmbed('5', embed, '222');
+		expect(calls[0]).toEqual([
+			'channels.createMessage',
+			'5',
+			{ content: '<@222>', embeds: [embed], allowed_mentions: { users: ['222'] } },
+		]);
+	});
+
 	it('メンバーにロールを付け、外す', async () => {
 		const { bot, calls } = setup();
 		await bot.addMemberRole('222', '333');

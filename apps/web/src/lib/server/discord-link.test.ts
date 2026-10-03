@@ -81,7 +81,8 @@ function fakeStore(overrides: Partial<DiscordLinkStore> = {}): DiscordLinkStore 
 		findByUser: () => null,
 		isDiscordUserLinkedToOther: () => false,
 		remove: () => null,
-		updateChannel: () => false,
+		setChannel: () => false,
+		setKindSettings: () => false,
 		...overrides,
 	};
 }
@@ -104,11 +105,13 @@ describe('completeDiscordLink', () => {
 			'user-1',
 			expect.objectContaining({
 				discordUserId: 'discord-1',
-				destination: 'thread',
-				channelId: 'thread-1',
+				threadChannelId: 'thread-1',
+				dmChannelId: null,
 			}),
 			at('2026-01-01'),
 		);
+		const saved = save.mock.calls[0]?.[1] as { kindSettings: Record<string, unknown> };
+		expect(saved.kindSettings['cancellation']).toEqual({ destination: 'thread', mention: false });
 	});
 
 	it('joinRoleIds を渡していれば、参加のときに付ける', async () => {
@@ -147,7 +150,7 @@ describe('completeDiscordLink', () => {
 		expect(result.ok).toBe(true);
 		expect(save).toHaveBeenCalledWith(
 			'user-1',
-			expect.objectContaining({ destination: 'dm', channelId: 'dm-1' }),
+			expect.objectContaining({ threadChannelId: null, dmChannelId: 'dm-1' }),
 			at('2026-01-01'),
 		);
 	});

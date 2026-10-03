@@ -511,13 +511,16 @@ export const discordLinks = sqliteTable('discord_links', {
 	accessTokenEncrypted: text('access_token_encrypted').notNull(),
 	refreshTokenEncrypted: text('refresh_token_encrypted').notNull(),
 	tokenExpiresAt: integer('token_expires_at', { mode: 'timestamp_ms' }).notNull(),
-	/** 通知の送り先。非公開スレッドか DM か */
-	destination: text('destination', { enum: ['thread', 'dm'] }).notNull(),
+	/** 本人だけの非公開スレッドの ID。まだ用意していない、完全に削除したあとは null */
+	threadChannelId: text('thread_channel_id'),
+	/** DM チャンネルの ID。まだ用意していない間は null */
+	dmChannelId: text('dm_channel_id'),
 	/**
-	 * destination が thread のときの、本人だけのスレッドの ID。dm のときは DM チャンネルの ID。
-	 * スレッドを完全に削除したあとなど、送り先が今は無い (再作成を待っている) 間は null
+	 * 通知の種類ごとの送り先とメンション (設計書 14.9、#163)。
+	 * JSON (Partial<Record<NotificationKind, { destination: 'thread' | 'dm' | 'both'; mention: boolean }>>)。
+	 * 無い種類は、スレッド、メンション無しとみなす
 	 */
-	channelId: text('channel_id'),
+	kindSettings: text('kind_settings', { mode: 'json' }).$type<Record<string, unknown>>(),
 	createdAt: createdAt(),
 });
 
