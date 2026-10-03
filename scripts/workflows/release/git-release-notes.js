@@ -13,11 +13,12 @@ const run = (command, args) =>
 	execFileSync(command, args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
 
 /**
- * sha から main の履歴をさかのぼって、一番近い自動リリース (build-<hash>) のタグの版と、そのコミット。なければ null
+ * sha から main の履歴をさかのぼって、一番近い (tagMatch に合う) タグの版と、そのコミット。なければ null
  * @param {string} sha
+ * @param {string} tagMatch 探すタグの形 (git describe --match)。既定は自動リリースの build-<hash>
  * @returns {{ version: string; sha: string } | null}
  */
-function previousRelease(sha) {
+function previousRelease(sha, tagMatch = 'build-*') {
 	try {
 		const tag = run('git', [
 			'describe',
@@ -25,7 +26,7 @@ function previousRelease(sha) {
 			'--abbrev=0',
 			'--first-parent',
 			'--match',
-			'build-*',
+			tagMatch,
 			`${sha}~1`,
 		]);
 		return { version: tag, sha: run('git', ['rev-list', '-n', '1', tag]) };
@@ -36,11 +37,11 @@ function previousRelease(sha) {
 }
 
 /**
- * @param {{ repo: string; version: string; sha: string }} release
+ * @param {{ repo: string; version: string; sha: string; tagMatch?: string }} release
  * @returns {string}
  */
-export function releaseNotesFromGit({ repo, version, sha }) {
-	const previous = previousRelease(sha);
+export function releaseNotesFromGit({ repo, version, sha, tagMatch = 'build-*' }) {
+	const previous = previousRelease(sha, tagMatch);
 	const subjects = (
 		previous
 			? run('git', ['log', '--first-parent', '--format=%s', `${previous.sha}..${sha}`])
