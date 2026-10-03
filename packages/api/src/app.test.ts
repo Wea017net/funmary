@@ -28,3 +28,20 @@ describe('GET /healthz', () => {
 		expect(res.headers.get('Cache-Control')).toBe('no-store');
 	});
 });
+
+describe('POST /discord/interactions', () => {
+	it('公開鍵を渡すと、createApi の中で受け口が開く (署名なしなので 401)', async () => {
+		const api = createApi({
+			checkHealth: () => true,
+			discordInteractions: { publicKeyHex: 'ab'.repeat(32), answer: () => 'x' },
+		});
+		const res = await api.request('/discord/interactions', { method: 'POST', body: '{"type":1}' });
+		expect(res.status).toBe(401);
+	});
+
+	it('公開鍵を渡さなければ、受け口は開かない (404)', async () => {
+		const api = createApi({ checkHealth: () => true });
+		const res = await api.request('/discord/interactions', { method: 'POST', body: '{"type":1}' });
+		expect(res.status).toBe(404);
+	});
+});
