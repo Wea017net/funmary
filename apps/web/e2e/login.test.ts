@@ -566,6 +566,8 @@ test.describe('スマホの幅で、画面が横にはみ出さない', () => {
 			'/about',
 			'/license',
 			'/third-party-licenses',
+			'/terms',
+			'/privacy',
 		];
 		for (const path of paths) {
 			await page.goto(path);
@@ -2071,7 +2073,7 @@ test.describe('このアプリについて', () => {
 		await expect(page).toHaveURL('/app');
 	};
 
-	test('設定の「アカウント」のすぐ上に、4 つの項目が並ぶ', async ({ page }) => {
+	test('設定の「アカウント」のすぐ上に、6 つの項目が並ぶ', async ({ page }) => {
 		await loginAs(page);
 		await page.goto('/app/settings');
 
@@ -2083,7 +2085,14 @@ test.describe('このアプリについて', () => {
 		const section = page.locator('section', {
 			has: page.getByRole('heading', { name: 'このアプリについて' }),
 		});
-		for (const path of ['/about', '/license', '/third-party-licenses', '/contributors']) {
+		for (const path of [
+			'/about',
+			'/license',
+			'/third-party-licenses',
+			'/terms',
+			'/privacy',
+			'/contributors',
+		]) {
 			await expect(section.locator(`a[href="${path}"]`)).toBeVisible();
 		}
 	});
@@ -2156,6 +2165,14 @@ test.describe('このアプリについて', () => {
 		await page.goto('/third-party-licenses');
 		await expect(
 			page.getByRole('heading', { name: 'サードパーティライセンス', level: 1 }),
+		).toBeVisible();
+
+		await page.goto('/terms');
+		await expect(page.getByRole('heading', { name: '利用規約', level: 1 })).toBeVisible();
+
+		await page.goto('/privacy');
+		await expect(
+			page.getByRole('heading', { name: 'プライバシーポリシー', level: 1 }),
 		).toBeVisible();
 	});
 

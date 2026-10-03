@@ -15,8 +15,10 @@
 	import IconLicense from '~icons/material-symbols/policy-outline';
 	import IconLink from '~icons/material-symbols/link';
 	import IconLogout from '~icons/material-symbols/logout';
+	import IconPrivacy from '~icons/material-symbols/privacy-tip-outline';
 	import IconSchool from '~icons/material-symbols/event-note-outline';
 	import IconSlotReview from '~icons/material-symbols/task-outline';
+	import IconTerms from '~icons/material-symbols/gavel';
 	import IconThirdParty from '~icons/material-symbols/inventory-2-outline';
 	import IconUpload from '~icons/material-symbols/upload-file-outline';
 
@@ -175,6 +177,18 @@
 			icon: IconThirdParty,
 			title: 'サードパーティライセンス',
 			description: '使っているオープンソースのソフトウェアの一覧',
+		},
+		{
+			href: resolve('/terms'),
+			icon: IconTerms,
+			title: '利用規約',
+			description: '本サービスを利用するときの条件',
+		},
+		{
+			href: resolve('/privacy'),
+			icon: IconPrivacy,
+			title: 'プライバシーポリシー',
+			description: '取得する情報と、その使い方',
 		},
 		{
 			href: resolve('/contributors'),

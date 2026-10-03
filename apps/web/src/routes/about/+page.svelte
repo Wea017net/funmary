@@ -46,6 +46,12 @@
 		<li>
 			<a href={resolve('/third-party-licenses')}>サードパーティライセンス</a>
 		</li>
+		<li>
+			<a href={resolve('/terms')}>利用規約</a>
+		</li>
+		<li>
+			<a href={resolve('/privacy')}>プライバシーポリシー</a>
+		</li>
 		{#if data.operator}
 			<li>
 				<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- 外部サイトへのリンク -->
