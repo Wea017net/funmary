@@ -12,6 +12,7 @@
 	import IconFeed from '~icons/material-symbols/rss-feed';
 	import IconHistory from '~icons/material-symbols/monitor-heart-outline';
 	import IconInvite from '~icons/material-symbols/person-add-outline';
+	import IconKey from '~icons/material-symbols/key-outline';
 	import IconLicense from '~icons/material-symbols/policy-outline';
 	import IconLink from '~icons/material-symbols/link';
 	import IconLogout from '~icons/material-symbols/logout';
@@ -61,6 +62,12 @@
 			icon: IconFeed,
 			title: 'お知らせのフィード',
 			description: '休講などの通知を、RSS リーダーで受け取る',
+		},
+		{
+			href: resolve('/app/settings/tokens'),
+			icon: IconKey,
+			title: '公開 API と MCP',
+			description: '自分の AI エージェントやスクリプトから、時間割や休講を読み取り専用で読む',
 		},
 		...(data.discordLinkAvailable
 			? [
