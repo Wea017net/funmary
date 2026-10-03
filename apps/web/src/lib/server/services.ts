@@ -1,7 +1,9 @@
 // 画面のサーバー側の処理 (load、action) が使う部品。起動時に hooks.server.ts の init が 1 回だけ入れる。
+import type { TimetableSources } from '@funmary/api';
 import type {
 	AcademicCalendarStore,
 	AccessGrantStore,
+	AccessTokenStore,
 	AuditLogStore,
 	AuthStore,
 	ChannelStore,
@@ -35,7 +37,6 @@ import type {
 import type { BuildInfo } from './build-info.ts';
 import type { LegalInfo } from './legal.ts';
 import type { ResponseTimes } from './response-times.ts';
-import type { TimetableSources } from './user-timetable.ts';
 
 export interface Services {
 	/** 利用者、招待コード、利用者の権限 */
@@ -118,6 +119,8 @@ export interface Services {
 	readonly legal: LegalInfo | null;
 	/** カレンダー購読の URL のトークン */
 	readonly feedTokens: FeedTokenStore;
+	/** 公開 API と MCP サーバー向けの個人用アクセストークン (設計書 3.3) */
+	readonly accessTokens: AccessTokenStore;
 	/** 新規登録の方式 (設計書 8.2)。紹介の画面の案内に使う */
 	readonly registration: 'invite' | 'open' | 'closed';
 	/** 公開 URL の origin (ブックマークレットの戻り先に使う) */

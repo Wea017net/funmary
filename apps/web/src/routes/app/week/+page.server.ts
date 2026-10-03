@@ -1,5 +1,6 @@
 // 週の時間割 (設計書 12.1、12.4)。?date= で、その日を含む週を出す。省けば今週
 import { redirect, type ServerLoad } from '@sveltejs/kit';
+import { buildUserTimetable } from '@funmary/api';
 import {
 	DEFAULT_PERIODS,
 	addDays,
@@ -12,7 +13,6 @@ import { parseDateParam } from '$lib/server/date-param.ts';
 import { eventViewsByDate } from '$lib/server/event-view.ts';
 import { toLessonView, type LessonView } from '$lib/server/lesson-view.ts';
 import { getServices } from '$lib/server/services.ts';
-import { buildUserTimetable } from '$lib/server/user-timetable.ts';
 import { parseWeekView, WEEK_VIEW_COOKIE } from '$lib/week-view.ts';
 
 export const load: ServerLoad = ({ cookies, locals, url }) => {

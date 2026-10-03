@@ -1,6 +1,6 @@
 // 通知のフィード (RSS、Atom、JSON Feed) に載せる項目 (設計書 14.5)。直近 30 日、最大 50 件。
 // RSS リーダーが取りに来るだけの口なので、送信の失敗が起きない。Discord やプッシュ通知が不調なときの受け皿にもなる
-import type { FeedInput, FeedItem } from '@funmary/api';
+import { listUserNotifications, type FeedInput, type FeedItem } from '@funmary/api';
 import {
 	DEFAULT_CHANNEL_KINDS,
 	type FeedTokenStore,
@@ -12,8 +12,6 @@ import {
 const DAYS = 30;
 /** 載せる件数の上限 */
 const MAX_ITEMS = 50;
-/** 絞る前に読む件数。利用者 1 人の通知は多くないので、これで十分足りる */
-const FETCH_LIMIT = 200;
 
 export interface NotificationFeedSources {
 	readonly feedTokens: Pick<FeedTokenStore, 'findOwner' | 'markUsed'>;
@@ -46,21 +44,21 @@ export function loadNotificationFeed(
 	sources.feedTokens.markUsed(owner.id, now);
 	const kinds = kindsOf(owner.options);
 	const since = new Date(now.getTime() - DAYS * 24 * 60 * 60 * 1000);
-	const items: FeedItem[] = sources.notifications
-		.list(owner.userId, { limit: FETCH_LIMIT })
-		.filter((notification) => notification.createdAt >= since && kinds.includes(notification.kind))
-		.slice(0, MAX_ITEMS)
-		.map((notification) => ({
-			title: notification.title,
-			// 項目の ID は通知の ID にする。リンクが変わっても二重に出ないようにするため
-			id: `${sources.origin}/app/notifications#ntf-${notification.id}`,
-			link: notification.link
-				? `${sources.origin}${notification.link}`
-				: `${sources.origin}/app/notifications`,
-			// JSON Feed は項目に content か description が要る。本文がなければ題を入れる
-			description: notification.body ?? notification.title,
-			published: notification.createdAt,
-		}));
+	const items: FeedItem[] = listUserNotifications(sources, owner.userId, {
+		kinds,
+		since,
+		limit: MAX_ITEMS,
+	}).map((notification) => ({
+		title: notification.title,
+		// 項目の ID は通知の ID にする。リンクが変わっても二重に出ないようにするため
+		id: `${sources.origin}/app/notifications#ntf-${notification.id}`,
+		link: notification.link
+			? `${sources.origin}${notification.link}`
+			: `${sources.origin}/app/notifications`,
+		// JSON Feed は項目に content か description が要る。本文がなければ題を入れる
+		description: notification.body ?? notification.title,
+		published: notification.createdAt,
+	}));
 	return {
 		options: {
 			title: 'Funmary の通知',

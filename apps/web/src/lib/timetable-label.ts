@@ -1,6 +1,6 @@
 // 時間割の画面 (/、/week) に出す表記。
+import type { DayNote } from '@funmary/api';
 import { addDays, isoWeekday, type CalendarDate } from '@funmary/core';
-import type { DayNote } from './server/user-timetable.ts';
 
 const WEEKDAY_NAMES = ['', '月', '火', '水', '木', '金', '土', '日'];
 

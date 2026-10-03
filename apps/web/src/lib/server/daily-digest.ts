@@ -1,5 +1,6 @@
 // 予定のまとめ (#207) の文面。今日か明日の授業と予定を、Discord のメッセージ 1 通にする。
 // メンションは送信の側 (allowed_mentions) で止めるので、ここでは書式に効く記号だけをただの文字にする。
+import { buildUserTimetable, type DayNote, type TimetableLesson } from '@funmary/api';
 import {
 	DEFAULT_PERIODS,
 	findPeriod,
@@ -12,7 +13,6 @@ import type { SendDailyDigestDeps } from '@funmary/jobs';
 import { DiscordApiError, type DiscordBot } from '@funmary/notify';
 import { eventsOnDate, type EventView } from './event-view.ts';
 import type { Services } from './services.ts';
-import { buildUserTimetable, type DayNote, type TimetableLesson } from './user-timetable.ts';
 
 export interface DailyDigestContent {
 	readonly date: CalendarDate;
