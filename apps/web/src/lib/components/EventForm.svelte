@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Button, { Label } from '@smui/button';
 	import { enhance } from '$app/forms';
+	import FormNotice from '$lib/components/FormNotice.svelte';
 	import type { EventFormValues } from '$lib/event-form.ts';
 
 	interface Candidate {
@@ -47,9 +48,7 @@
 </script>
 
 <form method="POST" {action} use:enhance class="event-form">
-	{#if error}
-		<p class="error" role="alert">{error}</p>
-	{/if}
+	<FormNotice {error} />
 
 	<label class="field">
 		予定の名前
@@ -365,11 +364,8 @@
 		color: var(--fm-text-muted);
 		font-size: 0.875rem;
 	}
-	.error {
+	/* gap で間隔を取る親の中なので、<p> の既定の margin を消す */
+	.event-form :global(.notice) {
 		margin: 0;
-		padding: 0.75rem 1rem;
-		border: 1px solid currentcolor;
-		border-radius: 0.25rem;
-		color: var(--fm-error);
 	}
 </style>

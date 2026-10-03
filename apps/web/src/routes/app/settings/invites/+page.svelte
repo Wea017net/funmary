@@ -3,6 +3,7 @@
 	import type { InviteIssuance } from '@funmary/core';
 	import { enhance } from '$app/forms';
 	import { createCopyState } from '$lib/clipboard.svelte.ts';
+	import FormNotice from '$lib/components/FormNotice.svelte';
 	import InviteCodeList from '$lib/components/InviteCodeList.svelte';
 	import SettingsBreadcrumb from '$lib/components/SettingsBreadcrumb.svelte';
 	import type { InviteCodeView } from '$lib/server/invites.ts';
@@ -54,11 +55,7 @@
 		</p>
 	{/if}
 
-	{#if form?.error}
-		<p class="error" role="alert">{form.error}</p>
-	{:else if form?.message}
-		<p class="message" role="status">{form.message}</p>
-	{/if}
+	<FormNotice error={form?.error} message={form?.message} />
 
 	{#if form?.issued}
 		{@const issued = form.issued}
@@ -199,16 +196,5 @@
 
 	.muted {
 		color: var(--fm-text-muted);
-	}
-
-	.message,
-	.error {
-		padding: 0.75rem 1rem;
-		border-radius: 0.5rem;
-		background: var(--fm-surface-muted);
-	}
-
-	.error {
-		color: var(--fm-error);
 	}
 </style>

@@ -4,6 +4,7 @@
 	import { resolve } from '$app/paths';
 	import { confirmSubmit } from '$lib/actions/confirm-submit.ts';
 	import EventForm from '$lib/components/EventForm.svelte';
+	import FormNotice from '$lib/components/FormNotice.svelte';
 	import type { EventFormValues } from '$lib/event-form.ts';
 
 	let {
@@ -29,9 +30,7 @@
 <div class="page">
 	<p><a href={resolve('/app/events')}>自分の予定</a></p>
 	<h1>予定を直す</h1>
-	{#if form?.message}
-		<p class="message" role="status">{form.message}</p>
-	{/if}
+	<FormNotice message={form?.message} />
 	<EventForm
 		values={form?.values ?? data.values}
 		error={form?.error}
@@ -155,10 +154,5 @@
 			background: var(--fm-surface);
 			overflow-wrap: anywhere;
 		}
-	}
-	.message {
-		padding: 0.75rem 1rem;
-		border: 1px solid currentcolor;
-		border-radius: 0.25rem;
 	}
 </style>

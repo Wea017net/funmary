@@ -3,6 +3,7 @@
 	import { enhance } from '$app/forms';
 	import { confirmSubmit } from '$lib/actions/confirm-submit.ts';
 	import { DAILY_DIGEST_STEP_MINUTES, type DailyDigestSettings } from '@funmary/core';
+	import FormNotice from '$lib/components/FormNotice.svelte';
 	import SettingsBreadcrumb from '$lib/components/SettingsBreadcrumb.svelte';
 
 	type Destination = 'thread' | 'dm' | 'both';
@@ -65,11 +66,7 @@
 			{data.callback.message}
 		</p>
 	{/if}
-	{#if form?.error}
-		<p class="error" role="alert">{form.error}</p>
-	{:else if form?.message}
-		<p class="message" role="status">{form.message}</p>
-	{/if}
+	<FormNotice error={form?.error} message={form?.message} />
 
 	{#if !data.configured}
 		<p>いまは Discord 連携を使えません。</p>
@@ -393,16 +390,5 @@
 		align-items: center;
 		gap: 0.5rem;
 		min-height: 44px;
-	}
-
-	.message,
-	.error {
-		padding: 0.75rem 1rem;
-		border: 1px solid currentcolor;
-		border-radius: 0.25rem;
-	}
-
-	.error {
-		color: var(--fm-error);
 	}
 </style>

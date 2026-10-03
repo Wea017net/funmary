@@ -4,6 +4,7 @@
 	import { resolve } from '$app/paths';
 	import { confirmSubmit } from '$lib/actions/confirm-submit.ts';
 	import { createCopyState } from '$lib/clipboard.svelte.ts';
+	import FormNotice from '$lib/components/FormNotice.svelte';
 	import SettingsBreadcrumb from '$lib/components/SettingsBreadcrumb.svelte';
 
 	let {
@@ -57,9 +58,7 @@
 		</li>
 	</ul>
 
-	{#if form?.message}
-		<p class="message" role="status">{form.message}</p>
-	{/if}
+	<FormNotice message={form?.message} />
 
 	{#if form?.issued}
 		{@const issued = form.issued}
@@ -266,11 +265,5 @@
 	.muted {
 		color: var(--fm-text-muted);
 		font-size: 0.875rem;
-	}
-
-	.message {
-		padding: 0.75rem 1rem;
-		border-radius: 0.5rem;
-		background: var(--fm-surface-muted);
 	}
 </style>

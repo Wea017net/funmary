@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Button, { Label } from '@smui/button';
 	import { resolve } from '$app/paths';
+	import FormNotice from '$lib/components/FormNotice.svelte';
 	import type { EventSummary } from '$lib/server/event-summary.ts';
 
 	let {
@@ -26,9 +27,7 @@
 		サークル、課外活動、合宿など、授業のほかの予定を足します。足した予定は、今日と週の画面に出ます。初めは、あなただけに見えます。公開すると、ほかの人が自分の時間割に加えられます。
 	</p>
 
-	{#if data.message}
-		<p class="message" role="status">{data.message}</p>
-	{/if}
+	<FormNotice message={data.message} />
 
 	<div class="actions">
 		<Button href={resolve('/app/events/new')} variant="unelevated">
@@ -121,11 +120,6 @@
 		display: inline-flex;
 		align-items: center;
 		min-height: 44px;
-	}
-	.message {
-		padding: 0.75rem 1rem;
-		border: 1px solid currentcolor;
-		border-radius: 0.25rem;
 	}
 	.visually-hidden {
 		position: absolute;

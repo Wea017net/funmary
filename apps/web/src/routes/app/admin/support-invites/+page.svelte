@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Button, { Label } from '@smui/button';
 	import { enhance } from '$app/forms';
+	import FormNotice from '$lib/components/FormNotice.svelte';
 	import SettingsBreadcrumb from '$lib/components/SettingsBreadcrumb.svelte';
 
 	interface InviteRow {
@@ -51,11 +52,7 @@
 		Discord 連携の画面に出します。
 	</p>
 
-	{#if form?.error}
-		<p class="notice error" role="alert">{form.error}</p>
-	{:else if form?.message}
-		<p class="notice" role="status">{form.message}</p>
-	{/if}
+	<FormNotice error={form?.error} message={form?.message} />
 
 	<section aria-labelledby="issue-heading">
 		<h2 id="issue-heading">Bot で発行する</h2>
@@ -64,7 +61,7 @@
 				Discord の Bot (DISCORD_BOT_TOKEN と DISCORD_GUILD_ID) を設定すると、ここから発行できます。
 			</p>
 		{:else if data.discordError}
-			<p class="notice error" role="alert">{data.discordError}</p>
+			<FormNotice error={data.discordError} />
 		{:else}
 			<form method="POST" action="?/issue" use:enhance class="entry">
 				<div class="field">
@@ -261,17 +258,6 @@
 		align-items: center;
 		gap: 0.5rem;
 		min-height: 44px;
-	}
-
-	.notice {
-		padding: 0.75rem 1rem;
-		border-radius: 0.5rem;
-		background: var(--fm-surface-muted);
-		overflow-wrap: anywhere;
-
-		&.error {
-			color: var(--fm-error);
-		}
 	}
 
 	.muted {

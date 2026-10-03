@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Button, { Label } from '@smui/button';
 	import { enhance } from '$app/forms';
+	import FormNotice from '$lib/components/FormNotice.svelte';
 	import SettingsBreadcrumb from '$lib/components/SettingsBreadcrumb.svelte';
 
 	let {
@@ -28,11 +29,7 @@
 		は消えません。上限を超えている間は、編集、無効化、削除だけができます。
 	</p>
 
-	{#if form?.error}
-		<p class="error" role="alert">{form.error}</p>
-	{:else if form?.message}
-		<p class="message" role="status">{form.message}</p>
-	{/if}
+	<FormNotice error={form?.error} message={form?.message} />
 
 	<form
 		method="POST"
@@ -81,16 +78,5 @@
 		padding: 0 0.75rem;
 		box-sizing: border-box;
 		font: inherit;
-	}
-
-	.message,
-	.error {
-		padding: 0.75rem 1rem;
-		border: 1px solid currentcolor;
-		border-radius: 0.25rem;
-	}
-
-	.error {
-		color: var(--fm-error);
 	}
 </style>

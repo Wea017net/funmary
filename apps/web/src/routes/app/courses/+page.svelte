@@ -5,6 +5,7 @@
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import { confirmSubmit } from '$lib/actions/confirm-submit.ts';
+	import FormNotice from '$lib/components/FormNotice.svelte';
 	import { DEFAULT_PERIODS, TERMS } from '@funmary/core';
 	import type { SubjectPathParams } from '$lib/subject-path.ts';
 	import { formatSlot, formatTerm, WEEKDAY_LABELS } from '$lib/term-label.ts';
@@ -97,11 +98,7 @@
 <div class="page">
 	<h1>科目</h1>
 
-	{#if form?.error}
-		<p class="error" role="alert">{form.error}</p>
-	{:else if form?.message}
-		<p class="message" role="status">{form.message}</p>
-	{/if}
+	<FormNotice error={form?.error} message={form?.message} />
 
 	{#if data.academicYear === null}
 		<p>まだシラバスを取り込んでいません。取り込みが済むまで、お待ちください。</p>
@@ -411,16 +408,5 @@
 		padding: 0.5rem 0.75rem;
 		border-radius: 0.5rem;
 		background: var(--fm-surface-muted);
-	}
-	.message {
-		padding: 0.75rem 1rem;
-		border: 1px solid currentcolor;
-		border-radius: 0.25rem;
-	}
-	.error {
-		padding: 0.75rem 1rem;
-		border: 1px solid currentcolor;
-		border-radius: 0.25rem;
-		color: var(--fm-error);
 	}
 </style>

@@ -3,6 +3,7 @@
 	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
 	import { confirmSubmit } from '$lib/actions/confirm-submit.ts';
+	import FormNotice from '$lib/components/FormNotice.svelte';
 	import SettingsBreadcrumb from '$lib/components/SettingsBreadcrumb.svelte';
 	import type { SubjectPathParams } from '$lib/subject-path.ts';
 	import { formatSlot } from '$lib/term-label.ts';
@@ -41,11 +42,7 @@
 	<SettingsBreadcrumb current="曜日と時限の確認" />
 	<h1>曜日と時限の確認</h1>
 
-	{#if form?.error}
-		<p class="error" role="alert">{form.error}</p>
-	{:else if form?.message}
-		<p class="message" role="status">{form.message}</p>
-	{/if}
+	<FormNotice error={form?.error} message={form?.message} />
 
 	<section aria-labelledby="mode-heading">
 		<h2 id="mode-heading">だれが共有の枠を登録できるか</h2>
@@ -117,17 +114,6 @@
 	.muted {
 		color: var(--fm-text-muted);
 		font-size: 0.875rem;
-	}
-
-	.message,
-	.error {
-		padding: 0.75rem 1rem;
-		border-radius: 0.5rem;
-		background: var(--fm-surface-muted);
-	}
-
-	.error {
-		color: var(--fm-error);
 	}
 
 	section {

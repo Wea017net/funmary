@@ -3,6 +3,7 @@
 	import { enhance } from '$app/forms';
 	import { onMount } from 'svelte';
 	import { createCopyState } from '$lib/clipboard.svelte.ts';
+	import FormNotice from '$lib/components/FormNotice.svelte';
 
 	interface ImportSummary {
 		read: number;
@@ -58,9 +59,7 @@
 		ここで取り込んだ曜日、時限、教室は、同じ科目を履修しているほかの利用者の時間割にも使われます。
 	</p>
 
-	{#if form?.error}
-		<p class="error" role="alert">{form.error}</p>
-	{/if}
+	<FormNotice error={form?.error} />
 
 	{#if form?.result}
 		<section aria-labelledby="result-heading">
@@ -172,12 +171,6 @@
 		padding: 0.75rem 1rem;
 		border-radius: 0.5rem;
 		background: var(--fm-surface-muted);
-	}
-	.error {
-		padding: 0.75rem 1rem;
-		border: 1px solid currentcolor;
-		border-radius: 0.25rem;
-		color: var(--fm-error);
 	}
 	.methods {
 		display: flex;
