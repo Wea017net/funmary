@@ -1,6 +1,6 @@
 // LICENSE と、依存のライセンス一覧を、ビルドしたサーバーの隣に写す。vite build のあとに動かす。
 // サーバーのコードは 1 つにまとめられるので、リポジトリのルートの LICENSE-* を実行時に読めない。
-// $lib/server/legal.ts が、自分から見た ../legal を探す (copy-migrations.js と同じ考え方)。
+// #lib/server/legal.ts が、自分から見た ../legal を探す (copy-migrations.js と同じ考え方)。
 import { cpSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';

@@ -1,3 +1,5 @@
+import adapter from '@sveltejs/adapter-node';
+import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 import { fileURLToPath } from 'node:url';
 import { sveltekit } from '@sveltejs/kit/vite';
 import Icons from 'unplugin-icons/vite';
@@ -9,11 +11,25 @@ export default defineConfig(({ command }) => ({
 	// adapter-node は dependencies をビルドの外に置き、実行時に読み込む。VPS には better-sqlite3 しか入れないので、
 	// ビルドでは、ほかの依存をすべて同梱する。開発サーバーでは、読み込みを速くするため同梱しない
 	...(command === 'build' && {
-		ssr: { noExternal: true, external: UNBUNDLED_DEPS },
+		ssr: {
+			// adapter-node 6 は、noExternal が配列でないと dependencies をすべて外に置く。配列で "UNBUNDLED_DEPS 以外すべて" を同梱にする
+			noExternal: [new RegExp(`^(?!(?:${UNBUNDLED_DEPS.join('|')})(?:/|$))`)],
+			external: UNBUNDLED_DEPS,
+		},
 		resolve: { alias: BUILD_ALIASES },
 	}),
 	plugins: [
-		sveltekit(),
+		sveltekit({
+			// <style lang="scss"> を Sass として変換する (設計書 5.2)
+			preprocess: vitePreprocess(),
+
+			// 静的ファイルを gzip と Brotli で事前に圧縮しておく (設計書 4.2)
+			adapter: adapter({ precompress: true }),
+
+			// .env はリポジトリのルートに置く (設計書 19.3)。管理用コマンドと同じファイルを読む
+			env: { dir: '../..' },
+		}),
+
 		// 使ったアイコンだけを、ビルド時に SVG の Svelte コンポーネントにして埋め込む (設計書 5.2)
 		Icons({ compiler: 'svelte' }),
 	],

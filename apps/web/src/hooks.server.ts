@@ -1,11 +1,11 @@
+import type { Handle, ServerInit } from '@sveltejs/kit/hooks';
+
 // サーバーの起動と、リクエストの振り分け (設計書 3.2)。
 // 起動時に設定を検証して DB を開き、機械向けのパスだけを Hono に渡す。
-import { mkdirSync } from 'node:fs';
+import { existsSync, mkdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { Handle, ServerInit } from '@sveltejs/kit';
-import { dev } from '$app/environment';
-import { env } from '$env/dynamic/private';
+import { dev } from '$app/env';
 import { createApi, SESSION_COOKIE_MAX_AGE_S, sessionCookieName } from '@funmary/api';
 import { createAuthService, createGoogleOidcClient, type AuthService } from '@funmary/auth';
 import {
@@ -55,28 +55,28 @@ import {
 	type DiscordLayout,
 } from '@funmary/notify';
 import { createLogger, type Logger } from '@funmary/log';
-import { parseConfig } from '$lib/server/config.ts';
-import { findBuildInfo } from '$lib/server/build-info.ts';
-import { createJobDefinitions } from '$lib/server/jobs.ts';
-import { createResponseTimes } from '$lib/server/response-times.ts';
-import { loadCalendarFeed } from '$lib/server/calendar-feed.ts';
-import { answerCommand } from '$lib/server/discord-commands.ts';
-import { loadNotificationFeed } from '$lib/server/notification-feed.ts';
-import { findLegalInfo } from '$lib/server/legal.ts';
+import { parseConfig } from '#lib/server/config.ts';
+import { findBuildInfo } from '#lib/server/build-info.ts';
+import { createJobDefinitions } from '#lib/server/jobs.ts';
+import { createResponseTimes } from '#lib/server/response-times.ts';
+import { loadCalendarFeed } from '#lib/server/calendar-feed.ts';
+import { answerCommand } from '#lib/server/discord-commands.ts';
+import { loadNotificationFeed } from '#lib/server/notification-feed.ts';
+import { findLegalInfo } from '#lib/server/legal.ts';
 import {
 	DISCORD_LAYOUT_KEY,
 	DISCORD_LINKING_KEY,
 	DISCORD_PRESENCE_KEY,
 	readLinkingEnabled,
 	readPresenceEnabled,
-} from '$lib/server/discord-admin.ts';
-import { legacyAppPath } from '$lib/server/legacy-path.ts';
-import { findMigrationsFolder } from '$lib/server/migrations-path.ts';
-import { getServices, setServices } from '$lib/server/services.ts';
-import { dailyDigestDeps } from '$lib/server/daily-digest.ts';
-import { deliverNotificationsDeps, testMessage } from '$lib/server/notification-delivery.ts';
-import { readWebhookLimit, WEBHOOKS_PER_USER_KEY } from '$lib/server/webhook-limit.ts';
-import { parseThemePreference, THEME_COOKIE } from '$lib/theme.ts';
+} from '#lib/server/discord-admin.ts';
+import { legacyAppPath } from '#lib/server/legacy-path.ts';
+import { findMigrationsFolder } from '#lib/server/migrations-path.ts';
+import { getServices, setServices } from '#lib/server/services.ts';
+import { dailyDigestDeps } from '#lib/server/daily-digest.ts';
+import { deliverNotificationsDeps, testMessage } from '#lib/server/notification-delivery.ts';
+import { readWebhookLimit, WEBHOOKS_PER_USER_KEY } from '#lib/server/webhook-limit.ts';
+import { parseThemePreference, THEME_COOKIE } from '#lib/theme.ts';
 
 /** Hono に渡すパス。これ自身か、この下のパスが対象になる */
 const API_PATHS = ['/api', '/auth', '/cal', '/discord', '/feed', '/healthz', '/mcp', '/signup'];
@@ -100,7 +100,10 @@ let publicOrigin = DEV_ORIGIN;
 const responseTimes = createResponseTimes();
 
 export const init: ServerInit = () => {
-	const result = parseConfig(env);
+	// 開発サーバーは、リポジトリのルートの .env を読む。本番では systemd やラッパーが環境変数を渡すので読まない (管理用コマンドと同じ)
+	const envFile = resolve(REPO_ROOT, '.env');
+	if (dev && existsSync(envFile)) process.loadEnvFile(envFile);
+	const result = parseConfig(process.env);
 	if (!result.ok) {
 		const lines = result.issues.map((issue) => `  ${issue.name}: ${issue.message}`);
 		throw new Error(
@@ -160,7 +163,9 @@ export const init: ServerInit = () => {
 	const alerter = createAdminAlerter({
 		webhookUrl: result.config.adminDiscordWebhookUrl,
 		...(discordBot
-			? { discord: createAdminDiscordSink({ bot: discordBot, layout: readDiscordLayout }) }
+			? {
+					discord: createAdminDiscordSink({ bot: discordBot, layout: readDiscordLayout }),
+				}
 			: {}),
 		dryRun: result.config.notifyDryRun,
 		log: logger,

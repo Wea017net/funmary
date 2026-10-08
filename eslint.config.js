@@ -4,7 +4,6 @@ import prettier from 'eslint-config-prettier';
 import svelte from 'eslint-plugin-svelte';
 import globals from 'globals';
 import ts from 'typescript-eslint';
-import svelteConfig from './apps/web/svelte.config.js';
 
 export default defineConfig(
 	{
@@ -34,7 +33,7 @@ export default defineConfig(
 	},
 	{
 		files: ['**/*.svelte', '**/*.svelte.ts'],
-		languageOptions: { parserOptions: { parser: ts.parser, svelteConfig } },
+		languageOptions: { parserOptions: { parser: ts.parser } },
 	},
 	{
 		// 設定ファイルなどの .js は型の検査の対象外にする
