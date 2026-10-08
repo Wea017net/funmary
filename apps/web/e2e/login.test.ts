@@ -1106,7 +1106,7 @@ test.describe('今日と週の時間割', () => {
 	}) => {
 		await loginAs(page);
 		await page.setViewportSize({ width: 390, height: 844 });
-		await page.goto('/app/week?date=2026-10-07');
+		await page.goto('/app/week?date=2026-09-09');
 		const views = page.getByRole('group', { name: '時間割の見せ方' });
 		const auto = views.getByRole('button', { name: '自動' });
 		const day = views.getByRole('button', { name: '1日' });

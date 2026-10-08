@@ -20,7 +20,7 @@ const LICENSE_FILE = /^(licen[cs]e|copying|notice)(\.[a-z]+)?$/i;
  * @returns {string}
  */
 export function generateThirdPartyLicenses(cwd) {
-	const output = execSync('pnpm licenses list --prod --json', {
+	const output = execSync('pnpm -r licenses list --prod --json', {
 		cwd,
 		encoding: 'utf8',
 		maxBuffer: 64 * 1024 * 1024,
