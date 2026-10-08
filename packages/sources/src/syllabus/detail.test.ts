@@ -60,6 +60,11 @@ describe('シラバスの詳細の解析', () => {
 		expect(termOf('未定')).toBe('invalid');
 	});
 
+	it('開講期の欄が空の科目は、失敗ではなく no-term にする (#247)', () => {
+		const result = parseSyllabusDetail(fixture.replace('>後期<', '><'));
+		expect(result.kind).toBe('no-term');
+	});
+
 	it('夏期集中と冬期集中は、開講期の表記か授業名から見分ける', () => {
 		const termOf = (html: string) => {
 			const result = parseSyllabusDetail(html);
