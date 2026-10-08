@@ -2,7 +2,7 @@
 import { fail, redirect, type Actions, type ServerLoad } from '@sveltejs/kit';
 import { jstDateTime } from '@funmary/core';
 import type { NotificationKind } from '@funmary/db';
-import { getServices } from '$lib/server/services.ts';
+import { getServices } from '#lib/server/services.ts';
 
 /** 一覧に出す件数。90 日より古い通知は定期処理が消す */
 const LIMIT = 200;

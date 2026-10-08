@@ -2,8 +2,8 @@
 	import Button, { Label } from '@smui/button';
 	import { enhance } from '$app/forms';
 	import { onMount } from 'svelte';
-	import { createCopyState } from '$lib/clipboard.svelte.ts';
-	import FormNotice from '$lib/components/FormNotice.svelte';
+	import { createCopyState } from '#lib/clipboard.svelte.ts';
+	import FormNotice from '#lib/components/FormNotice.svelte';
 
 	interface ImportSummary {
 		read: number;

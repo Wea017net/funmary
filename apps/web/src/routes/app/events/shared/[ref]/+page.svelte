@@ -2,8 +2,8 @@
 	import Button, { Label } from '@smui/button';
 	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
-	import FormNotice from '$lib/components/FormNotice.svelte';
-	import type { EventSummary } from '$lib/server/event-summary.ts';
+	import FormNotice from '#lib/components/FormNotice.svelte';
+	import type { EventSummary } from '#lib/server/event-summary.ts';
 
 	let {
 		data,
@@ -24,7 +24,7 @@
 </svelte:head>
 
 <div class="page">
-	<p><a href={resolve('/app/events')}>自分の予定</a></p>
+	<p><a href={resolve('app/events')}>自分の予定</a></p>
 	<h1>{data.event.title}</h1>
 
 	<FormNotice error={form?.error} message={form?.message} />

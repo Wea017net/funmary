@@ -2,10 +2,10 @@
 import { error, fail, redirect, type Actions, type ServerLoad } from '@sveltejs/kit';
 import { addDays, jstDateTime } from '@funmary/core';
 import { expandUserEvents } from '@funmary/core/event-expansion';
-import { echoFormValues, parseEventForm, toFormValues } from '$lib/event-form.ts';
-import { formatEventTime } from '$lib/event-label.ts';
-import { getServices } from '$lib/server/services.ts';
-import { formatDate } from '$lib/timetable-label.ts';
+import { echoFormValues, parseEventForm, toFormValues } from '#lib/event-form.ts';
+import { formatEventTime } from '#lib/event-label.ts';
+import { getServices } from '#lib/server/services.ts';
+import { formatDate } from '#lib/timetable-label.ts';
 
 /** 「この日は除く」に出す、これからの回の数と、見る先の日数 */
 const CANDIDATES = 24;

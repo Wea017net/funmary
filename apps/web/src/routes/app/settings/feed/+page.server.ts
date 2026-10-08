@@ -2,10 +2,10 @@
 // URL のトークンは DB にハッシュだけを保存するので、URL は発行の直後に 1 回だけ出す
 import { fail, redirect, type Actions, type ServerLoad } from '@sveltejs/kit';
 import { DEFAULT_CHANNEL_KINDS, type NotificationKind } from '@funmary/db';
-import { CHANNEL_KIND_OPTIONS, parseChannelKinds } from '$lib/server/channel-kind-form.ts';
-import { formatJstDateTime } from '$lib/server/invites.ts';
-import { notificationFeedLinks } from '$lib/server/notification-feed.ts';
-import { getServices } from '$lib/server/services.ts';
+import { CHANNEL_KIND_OPTIONS, parseChannelKinds } from '#lib/server/channel-kind-form.ts';
+import { formatJstDateTime } from '#lib/server/invites.ts';
+import { notificationFeedLinks } from '#lib/server/notification-feed.ts';
+import { getServices } from '#lib/server/services.ts';
 
 function kindsOf(options: Record<string, unknown> | null): NotificationKind[] {
 	const raw = options?.kinds;

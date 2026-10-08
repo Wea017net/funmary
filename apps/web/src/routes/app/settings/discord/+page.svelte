@@ -1,10 +1,10 @@
 <script lang="ts">
 	import Button, { Label } from '@smui/button';
 	import { enhance } from '$app/forms';
-	import { confirmSubmit } from '$lib/actions/confirm-submit.ts';
+	import { confirmSubmit } from '#lib/actions/confirm-submit.ts';
 	import { DAILY_DIGEST_STEP_MINUTES, type DailyDigestSettings } from '@funmary/core';
-	import FormNotice from '$lib/components/FormNotice.svelte';
-	import SettingsBreadcrumb from '$lib/components/SettingsBreadcrumb.svelte';
+	import FormNotice from '#lib/components/FormNotice.svelte';
+	import SettingsBreadcrumb from '#lib/components/SettingsBreadcrumb.svelte';
 
 	type Destination = 'thread' | 'dm' | 'both';
 

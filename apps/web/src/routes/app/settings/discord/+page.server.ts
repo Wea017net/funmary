@@ -7,8 +7,8 @@ import {
 	type DiscordLink,
 	type DiscordLinkKindSettings,
 } from '@funmary/db';
-import { CHANNEL_KIND_OPTIONS, parseChannelKinds } from '$lib/server/channel-kind-form.ts';
-import { parseDailyDigestForm } from '$lib/server/daily-digest-form.ts';
+import { CHANNEL_KIND_OPTIONS, parseChannelKinds } from '#lib/server/channel-kind-form.ts';
+import { parseDailyDigestForm } from '#lib/server/daily-digest-form.ts';
 import {
 	completeDiscordLink,
 	ensureChannel,
@@ -16,14 +16,14 @@ import {
 	prepareChannel,
 	sealLinkState,
 	type InitialDestination,
-} from '$lib/server/discord-link.ts';
+} from '#lib/server/discord-link.ts';
 import {
 	DISCORD_JOIN_ROLE_KEY,
 	readDiscordJoinRole,
 	resolveJoinRoleIds,
-} from '$lib/server/discord-join-role.ts';
-import { getServices } from '$lib/server/services.ts';
-import { SUPPORT_INVITES_KEY, publicInvite, readInvites } from '$lib/server/support-invites.ts';
+} from '#lib/server/discord-join-role.ts';
+import { getServices } from '#lib/server/services.ts';
+import { SUPPORT_INVITES_KEY, publicInvite, readInvites } from '#lib/server/support-invites.ts';
 
 const isInitialDestination = (value: unknown): value is InitialDestination =>
 	value === 'thread' || value === 'dm';
