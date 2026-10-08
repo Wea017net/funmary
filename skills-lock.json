@@ -55,6 +55,12 @@
       "skillPath": "skills/hush-review/SKILL.md",
       "computedHash": "bfe62505e9a31b5b69bf864bed945ae8ef02b9542f555854977a78b17b9ab035"
     },
+    "i-have-adhd": {
+      "source": "ayghri/i-have-adhd",
+      "sourceType": "github",
+      "skillPath": "skills/i-have-adhd/SKILL.md",
+      "computedHash": "e12ff08dfe4b5baae7065c2f05a5738b8a55f3ccbed82ba45f5496c8e83b2a25"
+    },
     "impeccable": {
       "source": "pbakaus/impeccable",
       "sourceType": "github",
