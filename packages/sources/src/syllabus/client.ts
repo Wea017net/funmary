@@ -186,6 +186,7 @@ export async function fetchSyllabusCatalog(deps: FetchSyllabusDeps): Promise<Fet
 			try {
 				const parsed = parseSyllabusDetail(await get(url));
 				if (parsed.kind === 'ok') entries.push({ row, detail: parsed.detail });
+				else if (parsed.kind === 'no-term') entries.push({ row, detail: null });
 				else fail(parsed.reason);
 			} catch (error) {
 				// 中断は、そのまま止める。1 科目の通信の失敗は、数えて続ける

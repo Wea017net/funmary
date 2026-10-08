@@ -22,6 +22,8 @@ export interface SyllabusDetail {
 
 export type SyllabusDetailResult =
 	| { readonly kind: 'ok'; readonly detail: SyllabusDetail }
+	/** 開講期の欄が空の科目 (特別研究、インターンシップなど)。時間割に載せないので、失敗ではなく読み飛ばす */
+	| { readonly kind: 'no-term' }
 	/** 必要な項目が読めなかった。ページの構造が変わったか、想定外の内容 */
 	| { readonly kind: 'invalid'; readonly reason: string };
 
@@ -128,8 +130,10 @@ export function parseSyllabusDetail(html: string): SyllabusDetailResult {
 	if (!name) return { kind: 'invalid', reason: '授業名がありません' };
 	const termLabel = attributes.get('開講期');
 	const term = termFrom(termLabel, name);
-	if (!term)
-		return { kind: 'invalid', reason: `開講期を読めませんでした: ${termLabel ?? '(なし)'}` };
+	if (!term) {
+		if (termLabel === undefined) return { kind: 'no-term' };
+		return { kind: 'invalid', reason: `開講期を読めませんでした: ${termLabel}` };
+	}
 
 	const credits = /^(\d+)\s*単位/.exec(attributes.get('単位数') ?? '')?.[1];
 	const teacher = attributes
