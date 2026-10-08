@@ -7,7 +7,7 @@ import {
 } from '@funmary/api';
 import { addDays, findPeriod, jstDateTime, type UserEvent } from '@funmary/core';
 import type { AuthStore, FeedTokenStore, UserEventStore } from '@funmary/db';
-import { formatDayNote } from '$lib/timetable-label.ts';
+import { formatDayNote } from '#lib/timetable-label.ts';
 import { toLessonView } from './lesson-view.ts';
 
 /** 載せる期間。過去の授業も少し残し、履修を登録した次の学期の分まで届くようにする */

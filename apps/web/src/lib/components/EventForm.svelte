@@ -1,8 +1,8 @@
 <script lang="ts">
 	import Button, { Label } from '@smui/button';
 	import { enhance } from '$app/forms';
-	import FormNotice from '$lib/components/FormNotice.svelte';
-	import type { EventFormValues } from '$lib/event-form.ts';
+	import FormNotice from '#lib/components/FormNotice.svelte';
+	import type { EventFormValues } from '#lib/event-form.ts';
 
 	interface Candidate {
 		date: string;

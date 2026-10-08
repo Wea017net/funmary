@@ -1,6 +1,6 @@
 // シラバスにない授業 (利用者が足した科目) の公開と、公開範囲の変更、削除を、Discord の subjects チャンネルに知らせる (Issue #164)。
 import type { SubjectVisibility } from '@funmary/db';
-import type { SubjectPathParams } from '$lib/subject-path.ts';
+import type { SubjectPathParams } from '#lib/subject-path.ts';
 import type { Services } from './services.ts';
 
 const VISIBILITY_LABELS: Record<SubjectVisibility, string> = {

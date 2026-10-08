@@ -2,15 +2,15 @@
 	import Button, { Label } from '@smui/button';
 	import { tick } from 'svelte';
 	import { enhance } from '$app/forms';
-	import { confirmSubmit } from '$lib/actions/confirm-submit.ts';
+	import { confirmSubmit } from '#lib/actions/confirm-submit.ts';
 	import { addDays } from '@funmary/core';
 	import {
 		dayMarks,
 		yearGrid,
 		type DayMarksInput,
 		type TermBand,
-	} from '$lib/academic-year-grid.ts';
-	import { formatTerm, WEEKDAY_LABELS } from '$lib/term-label.ts';
+	} from '#lib/academic-year-grid.ts';
+	import { formatTerm, WEEKDAY_LABELS } from '#lib/term-label.ts';
 
 	// 管理の学年暦の画面の、1 年分の月の格子。日を押すと、その日の振替授業日、全学の休講日、学期の端を決められる
 	let {

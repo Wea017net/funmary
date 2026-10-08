@@ -1,7 +1,7 @@
 import type { ServerLoad } from '@sveltejs/kit';
-import { formatJstDateTime } from '$lib/server/invites.ts';
-import { getServices } from '$lib/server/services.ts';
-import { describeUserAgent } from '$lib/server/user-agent.ts';
+import { formatJstDateTime } from '#lib/server/invites.ts';
+import { getServices } from '#lib/server/services.ts';
+import { describeUserAgent } from '#lib/server/user-agent.ts';
 
 export const load: ServerLoad = ({ locals, request }) => ({
 	// 画面に渡すのは、表示に要るものだけにする (ID は渡さない。権限は、管理画面へのリンクを出すかどうかだけ)

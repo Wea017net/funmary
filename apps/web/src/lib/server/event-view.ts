@@ -1,7 +1,7 @@
 // 今日と週の画面に出す、利用者の予定 (Issue #144)。予定を期間に展開して、日付ごとの表示用の形にする。
 import { eachDate, type CalendarDate, type UserEvent } from '@funmary/core';
 import { expandUserEvents } from '@funmary/core/event-expansion';
-import { formatOccurrenceTime } from '$lib/event-label.ts';
+import { formatOccurrenceTime } from '#lib/event-label.ts';
 
 export interface EventView {
 	/** 回ごとに決まる ID (予定の ID と、その回の始まりの日) */

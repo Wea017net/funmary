@@ -1,6 +1,6 @@
 // GitHub の貢献者の一覧。認証なしの GitHub API はレート制限が厳しいので、しばらく覚えておいて使い回す。
 import * as v from 'valibot';
-import { REPOSITORY_URL } from '$lib/repository.ts';
+import { REPOSITORY_URL } from '#lib/repository.ts';
 
 /** リポジトリの owner/repo。移管 (#114) で REPOSITORY_URL が変わっても、ここは書き換えなくてよい */
 const REPO_PATH = new URL(REPOSITORY_URL).pathname.replace(/^\//, '');

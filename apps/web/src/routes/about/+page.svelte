@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
-	import SettingsBreadcrumb from '$lib/components/SettingsBreadcrumb.svelte';
-	import { REPOSITORY_URL } from '$lib/repository.ts';
+	import SettingsBreadcrumb from '#lib/components/SettingsBreadcrumb.svelte';
+	import { REPOSITORY_URL } from '#lib/repository.ts';
 
 	let {
 		data,
@@ -37,21 +37,13 @@
 				不具合の報告、要望 (GitHub Issues)
 			</a>
 		</li>
-		<li>
-			<a href={resolve('/contributors')}>コードを書いてくれた人たち</a>
-		</li>
-		<li>
-			<a href={resolve('/license')}>ライセンス</a>
-		</li>
-		<li>
-			<a href={resolve('/third-party-licenses')}>サードパーティライセンス</a>
-		</li>
-		<li>
-			<a href={resolve('/terms')}>利用規約</a>
-		</li>
-		<li>
-			<a href={resolve('/privacy')}>プライバシーポリシー</a>
-		</li>
+
+		<li><a href={resolve('contributors')}>コードを書いてくれた人たち</a></li>
+		<li><a href={resolve('license')}>ライセンス</a></li>
+		<li><a href={resolve('third-party-licenses')}>サードパーティライセンス</a></li>
+		<li><a href={resolve('terms')}>利用規約</a></li>
+		<li><a href={resolve('privacy')}>プライバシーポリシー</a></li>
+
 		{#if data.operator}
 			<li>
 				<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- 外部サイトへのリンク -->

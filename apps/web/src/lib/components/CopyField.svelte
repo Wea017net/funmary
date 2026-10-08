@@ -1,6 +1,6 @@
 <script lang="ts">
 	import Button, { Label } from '@smui/button';
-	import type { CopyState } from '$lib/clipboard.svelte.ts';
+	import type { CopyState } from '#lib/clipboard.svelte.ts';
 
 	let {
 		id,

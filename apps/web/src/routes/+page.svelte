@@ -1,5 +1,5 @@
 <script lang="ts">
-	import Landing from '$lib/components/Landing.svelte';
+	import Landing from '#lib/components/Landing.svelte';
 
 	let { data }: { data: { signedIn: boolean; registration: 'invite' | 'open' | 'closed' } } =
 		$props();

@@ -9,7 +9,7 @@
 </script>
 
 <a
-	href={resolve('/app/notifications')}
+	href={resolve('app/notifications')}
 	class={['bell', { compact }]}
 	aria-label={unread > 0 ? `通知 (未読 ${unread} 件)` : '通知'}
 >

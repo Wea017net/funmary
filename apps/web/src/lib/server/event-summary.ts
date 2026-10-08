@@ -1,7 +1,7 @@
 // 予定の一覧や詳細に出す、表示用の文 (Issue #144、#145)。持ち主の情報は含めない。
 import { rruleToRecurrence, type UserEvent } from '@funmary/core';
-import { describeRecurrence, formatEventTime } from '$lib/event-label.ts';
-import { formatDate } from '$lib/timetable-label.ts';
+import { describeRecurrence, formatEventTime } from '#lib/event-label.ts';
+import { formatDate } from '#lib/timetable-label.ts';
 
 export interface EventSummary {
 	readonly id: number;
