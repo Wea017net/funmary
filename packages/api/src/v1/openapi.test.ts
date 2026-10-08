@@ -71,6 +71,15 @@ describe('/api/v1/openapi.json', () => {
 	});
 });
 
+describe('/api/v1/openapi.json の webhooks', () => {
+	it('汎用 Webhook に送る通知の形を、webhooks として載せる (#165)', async () => {
+		const res = await app().request('/api/v1/openapi.json');
+		const body = (await res.json()) as { webhooks?: Record<string, unknown> };
+		expect(Object.keys(body.webhooks ?? {})).toEqual(['notification']);
+		expect(JSON.stringify(body.webhooks)).toContain('webhook-signature');
+	});
+});
+
 describe('/api/docs', () => {
 	it('Swagger UI の画面を、ログインなしで返す', async () => {
 		const res = await app().request('/api/docs');

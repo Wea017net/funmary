@@ -4,6 +4,7 @@ import { swaggerUI } from '@hono/swagger-ui';
 import { Hono } from 'hono';
 import { openAPIRouteHandler } from 'hono-openapi';
 import type { V1AuthVariables } from './auth.ts';
+import { openApiWebhooks } from './webhooks.ts';
 
 export function createOpenApiRoutes(v1: Hono<{ Variables: V1AuthVariables }>): Hono {
 	const app = new Hono();
@@ -24,6 +25,7 @@ export function createOpenApiRoutes(v1: Hono<{ Variables: V1AuthVariables }>): H
 					},
 				},
 				security: [{ bearerAuth: [] }],
+				webhooks: openApiWebhooks,
 			},
 		}),
 	);
