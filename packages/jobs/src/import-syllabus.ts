@@ -1,6 +1,7 @@
-// 公開シラバスから科目を取り込む定期処理 (設計書 9 章)。毎日動くが、詳細は、未取得の科目と、
-// 7 日以上前に取った科目だけ取り直す (実際には週に 1 回ほど、全科目の詳細を取り直す)。
-// 新年度のシラバスがまだ公開されていなければ、前年度のものを使い続ける (毎日確かめる)。
+// 公開シラバスから科目を取り込む定期処理 (設計書 9 章、#122)。シラバスは年度の初めに公開されたあとほとんど変わらず、
+// 大学のサーバーへの負担も減らしたいので、普段は週に 1 回だけ科目の一覧を取り、詳細は 30 日以上前に取った科目と未取得の科目だけ取り直す。
+// 新年度の公開を待つ時期 (3 月 1 日から 4 月 15 日) と、今年度の科目が 1 件もないときは、毎日確かめる。
+// 新年度のシラバスがまだ公開されていなければ、前年度のものを使い続ける。
 import { isSourceDisabled, shouldAttempt, type SourceHealth } from '@funmary/core';
 import type { FetchSyllabusResult, SyllabusListRow } from '@funmary/sources';
 import { PORTAL_ORIGIN } from '@funmary/sources';
@@ -11,7 +12,16 @@ import { failSource, japanDate, succeedSource, type SourceRun } from './source-r
 export const SYLLABUS_SOURCE = 'syllabus';
 
 /** 詳細を取り直す間隔 */
-const DETAIL_REFRESH_MS = 7 * 24 * 60 * 60 * 1000;
+const DETAIL_REFRESH_MS = 30 * 24 * 60 * 60 * 1000;
+/** 科目の一覧を取りに行く間隔。毎日動くが、前回の成功からこれだけたつまでは取りに行かない (実行の時刻の揺れで 7 日に届かない日があるので、6 日にする) */
+const LIST_INTERVAL_MS = 6 * 24 * 60 * 60 * 1000;
+
+/** 新年度のシラバスの公開を待つ時期 (日本時間の 3 月 1 日から 4 月 15 日)。この間は毎日確かめる */
+function isAwaitingNewYear(today: string): boolean {
+	const month = Number(today.slice(5, 7));
+	const day = Number(today.slice(8, 10));
+	return month === 3 || (month === 4 && day <= 15);
+}
 /** 次に試すまでの間隔 (失敗のあとの待ちの基準) */
 const INTERVAL_MS = 12 * 60 * 60 * 1000;
 /** 詳細を取りに行った科目のうち、読めなかったものがこの割合を超えたら、管理者に知らせる */
@@ -86,7 +96,17 @@ export function createImportSyllabusJob(deps: ImportSyllabusDeps): JobDefinition
 				intervalMs: INTERVAL_MS,
 			};
 
-			const { academicYear } = japanDate(at);
+			const { academicYear, today } = japanDate(at);
+			const hasThisYear = deps.subjects.updatedAtBySyllabus(academicYear).size > 0;
+			const lastSuccessAt = health.lastSuccessAt;
+			if (
+				hasThisYear &&
+				lastSuccessAt &&
+				at.getTime() - lastSuccessAt.getTime() < LIST_INTERVAL_MS &&
+				!isAwaitingNewYear(today)
+			) {
+				return `前回の取得から 6 日たっていないので、次の週まで待ちます (最後の成功: ${lastSuccessAt.toISOString()})`;
+			}
 			// 新年度がまだ公開されていなければ、前年度を取り込む
 			let notice = '';
 			let result: FetchSyllabusResult | undefined;

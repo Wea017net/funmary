@@ -38,6 +38,7 @@ function setup(
 		stored?: Map<string, Date>;
 		latestYear?: number | null;
 		disabled?: string[];
+		now?: Date;
 	} = {},
 ) {
 	let health = options.health ?? INITIAL_SOURCE_HEALTH;
@@ -81,7 +82,7 @@ function setup(
 	};
 	const context: JobContext = {
 		signal: new AbortController().signal,
-		now: () => NOW,
+		now: () => options.now ?? NOW,
 		log: createLogger({ level: 'error', format: 'text', mode: 'development' }),
 	};
 	return {
@@ -127,10 +128,10 @@ describe('公開シラバスの定期処理', () => {
 		});
 	});
 
-	it('詳細は、未取得の科目と、7 日以上前に取った科目だけ取り直す', async () => {
+	it('詳細は、未取得の科目と、30 日以上前に取った科目だけ取り直す', async () => {
 		const stored = new Map([
-			['fresh', new Date(NOW.getTime() - 2 * DAY)],
-			['stale', new Date(NOW.getTime() - 8 * DAY)],
+			['fresh', new Date(NOW.getTime() - 20 * DAY)],
+			['stale', new Date(NOW.getTime() - 31 * DAY)],
 		]);
 		const t = setup({ stored });
 		await t.job.run(t.context);
@@ -138,6 +139,47 @@ describe('公開シラバスの定期処理', () => {
 		expect(needsDetail(row('fresh'))).toBe(false);
 		expect(needsDetail(row('stale'))).toBe(true);
 		expect(needsDetail(row('new'))).toBe(true);
+	});
+
+	describe('取得の頻度 (#122)', () => {
+		const healthAt = (lastSuccessAt: Date): SourceHealth => ({
+			...INITIAL_SOURCE_HEALTH,
+			lastSuccessAt,
+		});
+		const stored = new Map([['1', new Date(NOW.getTime() - DAY)]]);
+
+		it('前回の成功から 6 日たっていなければ、取りに行かない', async () => {
+			const t = setup({ health: healthAt(new Date(NOW.getTime() - 3 * DAY)), stored });
+			const message = await t.job.run(t.context);
+			expect(t.fetchCatalog).not.toHaveBeenCalled();
+			expect(message).toContain('待ちます');
+		});
+
+		it('前回の成功から 6 日以上たっていれば、取りに行く', async () => {
+			const t = setup({ health: healthAt(new Date(NOW.getTime() - 6 * DAY)), stored });
+			await t.job.run(t.context);
+			expect(t.fetchCatalog).toHaveBeenCalledTimes(1);
+		});
+
+		it('今年度の科目が 1 件もなければ、前回の成功が新しくても取りに行く', async () => {
+			const t = setup({ health: healthAt(new Date(NOW.getTime() - DAY)) });
+			await t.job.run(t.context);
+			expect(t.fetchCatalog).toHaveBeenCalledTimes(1);
+		});
+
+		it('新年度の公開を待つ時期 (3 月 1 日から 4 月 15 日) は、毎日取りに行く', async () => {
+			const march = new Date('2027-03-10T03:00:00Z');
+			const t = setup({ health: healthAt(new Date(march.getTime() - DAY)), stored, now: march });
+			await t.job.run(t.context);
+			expect(t.fetchCatalog).toHaveBeenCalledTimes(1);
+		});
+
+		it('4 月 16 日からは、また週に 1 回にする', async () => {
+			const april = new Date('2027-04-16T03:00:00Z');
+			const t = setup({ health: healthAt(new Date(april.getTime() - DAY)), stored, now: april });
+			await t.job.run(t.context);
+			expect(t.fetchCatalog).not.toHaveBeenCalled();
+		});
 	});
 
 	it('新年度がまだなければ、前年度を取り込む', async () => {
