@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
-	import InstallGuide from '$lib/components/InstallGuide.svelte';
-	import LessonRoom from '$lib/components/LessonRoom.svelte';
-	import StatusBadge from '$lib/components/StatusBadge.svelte';
-	import type { EventView } from '$lib/server/event-view.ts';
-	import type { LessonView } from '$lib/server/lesson-view.ts';
+	import InstallGuide from '#lib/components/InstallGuide.svelte';
+	import LessonRoom from '#lib/components/LessonRoom.svelte';
+	import StatusBadge from '#lib/components/StatusBadge.svelte';
+	import type { EventView } from '#lib/server/event-view.ts';
+	import type { LessonView } from '#lib/server/lesson-view.ts';
 	import type { DayNote } from '@funmary/api';
-	import { formatDate, formatDayNote, formatFetchedAt } from '$lib/timetable-label.ts';
+	import { formatDate, formatDayNote, formatFetchedAt } from '#lib/timetable-label.ts';
 	import IconCalendar from '~icons/material-symbols/calendar-add-on-outline';
 	import IconInfo from '~icons/material-symbols/info-outline';
 	import IconWarning from '~icons/material-symbols/warning-outline';
@@ -62,7 +62,7 @@
 			<p>この先 2 週間に授業はありません。</p>
 		{:else}
 			<p>履修科目を登録すると、ここに次の授業の時刻と教室が出ます。</p>
-			<p><a href={resolve('/app/courses')}>履修科目を登録する</a></p>
+			<p><a href={resolve('app/courses')}>履修科目を登録する</a></p>
 		{/if}
 	</section>
 
@@ -123,7 +123,7 @@
 	{/if}
 
 	{#if today.suggestCalendar}
-		<a class="suggest" href={resolve('/app/settings/calendar')}>
+		<a class="suggest" href={resolve('app/settings/calendar')}>
 			<IconCalendar aria-hidden="true" class="icon" />
 			<span>
 				<span class="suggest-title">授業をカレンダーに入れる</span>

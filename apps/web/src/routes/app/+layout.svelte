@@ -2,13 +2,13 @@
 	import type { Snippet } from 'svelte';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
-	import AboutApp, { type About } from '$lib/components/AboutApp.svelte';
-	import BrandLogo from '$lib/components/BrandLogo.svelte';
-	import FooterLinks from '$lib/components/FooterLinks.svelte';
-	import MaskedEmail from '$lib/components/MaskedEmail.svelte';
-	import NotificationBell from '$lib/components/NotificationBell.svelte';
-	import ThemeToggle from '$lib/components/ThemeToggle.svelte';
-	import type { ThemePreference } from '$lib/theme.ts';
+	import AboutApp, { type About } from '#lib/components/AboutApp.svelte';
+	import BrandLogo from '#lib/components/BrandLogo.svelte';
+	import FooterLinks from '#lib/components/FooterLinks.svelte';
+	import MaskedEmail from '#lib/components/MaskedEmail.svelte';
+	import NotificationBell from '#lib/components/NotificationBell.svelte';
+	import ThemeToggle from '#lib/components/ThemeToggle.svelte';
+	import type { ThemePreference } from '#lib/theme.ts';
 	import IconCourses from '~icons/material-symbols/menu-book-outline';
 	import IconHome from '~icons/material-symbols/home-outline';
 	import IconSettings from '~icons/material-symbols/settings-outline';
@@ -50,19 +50,19 @@
 	// 管理は設定の中にあるので、管理の画面を開いているときも設定を選んだ状態にする
 	const items = $derived([
 		{
-			href: resolve('/app'),
+			href: resolve('app'),
 			label: 'ホーム',
 			icon: IconHome,
 			current: page.url.pathname === '/app',
 		},
 		{
-			href: resolve('/app/week'),
+			href: resolve('app/week'),
 			label: '時間割',
 			icon: IconWeek,
 			current: page.url.pathname.startsWith('/app/week'),
 		},
 		{
-			href: resolve('/app/courses'),
+			href: resolve('app/courses'),
 			label: '科目',
 			icon: IconCourses,
 			current:
@@ -70,7 +70,7 @@
 				page.url.pathname.startsWith('/app/subjects'),
 		},
 		{
-			href: resolve('/app/settings'),
+			href: resolve('app/settings'),
 			label: '設定',
 			icon: IconSettings,
 			current:
@@ -100,7 +100,7 @@
 
 <div class="shell">
 	<header class="top" class:hidden={headerHidden}>
-		<a class="brand" href={resolve('/app')}><BrandLogo height="1.75rem" /></a>
+		<a class="brand" href={resolve('app')}><BrandLogo height="1.75rem" /></a>
 		<div class="top-actions">
 			<NotificationBell unread={data.unreadNotifications} compact />
 			<ThemeToggle initial={data.theme} compact />
@@ -108,7 +108,7 @@
 	</header>
 
 	<nav class="side" aria-label="メニュー">
-		<a class="brand" href={resolve('/app')}><BrandLogo height="1.75rem" /></a>
+		<a class="brand" href={resolve('app')}><BrandLogo height="1.75rem" /></a>
 		{@render navItems('side-items')}
 		<div class="account">
 			<div class="email"><MaskedEmail email={data.user.email} /></div>

@@ -1,6 +1,6 @@
 // アプリの画面 (/app の下) は、ログインしている人だけが使う
 import { redirect, type ServerLoad } from '@sveltejs/kit';
-import { getServices } from '$lib/server/services.ts';
+import { getServices } from '#lib/server/services.ts';
 
 export const load: ServerLoad = ({ locals }) => {
 	if (!locals.user) redirect(303, '/login');

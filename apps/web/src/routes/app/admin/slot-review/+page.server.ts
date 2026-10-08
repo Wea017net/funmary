@@ -2,16 +2,16 @@
 // 確認待ちの一覧はモデレーターと管理者が見られるが、設定そのもの (だれでも/確認して/だれも) は管理者だけが変えられる。
 import { fail, type Actions, type ServerLoad } from '@sveltejs/kit';
 import { jstDateTime } from '@funmary/core';
-import { requireAdmin, requireModerator } from '$lib/server/admin.ts';
-import { getServices } from '$lib/server/services.ts';
+import { requireAdmin, requireModerator } from '#lib/server/admin.ts';
+import { getServices } from '#lib/server/services.ts';
 import {
 	readSlotSharingMode,
 	saveSlotSharingMode,
 	SLOT_SHARING_MODE_LABELS,
 	SLOT_SHARING_MODES,
 	type SlotSharingMode,
-} from '$lib/server/slot-permission.ts';
-import { subjectPathParams } from '$lib/subject-path.ts';
+} from '#lib/server/slot-permission.ts';
+import { subjectPathParams } from '#lib/subject-path.ts';
 
 export const load: ServerLoad = ({ locals }) => {
 	const user = requireModerator(locals);

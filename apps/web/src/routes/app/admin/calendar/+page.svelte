@@ -2,12 +2,12 @@
 	import Button, { Label } from '@smui/button';
 	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
-	import { confirmSubmit } from '$lib/actions/confirm-submit.ts';
-	import FormNotice from '$lib/components/FormNotice.svelte';
-	import YearCalendar from '$lib/components/YearCalendar.svelte';
-	import { formatTerm, WEEKDAY_LABELS } from '$lib/term-label.ts';
-	import { formatDate } from '$lib/timetable-label.ts';
-	import SettingsBreadcrumb from '$lib/components/SettingsBreadcrumb.svelte';
+	import { confirmSubmit } from '#lib/actions/confirm-submit.ts';
+	import FormNotice from '#lib/components/FormNotice.svelte';
+	import YearCalendar from '#lib/components/YearCalendar.svelte';
+	import { formatTerm, WEEKDAY_LABELS } from '#lib/term-label.ts';
+	import { formatDate } from '#lib/timetable-label.ts';
+	import SettingsBreadcrumb from '#lib/components/SettingsBreadcrumb.svelte';
 
 	type Source = 'manual' | 'auto' | 'estimated';
 
@@ -65,8 +65,7 @@
 
 	const weekdayName = (weekday: number) =>
 		WEEKDAY_LABELS.find((day) => day.weekday === weekday)?.label ?? '?';
-
-	const yearUrl = (year: number) => `${resolve('/app/admin/calendar')}?year=${year}`;
+	const yearUrl = (year: number) => `${resolve('app/admin/calendar')}?year=${year}`;
 </script>
 
 <svelte:head>
@@ -177,7 +176,7 @@
 				<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- resolve した /admin/calendar に、年度と処理を足している -->
 				<form
 					method="POST"
-					action="{resolve('/app/admin/calendar')}?year={pdf.academicYear}&/applyPdf"
+					action="{resolve('app/admin/calendar')}?year={pdf.academicYear}&/applyPdf"
 					class="apply"
 				>
 					<input type="hidden" name="id" value={pdf.id} />

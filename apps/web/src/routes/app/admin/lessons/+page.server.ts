@@ -3,11 +3,11 @@
 // 紐付けたら、その名前の休講などにもすぐ科目を入れる。次の取得からは、定期処理が紐付けを先に使う。
 import { fail, type Actions, type ServerLoad } from '@sveltejs/kit';
 import { jstDateTime, rankCandidates } from '@funmary/core';
-import { requireAdmin } from '$lib/server/admin.ts';
-import { getServices } from '$lib/server/services.ts';
-import { findSameName, parseUserSubjectForm } from '$lib/server/user-subject.ts';
-import { subjectPathParams } from '$lib/subject-path.ts';
-import { formatTerm } from '$lib/term-label.ts';
+import { requireAdmin } from '#lib/server/admin.ts';
+import { getServices } from '#lib/server/services.ts';
+import { findSameName, parseUserSubjectForm } from '#lib/server/user-subject.ts';
+import { subjectPathParams } from '#lib/subject-path.ts';
+import { formatTerm } from '#lib/term-label.ts';
 
 /** 名前ごとに出す候補の数 */
 const CANDIDATES = 5;

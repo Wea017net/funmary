@@ -1,9 +1,9 @@
 // 利用者が全体に影響する操作をしたときの記録 (設計書、監査ログ)。見るだけの画面で、ここから何も変えない。
 import type { ServerLoad } from '@sveltejs/kit';
 import { jstDateTime } from '@funmary/core';
-import { requireModerator } from '$lib/server/admin.ts';
-import { getServices } from '$lib/server/services.ts';
-import { subjectPathParams, type SubjectPathParams } from '$lib/subject-path.ts';
+import { requireModerator } from '#lib/server/admin.ts';
+import { getServices } from '#lib/server/services.ts';
+import { subjectPathParams, type SubjectPathParams } from '#lib/subject-path.ts';
 
 /** 出す件数 */
 const ENTRIES = 200;

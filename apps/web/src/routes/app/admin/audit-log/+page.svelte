@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
-	import SettingsBreadcrumb from '$lib/components/SettingsBreadcrumb.svelte';
-	import type { SubjectPathParams } from '$lib/subject-path.ts';
+	import SettingsBreadcrumb from '#lib/components/SettingsBreadcrumb.svelte';
+	import type { SubjectPathParams } from '#lib/subject-path.ts';
 
 	interface EntryRow {
 		id: number;

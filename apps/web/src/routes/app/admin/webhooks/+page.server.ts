@@ -1,8 +1,8 @@
 // 利用者が登録できる Webhook の個数の上限 (設計書 14.3.1)。下げても、登録済みの Webhook は消さない
 import { fail, type Actions, type ServerLoad } from '@sveltejs/kit';
-import { requireAdmin } from '$lib/server/admin.ts';
-import { getServices } from '$lib/server/services.ts';
-import { MAX_WEBHOOK_LIMIT, parseWebhookLimit } from '$lib/server/webhook-limit.ts';
+import { requireAdmin } from '#lib/server/admin.ts';
+import { getServices } from '#lib/server/services.ts';
+import { MAX_WEBHOOK_LIMIT, parseWebhookLimit } from '#lib/server/webhook-limit.ts';
 
 export const load: ServerLoad = ({ locals }) => {
 	requireAdmin(locals);

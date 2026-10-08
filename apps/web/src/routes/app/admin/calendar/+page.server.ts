@@ -12,10 +12,10 @@ import { parseAcademicCalendarPdf } from '@funmary/sources/academic-calendar-pdf
 import {
 	importAcademicCalendar,
 	type ParsedAcademicCalendar,
-} from '$lib/server/academic-calendar-import.ts';
-import { requireAdmin } from '$lib/server/admin.ts';
-import { createPendingImports } from '$lib/server/pending-imports.ts';
-import { readPdfUpload } from '$lib/server/pdf-upload.ts';
+} from '#lib/server/academic-calendar-import.ts';
+import { requireAdmin } from '#lib/server/admin.ts';
+import { createPendingImports } from '#lib/server/pending-imports.ts';
+import { readPdfUpload } from '#lib/server/pdf-upload.ts';
 import {
 	academicYearRange,
 	parseAcademicYear,
@@ -25,8 +25,8 @@ import {
 	parseTermEdgeForm,
 	parseTermForm,
 	parseTermKey,
-} from '$lib/server/calendar-form.ts';
-import { getServices } from '$lib/server/services.ts';
+} from '#lib/server/calendar-form.ts';
+import { getServices } from '#lib/server/services.ts';
 
 /** PDF を読んでから取り込むまでに、管理者が内容を確かめる時間 */
 const pending = createPendingImports<ParsedAcademicCalendar>({ ttlMs: 30 * 60 * 1000 });

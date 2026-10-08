@@ -2,11 +2,11 @@
 	import Button, { Label } from '@smui/button';
 	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
-	import { confirmSubmit } from '$lib/actions/confirm-submit.ts';
-	import FormNotice from '$lib/components/FormNotice.svelte';
-	import SettingsBreadcrumb from '$lib/components/SettingsBreadcrumb.svelte';
-	import type { SubjectPathParams } from '$lib/subject-path.ts';
-	import { formatSlot } from '$lib/term-label.ts';
+	import { confirmSubmit } from '#lib/actions/confirm-submit.ts';
+	import FormNotice from '#lib/components/FormNotice.svelte';
+	import SettingsBreadcrumb from '#lib/components/SettingsBreadcrumb.svelte';
+	import type { SubjectPathParams } from '#lib/subject-path.ts';
+	import { formatSlot } from '#lib/term-label.ts';
 
 	interface PendingRow {
 		id: number;

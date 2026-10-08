@@ -2,16 +2,16 @@
 // 管理者が確かめてから、科目ごとに共有する枠に取り込む。既にある枠は上書きしない。
 import { fail, type Actions, type ServerLoad } from '@sveltejs/kit';
 import { parseTimetablePdf } from '@funmary/sources/timetable-pdf';
-import { requireAdmin } from '$lib/server/admin.ts';
-import { createPendingImports } from '$lib/server/pending-imports.ts';
-import { readPdfUpload } from '$lib/server/pdf-upload.ts';
-import { getServices } from '$lib/server/services.ts';
+import { requireAdmin } from '#lib/server/admin.ts';
+import { createPendingImports } from '#lib/server/pending-imports.ts';
+import { readPdfUpload } from '#lib/server/pdf-upload.ts';
+import { getServices } from '#lib/server/services.ts';
 import {
 	importTimetable,
 	type ParsedTimetable,
 	type TimetableImportReport,
-} from '$lib/server/timetable-import.ts';
-import { toTimetableImportView } from '$lib/server/timetable-import-view.ts';
+} from '#lib/server/timetable-import.ts';
+import { toTimetableImportView } from '#lib/server/timetable-import-view.ts';
 
 interface Pending {
 	readonly parsed: ParsedTimetable;

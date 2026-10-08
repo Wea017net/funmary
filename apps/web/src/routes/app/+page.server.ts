@@ -3,9 +3,9 @@ import { redirect, type ServerLoad } from '@sveltejs/kit';
 import { buildUserTimetable } from '@funmary/api';
 import { DEFAULT_PERIODS, addDays, findNextLesson, isStale, jstDateTime } from '@funmary/core';
 import { PORTAL_SOURCE } from '@funmary/jobs';
-import { getServices } from '$lib/server/services.ts';
-import { eventsOnDate } from '$lib/server/event-view.ts';
-import { toLessonView } from '$lib/server/lesson-view.ts';
+import { getServices } from '#lib/server/services.ts';
+import { eventsOnDate } from '#lib/server/event-view.ts';
+import { toLessonView } from '#lib/server/lesson-view.ts';
 
 /** 次の授業を探す日数。長い休みの間は見つからなくてよい */
 const LOOKAHEAD_DAYS = 14;

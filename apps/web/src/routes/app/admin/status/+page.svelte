@@ -1,11 +1,11 @@
 <script lang="ts">
 	import Button, { Label } from '@smui/button';
 	import { enhance } from '$app/forms';
-	import type { ResponseTimeSummary } from '$lib/server/response-times.ts';
-	import type { SourceStatusRow } from '$lib/server/source-status.ts';
-	import { SOURCE_STATE_LABELS } from '$lib/source-label.ts';
-	import FormNotice from '$lib/components/FormNotice.svelte';
-	import SettingsBreadcrumb from '$lib/components/SettingsBreadcrumb.svelte';
+	import type { ResponseTimeSummary } from '#lib/server/response-times.ts';
+	import type { SourceStatusRow } from '#lib/server/source-status.ts';
+	import { SOURCE_STATE_LABELS } from '#lib/source-label.ts';
+	import FormNotice from '#lib/components/FormNotice.svelte';
+	import SettingsBreadcrumb from '#lib/components/SettingsBreadcrumb.svelte';
 
 	interface RunRow {
 		id: number;
