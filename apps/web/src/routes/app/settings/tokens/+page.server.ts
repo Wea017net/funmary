@@ -6,8 +6,8 @@ import {
 	ACCESS_TOKEN_SCOPE_OPTIONS,
 	parseAccessTokenId,
 	parseAccessTokenIssue,
-} from '$lib/server/access-token-form.ts';
-import { getServices } from '$lib/server/services.ts';
+} from '#lib/server/access-token-form.ts';
+import { getServices } from '#lib/server/services.ts';
 
 export const load: ServerLoad = ({ locals }) => {
 	if (!locals.user) redirect(303, '/login');

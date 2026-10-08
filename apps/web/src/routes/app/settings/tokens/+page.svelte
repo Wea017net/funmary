@@ -1,11 +1,11 @@
 <script lang="ts">
 	import Button, { Label } from '@smui/button';
 	import { enhance } from '$app/forms';
-	import { confirmSubmit } from '$lib/actions/confirm-submit.ts';
-	import CopyField from '$lib/components/CopyField.svelte';
-	import FormNotice from '$lib/components/FormNotice.svelte';
-	import SettingsBreadcrumb from '$lib/components/SettingsBreadcrumb.svelte';
-	import { createCopyState } from '$lib/clipboard.svelte.ts';
+	import { confirmSubmit } from '#lib/actions/confirm-submit.ts';
+	import CopyField from '#lib/components/CopyField.svelte';
+	import FormNotice from '#lib/components/FormNotice.svelte';
+	import SettingsBreadcrumb from '#lib/components/SettingsBreadcrumb.svelte';
+	import { createCopyState } from '#lib/clipboard.svelte.ts';
 
 	let {
 		data,

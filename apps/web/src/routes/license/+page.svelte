@@ -1,5 +1,5 @@
 <script lang="ts">
-	import SettingsBreadcrumb from '$lib/components/SettingsBreadcrumb.svelte';
+	import SettingsBreadcrumb from '#lib/components/SettingsBreadcrumb.svelte';
 
 	let { data }: { data: { licenses: { file: string; text: string }[] | null } } = $props();
 

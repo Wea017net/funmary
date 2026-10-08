@@ -9,11 +9,11 @@ import {
 	jstDateTime,
 	startOfWeek,
 } from '@funmary/core';
-import { parseDateParam } from '$lib/server/date-param.ts';
-import { eventViewsByDate } from '$lib/server/event-view.ts';
-import { toLessonView, type LessonView } from '$lib/server/lesson-view.ts';
-import { getServices } from '$lib/server/services.ts';
-import { parseWeekView, WEEK_VIEW_COOKIE } from '$lib/week-view.ts';
+import { parseDateParam } from '#lib/server/date-param.ts';
+import { eventViewsByDate } from '#lib/server/event-view.ts';
+import { toLessonView, type LessonView } from '#lib/server/lesson-view.ts';
+import { getServices } from '#lib/server/services.ts';
+import { parseWeekView, WEEK_VIEW_COOKIE } from '#lib/week-view.ts';
 
 export const load: ServerLoad = ({ cookies, locals, url }) => {
 	if (!locals.user) redirect(303, '/login');

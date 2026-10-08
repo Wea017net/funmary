@@ -1,6 +1,6 @@
 <script lang="ts">
-	import SettingsBreadcrumb from '$lib/components/SettingsBreadcrumb.svelte';
-	import { REPOSITORY_URL } from '$lib/repository.ts';
+	import SettingsBreadcrumb from '#lib/components/SettingsBreadcrumb.svelte';
+	import { REPOSITORY_URL } from '#lib/repository.ts';
 
 	let {
 		data,

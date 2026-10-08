@@ -2,10 +2,10 @@
 	import Button, { Label } from '@smui/button';
 	import { enhance } from '$app/forms';
 	import { DEFAULT_PERIODS, TERMS } from '@funmary/core';
-	import FormNotice from '$lib/components/FormNotice.svelte';
-	import StatusBadge from '$lib/components/StatusBadge.svelte';
+	import FormNotice from '#lib/components/FormNotice.svelte';
+	import StatusBadge from '#lib/components/StatusBadge.svelte';
 	import { resolve } from '$app/paths';
-	import { formatSlot, formatTerm, WEEKDAY_LABELS } from '$lib/term-label.ts';
+	import { formatSlot, formatTerm, WEEKDAY_LABELS } from '#lib/term-label.ts';
 
 	interface SubjectView {
 		academicYear: number;
@@ -69,7 +69,7 @@
 </svelte:head>
 
 <div class="page">
-	<p><a href={resolve('/app/courses')}>科目</a></p>
+	<p><a href={resolve('app/courses')}>科目</a></p>
 	<h1>{data.subject.name}</h1>
 	{#if data.subject.userAdded}
 		<p class="note">

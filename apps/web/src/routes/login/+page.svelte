@@ -1,8 +1,8 @@
 <script lang="ts">
 	import Button, { Label } from '@smui/button';
 	import { page } from '$app/state';
-	import FormNotice from '$lib/components/FormNotice.svelte';
-	import { loginErrorMessage } from '$lib/login-error.ts';
+	import FormNotice from '#lib/components/FormNotice.svelte';
+	import { loginErrorMessage } from '#lib/login-error.ts';
 
 	const message = $derived(loginErrorMessage(page.url.searchParams.get('error')));
 </script>
