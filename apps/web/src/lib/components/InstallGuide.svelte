@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { isStandalone } from '$lib/standalone.ts';
+	import { isStandalone } from '#lib/standalone.ts';
 
 	/** 折りたたんでいるかどうかを覚える先 (このブラウザだけ) */
 	const STORAGE_KEY = 'funmary:install-guide-open';

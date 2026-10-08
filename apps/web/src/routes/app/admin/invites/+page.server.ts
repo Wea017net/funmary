@@ -1,15 +1,15 @@
 // 招待コードの管理 (設計書 8.2)。発行できる人のモードと月の上限を変え、全員のコードを見て取り消し、
 // 利用者ごとに発行の権限を付ける。発行そのものは /app/settings/invites で行う (管理者も同じ画面を使う)。
 import { fail, type Actions, type ServerLoad } from '@sveltejs/kit';
-import { requireAdmin } from '$lib/server/admin.ts';
-import { parseInviteSettingsForm } from '$lib/server/invite-form.ts';
+import { requireAdmin } from '#lib/server/admin.ts';
+import { parseInviteSettingsForm } from '#lib/server/invite-form.ts';
 import {
 	readInviteSettings,
 	revokeInvite,
 	saveInviteSettings,
 	usableInviteCodes,
-} from '$lib/server/invites.ts';
-import { getServices } from '$lib/server/services.ts';
+} from '#lib/server/invites.ts';
+import { getServices } from '#lib/server/services.ts';
 
 export const load: ServerLoad = ({ locals }) => {
 	requireAdmin(locals);

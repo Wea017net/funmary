@@ -1,7 +1,7 @@
 /// <reference types="unplugin-icons/types/svelte" />
 // SvelteKit の型の拡張。https://svelte.dev/docs/kit/types#app.d.ts
 import type { AuthUser } from '@funmary/db';
-import type { ThemePreference } from '$lib/theme.ts';
+import type { ThemePreference } from '#lib/theme.ts';
 
 declare global {
 	namespace App {

@@ -1,8 +1,8 @@
 <script lang="ts">
 	import Button, { Label } from '@smui/button';
 	import { resolve } from '$app/paths';
-	import FormNotice from '$lib/components/FormNotice.svelte';
-	import type { EventSummary } from '$lib/server/event-summary.ts';
+	import FormNotice from '#lib/components/FormNotice.svelte';
+	import type { EventSummary } from '#lib/server/event-summary.ts';
 
 	let {
 		data,
@@ -21,7 +21,7 @@
 </svelte:head>
 
 <div class="page">
-	<p><a href={resolve('/app/week')}>時間割</a></p>
+	<p><a href={resolve('app/week')}>時間割</a></p>
 	<h1>自分の予定</h1>
 	<p>
 		サークル、課外活動、合宿など、授業のほかの予定を足します。足した予定は、今日と週の画面に出ます。初めは、あなただけに見えます。公開すると、ほかの人が自分の時間割に加えられます。
@@ -30,12 +30,11 @@
 	<FormNotice message={data.message} />
 
 	<div class="actions">
-		<Button href={resolve('/app/events/new')} variant="unelevated">
-			<Label>予定を足す</Label>
-		</Button>
-		<Button href={resolve('/app/events/browse')} variant="outlined">
-			<Label>みんなの予定を探す</Label>
-		</Button>
+		<Button href={resolve('app/events/new')} variant="unelevated"><Label>予定を足す</Label></Button>
+
+		<Button href={resolve('app/events/browse')} variant="outlined"
+			><Label>みんなの予定を探す</Label></Button
+		>
 	</div>
 
 	<section aria-labelledby="mine-heading">

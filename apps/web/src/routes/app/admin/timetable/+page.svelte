@@ -2,9 +2,9 @@
 	import Button, { Label } from '@smui/button';
 	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
-	import type { TimetableImportView } from '$lib/server/timetable-import-view.ts';
-	import FormNotice from '$lib/components/FormNotice.svelte';
-	import SettingsBreadcrumb from '$lib/components/SettingsBreadcrumb.svelte';
+	import type { TimetableImportView } from '#lib/server/timetable-import-view.ts';
+	import FormNotice from '#lib/components/FormNotice.svelte';
+	import SettingsBreadcrumb from '#lib/components/SettingsBreadcrumb.svelte';
 
 	let {
 		form,
@@ -71,7 +71,8 @@
 			</ul>
 		</details>
 		<p class="muted">
-			取り込むと記録され、<a href={resolve('/app/admin/lessons')}>照合できなかった授業名</a>
+			取り込むと記録され、
+			<a href={resolve('app/admin/lessons')}>照合できなかった授業名</a>
 			の画面で科目に紐付けられます。紐付けたあとに取り込み直すと、その枠も入ります。
 		</p>
 	{/if}

@@ -3,7 +3,7 @@
 import { buildUserTimetable, type DayNote, type TimetableLesson } from '@funmary/api';
 import { addDays, findPeriod, DEFAULT_PERIODS, jstDateTime, startOfWeek } from '@funmary/core';
 import type { CalendarDate } from '@funmary/core';
-import { formatDate, formatDayNote, STATUS_LABELS } from '$lib/timetable-label.ts';
+import { formatDate, formatDayNote, STATUS_LABELS } from '#lib/timetable-label.ts';
 import { plain } from './daily-digest.ts';
 import type { Services } from './services.ts';
 

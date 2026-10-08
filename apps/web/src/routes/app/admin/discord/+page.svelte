@@ -1,11 +1,11 @@
 <script lang="ts">
 	import Button, { Label } from '@smui/button';
 	import { enhance } from '$app/forms';
-	import FormNotice from '$lib/components/FormNotice.svelte';
-	import SettingsBreadcrumb from '$lib/components/SettingsBreadcrumb.svelte';
-	import type { DiscordAdminView, DiscordRow } from '$lib/server/discord-admin.ts';
-	import type { DiscordJoinRoleSetting } from '$lib/server/discord-join-role.ts';
-	import type { SupportInvite } from '$lib/server/support-invites.ts';
+	import FormNotice from '#lib/components/FormNotice.svelte';
+	import SettingsBreadcrumb from '#lib/components/SettingsBreadcrumb.svelte';
+	import type { DiscordAdminView, DiscordRow } from '#lib/server/discord-admin.ts';
+	import type { DiscordJoinRoleSetting } from '#lib/server/discord-join-role.ts';
+	import type { SupportInvite } from '#lib/server/support-invites.ts';
 
 	let {
 		data,

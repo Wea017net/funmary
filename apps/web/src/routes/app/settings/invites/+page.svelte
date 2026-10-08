@@ -2,12 +2,12 @@
 	import Button, { Label } from '@smui/button';
 	import type { InviteIssuance } from '@funmary/core';
 	import { enhance } from '$app/forms';
-	import { createCopyState } from '$lib/clipboard.svelte.ts';
-	import CopyField from '$lib/components/CopyField.svelte';
-	import FormNotice from '$lib/components/FormNotice.svelte';
-	import InviteCodeList from '$lib/components/InviteCodeList.svelte';
-	import SettingsBreadcrumb from '$lib/components/SettingsBreadcrumb.svelte';
-	import type { InviteCodeView } from '$lib/server/invites.ts';
+	import { createCopyState } from '#lib/clipboard.svelte.ts';
+	import CopyField from '#lib/components/CopyField.svelte';
+	import FormNotice from '#lib/components/FormNotice.svelte';
+	import InviteCodeList from '#lib/components/InviteCodeList.svelte';
+	import SettingsBreadcrumb from '#lib/components/SettingsBreadcrumb.svelte';
+	import type { InviteCodeView } from '#lib/server/invites.ts';
 
 	let {
 		data,

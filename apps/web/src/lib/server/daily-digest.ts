@@ -7,8 +7,8 @@ import {
 	type CalendarDate,
 	type DailyDigestTiming,
 } from '@funmary/core';
-import { formatPeriod } from '$lib/period-label.ts';
-import { formatDate, formatDayNote, STATUS_LABELS } from '$lib/timetable-label.ts';
+import { formatPeriod } from '#lib/period-label.ts';
+import { formatDate, formatDayNote, STATUS_LABELS } from '#lib/timetable-label.ts';
 import type { SendDailyDigestDeps } from '@funmary/jobs';
 import { DiscordApiError, type DiscordBot } from '@funmary/notify';
 import { eventsOnDate, type EventView } from './event-view.ts';

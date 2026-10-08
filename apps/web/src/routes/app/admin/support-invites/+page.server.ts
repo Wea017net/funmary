@@ -2,8 +2,8 @@
 import { fail, type Actions, type ServerLoad } from '@sveltejs/kit';
 import { jstDateTime } from '@funmary/core';
 import { CHANNEL_TYPES, DiscordApiError, type DiscordBot } from '@funmary/notify';
-import { requireAdmin } from '$lib/server/admin.ts';
-import { getServices } from '$lib/server/services.ts';
+import { requireAdmin } from '#lib/server/admin.ts';
+import { getServices } from '#lib/server/services.ts';
 import {
 	SUPPORT_INVITES_KEY,
 	addInvite,
@@ -14,7 +14,7 @@ import {
 	readInvites,
 	updateInvite,
 	type SupportInvite,
-} from '$lib/server/support-invites.ts';
+} from '#lib/server/support-invites.ts';
 
 const formatTime = (iso: string) => {
 	const { date, time } = jstDateTime(new Date(iso));

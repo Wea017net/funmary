@@ -4,13 +4,13 @@
 import { fail, redirect, type Actions, type ServerLoad } from '@sveltejs/kit';
 import { DEFAULT_CHANNEL_KINDS } from '@funmary/db';
 import { generateSigningKey, maskWebhookUrl, type SendOutcome } from '@funmary/notify';
-import { CHANNEL_KIND_OPTIONS } from '$lib/server/channel-kind-form.ts';
-import { getServices } from '$lib/server/services.ts';
+import { CHANNEL_KIND_OPTIONS } from '#lib/server/channel-kind-form.ts';
+import { getServices } from '#lib/server/services.ts';
 import {
 	parseWebhookCreate,
 	parseWebhookId,
 	parseWebhookUpdate,
-} from '$lib/server/webhook-form.ts';
+} from '#lib/server/webhook-form.ts';
 
 /** テスト送信と登録の間隔 */
 const SEND_COOLDOWN_MS = 10 * 1000;

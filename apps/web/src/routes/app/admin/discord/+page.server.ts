@@ -2,20 +2,20 @@
 // Discord に接続するのは、管理者がこの画面で押したときだけ。トークンは画面にも応答にも出さない。
 import { fail, type Actions, type ServerLoad } from '@sveltejs/kit';
 import { ADMIN_CHANNELS, DiscordApiError, ensureLayout, type AdminChannel } from '@funmary/notify';
-import { requireAdmin } from '$lib/server/admin.ts';
+import { requireAdmin } from '#lib/server/admin.ts';
 import {
 	changeMemberRole,
 	replaceEntry,
 	toDiscordView,
 	useBot,
-} from '$lib/server/discord-admin.ts';
+} from '#lib/server/discord-admin.ts';
 import {
 	DISCORD_JOIN_ROLE_KEY,
 	parseDiscordJoinRoleForm,
 	readDiscordJoinRole,
-} from '$lib/server/discord-join-role.ts';
-import { getServices } from '$lib/server/services.ts';
-import { SUPPORT_INVITES_KEY, readInvites } from '$lib/server/support-invites.ts';
+} from '#lib/server/discord-join-role.ts';
+import { getServices } from '#lib/server/services.ts';
+import { SUPPORT_INVITES_KEY, readInvites } from '#lib/server/support-invites.ts';
 
 const NO_BOT =
 	'Bot が設定されていません。環境変数 DISCORD_BOT_TOKEN と DISCORD_GUILD_ID を書いて、再起動してください。';

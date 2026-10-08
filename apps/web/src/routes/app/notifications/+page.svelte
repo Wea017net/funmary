@@ -2,7 +2,7 @@
 	import Button, { Label } from '@smui/button';
 	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
-	import FormNotice from '$lib/components/FormNotice.svelte';
+	import FormNotice from '#lib/components/FormNotice.svelte';
 
 	type Kind = 'cancellation' | 'makeup' | 'roomChange' | 'integration' | 'notice';
 
@@ -56,8 +56,8 @@
 				<li>
 					<a
 						href={filter.kind
-							? `${resolve('/app/notifications')}?kind=${filter.kind}`
-							: resolve('/app/notifications')}
+							? `${resolve('app/notifications')}?kind=${filter.kind}`
+							: resolve('app/notifications')}
 						aria-current={data.kind === filter.kind ? 'page' : undefined}>{filter.label}</a
 					>
 				</li>

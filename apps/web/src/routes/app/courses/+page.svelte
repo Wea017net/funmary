@@ -4,11 +4,11 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
-	import { confirmSubmit } from '$lib/actions/confirm-submit.ts';
-	import FormNotice from '$lib/components/FormNotice.svelte';
+	import { confirmSubmit } from '#lib/actions/confirm-submit.ts';
+	import FormNotice from '#lib/components/FormNotice.svelte';
 	import { DEFAULT_PERIODS, TERMS } from '@funmary/core';
-	import type { SubjectPathParams } from '$lib/subject-path.ts';
-	import { formatSlot, formatTerm, WEEKDAY_LABELS } from '$lib/term-label.ts';
+	import type { SubjectPathParams } from '#lib/subject-path.ts';
+	import { formatSlot, formatTerm, WEEKDAY_LABELS } from '#lib/term-label.ts';
 
 	interface Slot {
 		weekday: number;
@@ -67,10 +67,9 @@
 
 	function selectTab(tab: Tab) {
 		if (tab === activeTab) return;
-		const url = new URL(page.url);
+		const url = new URL(page.url.href);
 		url.searchParams.set('tab', tab);
-		// eslint-disable-next-line svelte/no-navigation-without-resolve -- 今の URL (resolve 済み) に、tab= を足している
-		void goto(url, { replaceState: true, noScroll: true, keepFocus: true });
+		void goto(url, { replace: true, reset: false });
 	}
 
 	/** 左右矢印キーと Home、End で、タブの間を移動して選ぶ (WAI-ARIA のタブの決まり) */
@@ -340,7 +339,7 @@
 
 		<p>
 			学生ポータルの時間割から、まとめて登録することもできます:
-			<a href={resolve('/app/courses/import')}>ポータルの時間割から取り込む</a>
+			<a href={resolve('app/courses/import')}>ポータルの時間割から取り込む</a>
 		</p>
 	{/if}
 </div>

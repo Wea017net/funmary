@@ -1,15 +1,15 @@
 // 招待コードの発行 (設計書 8.2)。発行できる人は、管理画面のモードで決まる。
 // 発行したコードは DB にハッシュだけを保存するので、発行の直後に 1 回だけ画面に出す。
 import { fail, redirect, type Actions, type ServerLoad } from '@sveltejs/kit';
-import { parseInviteForm } from '$lib/server/invite-form.ts';
+import { parseInviteForm } from '#lib/server/invite-form.ts';
 import {
 	formatJstDateTime,
 	issueInvite,
 	loadInviteStatus,
 	revokeInvite,
 	usableInviteCodes,
-} from '$lib/server/invites.ts';
-import { getServices } from '$lib/server/services.ts';
+} from '#lib/server/invites.ts';
+import { getServices } from '#lib/server/services.ts';
 
 export const load: ServerLoad = ({ locals }) => {
 	if (!locals.user) redirect(303, '/login');

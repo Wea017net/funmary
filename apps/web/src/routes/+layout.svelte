@@ -1,14 +1,14 @@
 <script lang="ts">
-	import '$lib/styles/generated/smui.css';
-	import '$lib/styles/base.scss';
+	import '#lib/styles/generated/smui.css';
+	import '#lib/styles/base.scss';
 	import type { Snippet } from 'svelte';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
-	import AboutApp, { type About } from '$lib/components/AboutApp.svelte';
-	import BrandLogo from '$lib/components/BrandLogo.svelte';
-	import FooterLinks from '$lib/components/FooterLinks.svelte';
-	import ThemeToggle from '$lib/components/ThemeToggle.svelte';
-	import type { ThemePreference } from '$lib/theme.ts';
+	import AboutApp, { type About } from '#lib/components/AboutApp.svelte';
+	import BrandLogo from '#lib/components/BrandLogo.svelte';
+	import FooterLinks from '#lib/components/FooterLinks.svelte';
+	import ThemeToggle from '#lib/components/ThemeToggle.svelte';
+	import type { ThemePreference } from '#lib/theme.ts';
 
 	let {
 		data,

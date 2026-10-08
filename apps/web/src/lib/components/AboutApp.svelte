@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { createCopyState } from '$lib/clipboard.svelte.ts';
-	import { isStandalone } from '$lib/standalone.ts';
+	import { createCopyState } from '#lib/clipboard.svelte.ts';
+	import { isStandalone } from '#lib/standalone.ts';
 
 	export interface About {
 		build: { version: string; commit: string; buildNumber: number | null; builtAt: string } | null;

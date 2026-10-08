@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
-	import type { EventSummary } from '$lib/server/event-summary.ts';
+	import type { EventSummary } from '#lib/server/event-summary.ts';
 
 	let { data }: { data: { events: (EventSummary & { subscribed: boolean })[] } } = $props();
 </script>
@@ -11,7 +11,7 @@
 </svelte:head>
 
 <div class="page">
-	<p><a href={resolve('/app/events')}>自分の予定</a></p>
+	<p><a href={resolve('app/events')}>自分の予定</a></p>
 	<h1>みんなの予定</h1>
 	<p>
 		Funmary

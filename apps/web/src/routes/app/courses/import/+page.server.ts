@@ -2,8 +2,8 @@
 // 画面の JavaScript が # 以降をフォームに入れ、利用者がボタンを押したときだけ送る (リンクを開いただけでは取り込まない)。
 import { fail, redirect, type Actions, type ServerLoad } from '@sveltejs/kit';
 import { buildBookmarklet, buildImportScript, decodeImportFragment } from '@funmary/sources';
-import { getServices } from '$lib/server/services.ts';
-import { alertSlotConflicts } from '$lib/server/slot-conflicts.ts';
+import { getServices } from '#lib/server/services.ts';
+import { alertSlotConflicts } from '#lib/server/slot-conflicts.ts';
 
 export const load: ServerLoad = ({ locals }) => {
 	if (!locals.user) redirect(303, '/login');

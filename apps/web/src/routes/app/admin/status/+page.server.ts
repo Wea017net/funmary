@@ -2,10 +2,10 @@
 // 定期処理は、ここから今すぐ動かせる (サーバーの中で動かすので、同じ処理が同時に 2 つ動くことはない)
 import { fail, type Actions, type ServerLoad } from '@sveltejs/kit';
 import { jstDateTime } from '@funmary/core';
-import { requireAdmin } from '$lib/server/admin.ts';
-import { JOB_LABELS } from '$lib/server/jobs.ts';
-import { getServices } from '$lib/server/services.ts';
-import { sourceStatuses } from '$lib/server/source-status.ts';
+import { requireAdmin } from '#lib/server/admin.ts';
+import { JOB_LABELS } from '#lib/server/jobs.ts';
+import { getServices } from '#lib/server/services.ts';
+import { sourceStatuses } from '#lib/server/source-status.ts';
 
 /** 実行履歴を出す件数 */
 const RUNS = 50;

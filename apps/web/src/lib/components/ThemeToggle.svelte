@@ -2,7 +2,7 @@
 	import IconDark from '~icons/material-symbols/dark-mode-outline';
 	import IconLight from '~icons/material-symbols/light-mode-outline';
 	import IconSystem from '~icons/material-symbols/contrast-outline';
-	import { nextThemePreference, THEME_COOKIE, type ThemePreference } from '$lib/theme.ts';
+	import { nextThemePreference, THEME_COOKIE, type ThemePreference } from '#lib/theme.ts';
 
 	// 画面の色を、自動 (端末の設定に従う)、ライト、ダークの順に切り替える。設定は Cookie に置き、次の読み込みではサーバーが反映する
 	let { initial, compact = false }: { initial: ThemePreference; compact?: boolean } = $props();

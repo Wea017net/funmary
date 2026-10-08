@@ -3,9 +3,9 @@
 	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
 	import { TERMS } from '@funmary/core';
-	import { formatTerm } from '$lib/term-label.ts';
-	import FormNotice from '$lib/components/FormNotice.svelte';
-	import SettingsBreadcrumb from '$lib/components/SettingsBreadcrumb.svelte';
+	import { formatTerm } from '#lib/term-label.ts';
+	import FormNotice from '#lib/components/FormNotice.svelte';
+	import SettingsBreadcrumb from '#lib/components/SettingsBreadcrumb.svelte';
 
 	interface Candidate {
 		id: number;

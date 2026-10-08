@@ -6,18 +6,18 @@
 	import IconNext from '~icons/material-symbols/chevron-right';
 	import IconPrevious from '~icons/material-symbols/chevron-left';
 	import IconSubstitute from '~icons/material-symbols/swap-horiz';
-	import LessonRoom from '$lib/components/LessonRoom.svelte';
-	import StatusBadge from '$lib/components/StatusBadge.svelte';
-	import type { EventView } from '$lib/server/event-view.ts';
-	import type { LessonView } from '$lib/server/lesson-view.ts';
+	import LessonRoom from '#lib/components/LessonRoom.svelte';
+	import StatusBadge from '#lib/components/StatusBadge.svelte';
+	import type { EventView } from '#lib/server/event-view.ts';
+	import type { LessonView } from '#lib/server/lesson-view.ts';
 	import type { DayNote } from '@funmary/api';
 	import {
 		formatDate,
 		formatDayNote,
 		formatMonthDay,
 		formatWeekday,
-	} from '$lib/timetable-label.ts';
-	import { WEEK_VIEW_COOKIE, WEEK_VIEWS, type WeekView } from '$lib/week-view.ts';
+	} from '#lib/timetable-label.ts';
+	import { WEEK_VIEW_COOKIE, WEEK_VIEWS, type WeekView } from '#lib/week-view.ts';
 
 	interface Row {
 		period: number;
@@ -44,7 +44,7 @@
 		};
 	} = $props();
 
-	const weekUrl = (date: string) => `${resolve('/app/week')}?date=${date}`;
+	const weekUrl = (date: string) => `${resolve('app/week')}?date=${date}`;
 
 	/** 見せ方の選び方。自動は、狭い画面では 1 日ずつ、広い画面では週を並べる */
 	const VIEW_LABELS: Record<WeekView, { text: string; title: string }> = {
@@ -90,7 +90,6 @@
 	/** 日付を選んだら、その日を含む週に移る */
 	async function pickDate(event: Event & { currentTarget: HTMLInputElement }) {
 		const date = event.currentTarget.value;
-		// eslint-disable-next-line svelte/no-navigation-without-resolve -- resolve した /week に、選んだ日付を足している
 		if (date) await goto(weekUrl(date));
 	}
 
@@ -149,7 +148,7 @@
 			{#if data.isThisWeek}
 				<span class="text-button current" aria-current="date">今週</span>
 			{:else}
-				<a class="text-button" href={resolve('/app/week')}>今週</a>
+				<a class="text-button" href={resolve('app/week')}>今週</a>
 			{/if}
 			<a class="icon-button" href={weekUrl(data.next)} aria-label="次の週" title="次の週">
 				<IconNext aria-hidden="true" />
@@ -176,7 +175,7 @@
 				aria-hidden="true"
 			/>
 		</div>
-		<a class="text-button" href={resolve('/app/events')}>自分の予定</a>
+		<a class="text-button" href={resolve('app/events')}>自分の予定</a>
 		<div class="views" role="group" aria-label="時間割の見せ方">
 			{#each WEEK_VIEWS as option (option)}
 				<button

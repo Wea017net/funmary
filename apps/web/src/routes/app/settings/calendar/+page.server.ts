@@ -1,9 +1,9 @@
 // カレンダーの購読の設定 (設計書 13 章)。購読の URL を発行、再発行、無効にする。
 // URL のトークンは DB にハッシュだけを保存するので、URL と QR コードは発行の直後に 1 回だけ出す。
 import { redirect, type Actions, type ServerLoad } from '@sveltejs/kit';
-import { qrCode, subscriptionLinks } from '$lib/server/calendar-subscription.ts';
-import { formatJstDateTime } from '$lib/server/invites.ts';
-import { getServices } from '$lib/server/services.ts';
+import { qrCode, subscriptionLinks } from '#lib/server/calendar-subscription.ts';
+import { formatJstDateTime } from '#lib/server/invites.ts';
+import { getServices } from '#lib/server/services.ts';
 
 export const load: ServerLoad = ({ locals }) => {
 	if (!locals.user) redirect(303, '/login');

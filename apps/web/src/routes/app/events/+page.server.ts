@@ -1,7 +1,7 @@
 // 自分の予定の一覧 (Issue #144、#145)。自分が足した予定と、ほかの人の予定のうち自分の時間割に加えたもの。
 import { redirect, type ServerLoad } from '@sveltejs/kit';
-import { summarizeEvent } from '$lib/server/event-summary.ts';
-import { getServices } from '$lib/server/services.ts';
+import { summarizeEvent } from '#lib/server/event-summary.ts';
+import { getServices } from '#lib/server/services.ts';
 
 const VISIBILITY_LABELS = { private: '自分だけ', link: '限定公開', public: '全体に公開' } as const;
 

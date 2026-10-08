@@ -1,8 +1,8 @@
 // 予定を足す (Issue #144)。
 import { fail, redirect, type Actions, type ServerLoad } from '@sveltejs/kit';
 import { jstDateTime } from '@funmary/core';
-import { echoFormValues, emptyFormValues, parseEventForm } from '$lib/event-form.ts';
-import { getServices } from '$lib/server/services.ts';
+import { echoFormValues, emptyFormValues, parseEventForm } from '#lib/event-form.ts';
+import { getServices } from '#lib/server/services.ts';
 
 export const load: ServerLoad = ({ locals }) => {
 	if (!locals.user) redirect(303, '/login');

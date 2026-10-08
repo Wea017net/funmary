@@ -1,8 +1,8 @@
 <script lang="ts">
 	import type { Component } from 'svelte';
 	import { resolve } from '$app/paths';
-	import { confirmSubmit } from '$lib/actions/confirm-submit.ts';
-	import type { AdminSummary } from '$lib/server/admin-summary.ts';
+	import { confirmSubmit } from '#lib/actions/confirm-submit.ts';
+	import type { AdminSummary } from '#lib/server/admin-summary.ts';
 	import IconAbout from '~icons/material-symbols/info-outline';
 	import IconAuditLog from '~icons/material-symbols/fact-check-outline';
 	import IconCalendar from '~icons/material-symbols/calendar-add-on-outline';
@@ -46,25 +46,25 @@
 
 	const personal = $derived.by((): Item[] => [
 		{
-			href: resolve('/app/settings/calendar'),
+			href: resolve('app/settings/calendar'),
 			icon: IconCalendar,
 			title: 'カレンダーの購読',
 			description: '授業の予定を、Google カレンダーや iPhone のカレンダーに入れる',
 		},
 		{
-			href: resolve('/app/settings/webhooks'),
+			href: resolve('app/settings/webhooks'),
 			icon: IconDiscord,
 			title: 'Webhook',
 			description: '休講などの通知を、Discord のチャンネルや、自分で用意した URL に届ける',
 		},
 		{
-			href: resolve('/app/settings/feed'),
+			href: resolve('app/settings/feed'),
 			icon: IconFeed,
 			title: 'お知らせのフィード',
 			description: '休講などの通知を、RSS リーダーで受け取る',
 		},
 		{
-			href: resolve('/app/settings/tokens'),
+			href: resolve('app/settings/tokens'),
 			icon: IconKey,
 			title: '公開 API と MCP',
 			description: '自分の AI エージェントやスクリプトから、時間割や休講を読み取り専用で読む',
@@ -72,7 +72,7 @@
 		...(data.discordLinkAvailable
 			? [
 					{
-						href: resolve('/app/settings/discord'),
+						href: resolve('app/settings/discord'),
 						icon: IconDiscord,
 						title: 'Discord連携',
 						description: '休講などの通知を、Discord の非公開スレッドか DM で受け取る',
@@ -82,7 +82,7 @@
 		...(data.canInvite
 			? [
 					{
-						href: resolve('/app/settings/invites'),
+						href: resolve('app/settings/invites'),
 						icon: IconInvite,
 						title: '招待',
 						description: '友だちを招待するコードを発行する',
@@ -96,7 +96,7 @@
 		if (!admin) return [];
 		return [
 			{
-				href: resolve('/app/admin/lessons'),
+				href: resolve('app/admin/lessons'),
 				icon: IconLink,
 				title: '照合できなかった授業名',
 				description:
@@ -106,7 +106,7 @@
 				attention: admin.unresolvedLessons > 0,
 			},
 			{
-				href: resolve('/app/admin/calendar'),
+				href: resolve('app/admin/calendar'),
 				icon: IconSchool,
 				title: '学年暦',
 				description:
@@ -116,49 +116,49 @@
 				attention: admin.estimatedTerms > 0,
 			},
 			{
-				href: resolve('/app/admin/timetable'),
+				href: resolve('app/admin/timetable'),
 				icon: IconUpload,
 				title: '授業時間割の取り込み',
 				description: '大学が配る PDF から、曜日、時限、教室を入れる',
 			},
 			{
-				href: resolve('/app/admin/invites'),
+				href: resolve('app/admin/invites'),
 				icon: IconInvite,
 				title: '招待コード',
 				description: '発行できる人と、発行されたコード',
 			},
 			{
-				href: resolve('/app/admin/status'),
+				href: resolve('app/admin/status'),
 				icon: IconHistory,
 				title: '取得元と実行履歴',
 				description: '学生ポータルなどの取得の状態と、定期処理の記録',
 			},
 			{
-				href: resolve('/app/admin/discord'),
+				href: resolve('app/admin/discord'),
 				icon: IconDiscord,
 				title: 'Discord設定',
 				description: 'Bot のチャンネルとロールを整え、ロールをユーザーに付ける',
 			},
 			{
-				href: resolve('/app/admin/support-invites'),
+				href: resolve('app/admin/support-invites'),
 				icon: IconDiscord,
 				title: 'サポートサーバーの招待',
 				description: 'Discord の招待リンクの発行、登録、公開と取り消し',
 			},
 			{
-				href: resolve('/app/admin/webhooks'),
+				href: resolve('app/admin/webhooks'),
 				icon: IconDiscord,
 				title: 'Webhook の上限',
 				description: '利用者が登録できる Webhook の個数',
 			},
 			{
-				href: resolve('/app/admin/audit-log'),
+				href: resolve('app/admin/audit-log'),
 				icon: IconAuditLog,
 				title: '操作の記録',
 				description: 'シラバスにない授業の公開、情報の変更、削除、授業名の紐づけの記録',
 			},
 			{
-				href: resolve('/app/admin/slot-review'),
+				href: resolve('app/admin/slot-review'),
 				icon: IconSlotReview,
 				title: '曜日と時限の確認',
 				description: 'だれが共有の枠を登録できるかの設定と、確認待ちの一覧',
@@ -168,37 +168,37 @@
 
 	const aboutItems: Item[] = [
 		{
-			href: resolve('/about'),
+			href: resolve('about'),
 			icon: IconAbout,
 			title: 'リポジトリと作者',
 			description: 'ソースコードと、Funmary を作った人へのリンク',
 		},
 		{
-			href: resolve('/license'),
+			href: resolve('license'),
 			icon: IconLicense,
 			title: 'ライセンス',
 			description: 'Funmary 自身のライセンス (BSD-3-Clause または Apache-2.0)',
 		},
 		{
-			href: resolve('/third-party-licenses'),
+			href: resolve('third-party-licenses'),
 			icon: IconThirdParty,
 			title: 'サードパーティライセンス',
 			description: '使っているオープンソースのソフトウェアの一覧',
 		},
 		{
-			href: resolve('/terms'),
+			href: resolve('terms'),
 			icon: IconTerms,
 			title: '利用規約',
 			description: '本サービスを利用するときの条件',
 		},
 		{
-			href: resolve('/privacy'),
+			href: resolve('privacy'),
 			icon: IconPrivacy,
 			title: 'プライバシーポリシー',
 			description: '取得する情報と、その使い方',
 		},
 		{
-			href: resolve('/contributors'),
+			href: resolve('contributors'),
 			icon: IconContributors,
 			title: 'Contributors',
 			description: 'コードを書いてくれた人たち',
@@ -209,13 +209,13 @@
 		if (!data.moderator) return [];
 		return [
 			{
-				href: resolve('/app/admin/audit-log'),
+				href: resolve('app/admin/audit-log'),
 				icon: IconAuditLog,
 				title: '操作の記録',
 				description: 'シラバスにない授業の公開、情報の変更、削除、授業名の紐づけの記録',
 			},
 			{
-				href: resolve('/app/admin/slot-review'),
+				href: resolve('app/admin/slot-review'),
 				icon: IconSlotReview,
 				title: '曜日と時限の確認',
 				description: '確認待ちの提出を承認、または却下する',

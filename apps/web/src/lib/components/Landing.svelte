@@ -6,9 +6,9 @@
 	import IconImport from '~icons/material-symbols/bookmark-add-outline';
 	import IconNotice from '~icons/material-symbols/swap-horiz';
 	import IconToday from '~icons/material-symbols/today-outline';
-	import BrandLogo from '$lib/components/BrandLogo.svelte';
-	import LessonRoom from '$lib/components/LessonRoom.svelte';
-	import StatusBadge from '$lib/components/StatusBadge.svelte';
+	import BrandLogo from '#lib/components/BrandLogo.svelte';
+	import LessonRoom from '#lib/components/LessonRoom.svelte';
+	import StatusBadge from '#lib/components/StatusBadge.svelte';
 	import { resolve } from '$app/paths';
 
 	// 紹介の画面。ログインしているかどうかにかかわらず出す。できることだけを書き、準備中のものは準備中と書く
@@ -66,7 +66,7 @@
 
 			<div class="start">
 				{#if signedIn}
-					<Button href={resolve('/app')} variant="unelevated"><Label>アプリを開く</Label></Button>
+					<Button href={resolve('app')} variant="unelevated"><Label>アプリを開く</Label></Button>
 				{:else}
 					{#if registration === 'closed'}
 						<p class="muted">

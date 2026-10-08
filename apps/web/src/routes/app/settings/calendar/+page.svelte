@@ -2,11 +2,11 @@
 	import Button, { Label } from '@smui/button';
 	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
-	import { confirmSubmit } from '$lib/actions/confirm-submit.ts';
-	import { createCopyState } from '$lib/clipboard.svelte.ts';
-	import CopyField from '$lib/components/CopyField.svelte';
-	import FormNotice from '$lib/components/FormNotice.svelte';
-	import SettingsBreadcrumb from '$lib/components/SettingsBreadcrumb.svelte';
+	import { confirmSubmit } from '#lib/actions/confirm-submit.ts';
+	import { createCopyState } from '#lib/clipboard.svelte.ts';
+	import CopyField from '#lib/components/CopyField.svelte';
+	import FormNotice from '#lib/components/FormNotice.svelte';
+	import SettingsBreadcrumb from '#lib/components/SettingsBreadcrumb.svelte';
 
 	let {
 		data,
@@ -46,9 +46,12 @@
 			載るのは、2
 			週間前から半年先までの授業と、振替授業日、全学の休講日です。履修科目を変えると、カレンダーにも反映されます。
 		</li>
+
 		<li>
 			カレンダーアプリが予定を取りに来る間隔はアプリ次第で、Google カレンダーでは数時間から 1
-			日かかります。当日の休講は、<a href={resolve('/app')}>今日</a> の画面で確かめてください。
+			日かかります。当日の休講は、
+			<a href={resolve('app')}>今日</a>
+			の画面で確かめてください。
 		</li>
 	</ul>
 
@@ -73,12 +76,14 @@
 					<Label>iPhone や Mac のカレンダーに追加</Label>
 				</Button>
 			</div>
+
 			<p class="muted">
 				Google カレンダーのスマホのアプリからは追加できません。PC のブラウザで開くか、下の URL を PC
 				の Google カレンダーの「他のカレンダー」の「URL で追加」に貼ってください。
 			</p>
 
 			<CopyField id="calendar-url" label="購読の URL" value={issued.url} {copyState} />
+
 			<p class="muted" role="status">{copyState.copied ? 'コピーしました。' : ''}</p>
 
 			<div class="qr">
@@ -88,8 +93,9 @@
 					aria-label="購読の URL の QR コード"
 					shape-rendering="crispEdges"
 				>
-					<rect width={issued.qr.size} height={issued.qr.size} fill="#fff" />
-					<path d={issued.qr.path} fill="#000" />
+					<rect width={issued.qr.size} height={issued.qr.size} fill="#fff"></rect>
+
+					<path d={issued.qr.path} fill="#000"></path>
 				</svg>
 				<p class="muted">
 					PC で開いているときは、スマホのカメラでこの QR コードを読むと、スマホで URL を開けます。

@@ -1,8 +1,8 @@
 <script lang="ts">
 	import Button, { Label } from '@smui/button';
 	import { enhance } from '$app/forms';
-	import FormNotice from '$lib/components/FormNotice.svelte';
-	import SettingsBreadcrumb from '$lib/components/SettingsBreadcrumb.svelte';
+	import FormNotice from '#lib/components/FormNotice.svelte';
+	import SettingsBreadcrumb from '#lib/components/SettingsBreadcrumb.svelte';
 
 	interface InviteRow {
 		id: string;

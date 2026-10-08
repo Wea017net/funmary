@@ -3,10 +3,10 @@
 	import type { InviteIssuers, InviteSettings } from '@funmary/core';
 	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
-	import FormNotice from '$lib/components/FormNotice.svelte';
-	import InviteCodeList from '$lib/components/InviteCodeList.svelte';
-	import type { InviteCodeView } from '$lib/server/invites.ts';
-	import SettingsBreadcrumb from '$lib/components/SettingsBreadcrumb.svelte';
+	import FormNotice from '#lib/components/FormNotice.svelte';
+	import InviteCodeList from '#lib/components/InviteCodeList.svelte';
+	import type { InviteCodeView } from '#lib/server/invites.ts';
+	import SettingsBreadcrumb from '#lib/components/SettingsBreadcrumb.svelte';
 
 	let {
 		data,
@@ -52,7 +52,13 @@
 <div class="page">
 	<SettingsBreadcrumb current="招待コードの管理" />
 	<h1>招待コードの管理</h1>
-	<p>招待コードの発行は、<a href={resolve('/app/settings/invites')}>招待</a> の画面で行います。</p>
+
+	<p>
+		招待コードの発行は、
+		<a href={resolve('app/settings/invites')}>招待</a>
+		の画面で行います。
+	</p>
+
 	{#if data.registration !== 'invite'}
 		<p class="muted">
 			いまの登録の方式 (REGISTRATION) は {data.registration} なので、招待コードは登録に使われません。

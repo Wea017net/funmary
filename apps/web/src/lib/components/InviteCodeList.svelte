@@ -1,8 +1,8 @@
 <script lang="ts">
 	import Button, { Label } from '@smui/button';
 	import { enhance } from '$app/forms';
-	import { confirmSubmit } from '$lib/actions/confirm-submit.ts';
-	import type { InviteCodeView } from '$lib/server/invites.ts';
+	import { confirmSubmit } from '#lib/actions/confirm-submit.ts';
+	import type { InviteCodeView } from '#lib/server/invites.ts';
 
 	// まだ使える招待コードの一覧。発行の画面 (自分のコード) と管理画面 (全員のコード) で使う。
 	// 使い切り、期限切れ、取り消し済みのコードは、渡す前に除いてある

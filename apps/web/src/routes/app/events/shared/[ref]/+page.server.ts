@@ -1,8 +1,8 @@
 // ほかの人の予定を見て、自分の時間割に加える、外す (Issue #145)。
 // ref は、限定公開の共有のリンクの値か、全体に公開された予定の番号。開けるかは、ストアが決める。持ち主の情報は出さない。
 import { error, fail, redirect, type Actions, type ServerLoad } from '@sveltejs/kit';
-import { summarizeEvent } from '$lib/server/event-summary.ts';
-import { getServices } from '$lib/server/services.ts';
+import { summarizeEvent } from '#lib/server/event-summary.ts';
+import { getServices } from '#lib/server/services.ts';
 
 export const load: ServerLoad = ({ locals, params }) => {
 	if (!locals.user) redirect(303, '/login');

@@ -4,14 +4,14 @@ import { error, fail, redirect, type Actions, type ServerLoad } from '@sveltejs/
 import { getSubjectDetail, type SubjectDetail } from '@funmary/api';
 import { canEditSubject } from '@funmary/core';
 import type { SubjectVisibility } from '@funmary/db';
-import { describeClassChange } from '$lib/class-change-label.ts';
-import { parseSlotFields } from '$lib/server/course-form.ts';
-import { getServices } from '$lib/server/services.ts';
-import { alertSlotConflicts, alertSlotSubmission } from '$lib/server/slot-conflicts.ts';
-import { readSlotSharingMode } from '$lib/server/slot-permission.ts';
-import { alertSubjectDeleted, alertSubjectVisibilityChanged } from '$lib/server/subject-notify.ts';
-import { findSameName, parseUserSubjectForm } from '$lib/server/user-subject.ts';
-import { parseSubjectPath, subjectPathParams } from '$lib/subject-path.ts';
+import { describeClassChange } from '#lib/class-change-label.ts';
+import { parseSlotFields } from '#lib/server/course-form.ts';
+import { getServices } from '#lib/server/services.ts';
+import { alertSlotConflicts, alertSlotSubmission } from '#lib/server/slot-conflicts.ts';
+import { readSlotSharingMode } from '#lib/server/slot-permission.ts';
+import { alertSubjectDeleted, alertSubjectVisibilityChanged } from '#lib/server/subject-notify.ts';
+import { findSameName, parseUserSubjectForm } from '#lib/server/user-subject.ts';
+import { parseSubjectPath, subjectPathParams } from '#lib/subject-path.ts';
 
 /** 休講などの種類を、時間割の画面と同じ表示 (StatusBadge) にそろえる */
 const CHANGE_STATUS = {

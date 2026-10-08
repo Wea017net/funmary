@@ -2,10 +2,10 @@
 	import Button, { Label } from '@smui/button';
 	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
-	import { confirmSubmit } from '$lib/actions/confirm-submit.ts';
-	import EventForm from '$lib/components/EventForm.svelte';
-	import FormNotice from '$lib/components/FormNotice.svelte';
-	import type { EventFormValues } from '$lib/event-form.ts';
+	import { confirmSubmit } from '#lib/actions/confirm-submit.ts';
+	import EventForm from '#lib/components/EventForm.svelte';
+	import FormNotice from '#lib/components/FormNotice.svelte';
+	import type { EventFormValues } from '#lib/event-form.ts';
 
 	let {
 		data,
@@ -28,7 +28,7 @@
 </svelte:head>
 
 <div class="page">
-	<p><a href={resolve('/app/events')}>自分の予定</a></p>
+	<p><a href={resolve('app/events')}>自分の予定</a></p>
 	<h1>予定を直す</h1>
 	<FormNotice message={form?.message} />
 	<EventForm
