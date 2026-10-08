@@ -42,6 +42,8 @@ Funmary は開発を始めたばかりで、まだ使える機能はありませ
 
 自分の VPS で Funmary を動かす手順は [docs/self-hosting.md](docs/self-hosting.md) にあります。
 
+設計の考え方と、その理由は [docs/design/](docs/design/README.md) にまとめています。
+
 ## 開発に参加する
 
 手元で動かす手順と、コミットメッセージやブランチの決まりは [CONTRIBUTING.md](CONTRIBUTING.md) にあります。AI エージェントで開発するときの指示は [AGENTS.md](AGENTS.md) にあります。
