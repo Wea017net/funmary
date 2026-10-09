@@ -22,6 +22,7 @@ import type {
 	StoredJobRunStore,
 	SourceHealthStore,
 	SubjectStore,
+	SubjectAbbreviationStore,
 	UnmatchedLessonStore,
 	UserEventStore,
 } from '@funmary/db';
@@ -95,6 +96,8 @@ export interface Services {
 	/** 利用者が自分の時間割に足した予定 (持ち主だけが読み書きできる) */
 	readonly userEvents: UserEventStore;
 	readonly subjects: SubjectStore;
+	/** 時間割のセルだけに使う、利用者ごとの科目の略称 */
+	readonly subjectAbbreviations: SubjectAbbreviationStore;
 	/** 予定や科目を、特定のメールアドレスの人にだけ見せる招待 (限定公開、Issue #215) */
 	readonly accessGrants: AccessGrantStore;
 	readonly classChanges: ClassChangeStore;

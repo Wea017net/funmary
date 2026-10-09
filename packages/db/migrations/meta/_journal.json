@@ -148,6 +148,13 @@
       "when": 1791036821432,
       "tag": "0020_familiar_bastion",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "6",
+      "when": 1791513434196,
+      "tag": "0021_next_jane_foster",
+      "breakpoints": true
     }
   ]
 }
