@@ -4,12 +4,15 @@
 	import IconCalendarSync from '~icons/material-symbols/calendar-add-on-outline';
 	import IconDetail from '~icons/material-symbols/menu-book-outline';
 	import IconImport from '~icons/material-symbols/bookmark-add-outline';
+	import IconAi from '~icons/material-symbols/smart-toy-outline';
+	import IconBell from '~icons/material-symbols/notifications-outline';
 	import IconNotice from '~icons/material-symbols/swap-horiz';
 	import IconToday from '~icons/material-symbols/today-outline';
 	import BrandLogo from '#lib/components/BrandLogo.svelte';
 	import LessonRoom from '#lib/components/LessonRoom.svelte';
 	import StatusBadge from '#lib/components/StatusBadge.svelte';
 	import { resolve } from '$app/paths';
+	import { OFFICIAL_ACCOUNTS } from '#lib/official-accounts.ts';
 
 	// 紹介の画面。ログインしているかどうかにかかわらず出す。できることだけを書き、準備中のものは準備中と書く
 	let {
@@ -44,9 +47,19 @@
 			text: 'ブックマークを 1 回押すと、学生ポータルの時間割から履修科目を取り込めます。科目を探して 1 つずつ登録することもできます。',
 		},
 		{
+			icon: IconBell,
+			title: '休講などの知らせを、通知欄、Discord、RSS で',
+			text: '履修している授業の休講、補講、教室変更を、アプリの通知欄に残します。Discord のサーバーやダイレクトメッセージ、Webhook、RSS などのフィードにも届けられます。',
+		},
+		{
 			icon: IconCalendarSync,
 			title: 'ふだん使っているカレンダーにも反映',
 			text: 'Google カレンダーや iPhone のカレンダーに、履修科目の授業と、休講、補講、教室変更を反映します。',
+		},
+		{
+			icon: IconAi,
+			title: '自分の AI や、スクリプトからも使える',
+			text: '公開 API と MCP サーバーで、自分の時間割と休講を、AI エージェントやスクリプトから読めます。Discord では、/today、/week、/changes で答えます。',
 		},
 	];
 </script>
@@ -150,7 +163,9 @@
 				</li>
 			{/each}
 		</ul>
-		<p class="soon">準備中: Discord への休講などの通知、AI から使える公開 API と MCP サーバー。</p>
+		<p class="soon">
+			準備中: ブラウザのプッシュ通知、授業前のリマインダー、欠席の記録、時間割の共有。
+		</p>
 	</section>
 
 	<section aria-labelledby="trust-heading">
@@ -169,6 +184,18 @@
 				は公立はこだて未来大学の公式のアプリではありません。休講などは、大学の案内もあわせて確かめてください。
 			</li>
 		</ul>
+	</section>
+
+	<section aria-labelledby="news-heading">
+		<h2 id="news-heading">お知らせ</h2>
+		<p class="news">
+			新しい機能や、開発の様子は、公式のアカウントでお知らせしています:
+			{#each OFFICIAL_ACCOUNTS as account, index (account.url)}
+				{#if index > 0}、{/if}
+				<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- 外部サイトへのリンク -->
+				<a href={account.url} target="_blank" rel="noopener noreferrer">{account.label}</a>
+			{/each}
+		</p>
 	</section>
 </div>
 
@@ -418,6 +445,11 @@
 		width: 1.75rem;
 		height: 1.75rem;
 		color: var(--fm-primary);
+	}
+
+	.news {
+		margin: 0;
+		color: var(--fm-text-muted);
 	}
 
 	.soon {
