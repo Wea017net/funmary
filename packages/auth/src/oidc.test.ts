@@ -158,3 +158,11 @@ describe('http の issuer', () => {
 		await expect(insecure.createAuthorization()).rejects.toThrow();
 	});
 });
+
+describe('createAuthorization の hd', () => {
+	it('テストアカウントの入口では、大学のドメインの絞り込み (hd) を付けない', async () => {
+		const auth = await oidc.createAuthorization({ hostedDomainHint: false });
+
+		expect(new URL(auth.url).searchParams.has('hd')).toBe(false);
+	});
+});

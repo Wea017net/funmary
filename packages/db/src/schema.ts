@@ -59,6 +59,24 @@ export const termsAcceptances = sqliteTable(
 	(table) => [primaryKey({ columns: [table.userId, table.version] })],
 );
 
+/**
+ * 管理者が用意するテストアカウント。大学のアカウントでない Google のアカウント (メールアドレス) で、
+ * ログインして試せるようにする。管理者ごとに持ち、データは引き継がない (必要なときだけ、管理者のデータを写す)
+ */
+export const testAccounts = sqliteTable(
+	'test_accounts',
+	{
+		id: integer('id').primaryKey({ autoIncrement: true }),
+		ownerId: text('owner_id')
+			.notNull()
+			.references(() => users.id, { onDelete: 'cascade' }),
+		/** 小文字にそろえて保存する。全体で 1 つだけ */
+		email: text('email').notNull().unique(),
+		createdAt: createdAt(),
+	},
+	(table) => [index('test_accounts_owner').on(table.ownerId)],
+);
+
 export const sessions = sqliteTable(
 	'sessions',
 	{

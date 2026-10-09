@@ -25,4 +25,9 @@
 			<Label>Google でログイン</Label>
 		</Button>
 	</p>
+	<p class="muted">
+		管理者が用意したテストアカウントの方は、<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- /auth は、サーバーが処理する -->
+		<a href="/auth/google/test" data-sveltekit-reload>テストアカウントでログイン</a>
+		から入ります。
+	</p>
 </div>

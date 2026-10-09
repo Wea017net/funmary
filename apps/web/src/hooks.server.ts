@@ -15,6 +15,7 @@ import {
 	createAccessGrantStore,
 	createAccessTokenStore,
 	createAccountStore,
+	createTestAccountStore,
 	createAuditLogStore,
 	createAuthStore,
 	createChannelStore,
@@ -265,6 +266,7 @@ export const init: ServerInit = () => {
 	const store = createAuthStore(database);
 	authStore = store;
 	const accessTokenStore = createAccessTokenStore(database);
+	const testAccountStore = createTestAccountStore(database);
 	const oauthStore = createOAuthStore(database, accessTokenStore);
 	const services = {
 		auth: store,
@@ -341,6 +343,8 @@ export const init: ServerInit = () => {
 		accessTokens: accessTokenStore,
 		oauth: oauthStore,
 		account: createAccountStore(database),
+		testAccounts: testAccountStore,
+		universityDomains: result.config.allowedEmailDomains,
 		// リリースでは、tar.gz に同梱した build-info.json を、上の階層へたどって探す
 		build: findBuildInfo(dirname(fileURLToPath(import.meta.url))),
 		// ビルドでは、scripts/copy-legal.js が写した legal/ を、上の階層へたどって探す
@@ -361,6 +365,7 @@ export const init: ServerInit = () => {
 		allowedDomains: result.config.allowedEmailDomains,
 		registration: result.config.registration,
 		adminEmails: result.config.adminEmails,
+		isTestAccount: (email) => testAccountStore.isTestAccount(email),
 	});
 	const apiLog = logger.withTag('api');
 	api = createApi({

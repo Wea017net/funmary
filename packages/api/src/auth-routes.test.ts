@@ -277,3 +277,32 @@ describe('POST /auth/logout', () => {
 		expect(res.status).toBe(404);
 	});
 });
+
+describe('GET /auth/google/test', () => {
+	it('テストアカウントの入口。hd の絞り込みなしで、Google に進む', async () => {
+		const startLogin = vi.fn(() =>
+			Promise.resolve({
+				redirectTo: 'https://accounts.example/auth?x=1',
+				flow: flowNow(),
+			}),
+		);
+		const api = createApi({
+			checkHealth: () => true,
+			auth: {
+				service: {
+					startLogin,
+					checkInviteCode: () => ({ kind: 'valid' }),
+					completeLogin: () => Promise.reject(new Error('使わない')),
+				},
+				deleteSession: () => undefined,
+				flowKey: KEY,
+				origin: ORIGIN,
+			},
+		});
+
+		const res = await api.request('/auth/google/test');
+
+		expect(res.status).toBe(302);
+		expect(startLogin).toHaveBeenCalledWith({ inviteCode: null, testAccount: true });
+	});
+});

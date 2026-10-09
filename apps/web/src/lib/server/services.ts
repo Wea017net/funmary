@@ -5,6 +5,7 @@ import type {
 	AccessGrantStore,
 	AccessTokenStore,
 	AccountStore,
+	TestAccountStore,
 	AuditLogStore,
 	AuthStore,
 	ChannelStore,
@@ -125,6 +126,10 @@ export interface Services {
 	readonly accessTokens: AccessTokenStore;
 	/** アカウントのデータの書き出しと、退会 */
 	readonly account: AccountStore;
+	/** 管理者が用意するテストアカウント (大学のアカウントでなくても、ログインして試せる) */
+	readonly testAccounts: TestAccountStore;
+	/** 大学のアカウントとして許すメールのドメイン (テストアカウントには使えない) */
+	readonly universityDomains: readonly string[];
 	/** MCP の認可 (OAuth 2.1)。同意の画面が、クライアントの確認と認可コードの発行に使う */
 	readonly oauth: OAuthStore;
 	/** 新規登録の方式。紹介の画面の案内に使う */

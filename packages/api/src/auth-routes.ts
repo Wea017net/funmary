@@ -63,8 +63,8 @@ export function createAuthRoutes(deps: AuthRoutesDeps): Hono {
 	const flowCookie = secure ? '__Secure-funmary_login' : 'funmary_login';
 	const sessionName = sessionCookieName(deps.origin);
 
-	const goToGoogle = async (c: Context, inviteCode: string | null) => {
-		const { redirectTo, flow } = await deps.service.startLogin({ inviteCode });
+	const goToGoogle = async (c: Context, inviteCode: string | null, testAccount = false) => {
+		const { redirectTo, flow } = await deps.service.startLogin({ inviteCode, testAccount });
 		// Google から戻るときは別のサイトからの移動なので、SameSite は Lax にする (Strict だと Cookie が届かない)
 		setCookie(c, flowCookie, sealFlow(flow, deps.flowKey), {
 			httpOnly: true,
@@ -78,6 +78,9 @@ export function createAuthRoutes(deps: AuthRoutesDeps): Hono {
 	};
 
 	app.get('/auth/google', (c) => goToGoogle(c, null));
+	// 管理者が用意したテストアカウント (大学のアカウントでない Google のアカウント) の入口。
+	// ここから進んでも、テストアカウントでなければ、コールバックで断られる
+	app.get('/auth/google/test', (c) => goToGoogle(c, null, true));
 
 	// 招待コードがあるときの入口。Google に進む前に、コードを確かめる
 	app.get('/signup', (c) => {
