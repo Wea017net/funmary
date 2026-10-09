@@ -129,6 +129,12 @@
 				description: '発行できる人と、発行されたコード',
 			},
 			{
+				href: resolve('app/admin/test-accounts'),
+				icon: IconAccount,
+				title: 'テストアカウント',
+				description: '大学のアカウントでない Google のアカウントで、機能を試す',
+			},
+			{
 				href: resolve('app/admin/status'),
 				icon: IconHistory,
 				title: '取得元と実行履歴',

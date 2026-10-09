@@ -204,3 +204,51 @@ describe('管理者', () => {
 		).toEqual({ kind: 'denied', reason: 'domain-not-allowed' });
 	});
 });
+
+describe('テストアカウント', () => {
+	const gmail = { claims: claims('tester@gmail.com', null) };
+
+	it('管理者が用意したメールアドレスなら、大学のドメインでも hd でもなくても、登録の方式を問わずに入れる', () => {
+		for (const registration of ['invite', 'closed', 'open'] as const) {
+			expect(decideSignIn(input({ ...gmail, registration, testAccount: true }))).toEqual({
+				kind: 'sign-up',
+				role: 'user',
+				inviteCodeId: null,
+			});
+		}
+	});
+
+	it('用意していないメールアドレスは、これまでどおり断る', () => {
+		expect(decideSignIn(input({ ...gmail }))).toEqual({
+			kind: 'denied',
+			reason: 'domain-not-allowed',
+		});
+	});
+
+	it('メールアドレスの確認と、停止は、テストアカウントでも守る', () => {
+		expect(
+			decideSignIn(input({ claims: claims('tester@gmail.com', null, false), testAccount: true })),
+		).toEqual({ kind: 'denied', reason: 'email-not-verified' });
+		expect(
+			decideSignIn(
+				input({
+					...gmail,
+					testAccount: true,
+					existingUser: { id: 'u1', status: 'suspended', role: 'user' },
+				}),
+			),
+		).toEqual({ kind: 'denied', reason: 'suspended' });
+	});
+
+	it('登録済みのテストアカウントは、ふつうにログインできる', () => {
+		expect(
+			decideSignIn(
+				input({
+					...gmail,
+					testAccount: true,
+					existingUser: { id: 'u1', status: 'active', role: 'user' },
+				}),
+			),
+		).toEqual({ kind: 'sign-in', userId: 'u1', promoteToAdmin: false });
+	});
+});

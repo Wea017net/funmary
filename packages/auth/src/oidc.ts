@@ -49,7 +49,7 @@ export function createGoogleOidcClient(options: OidcOptions): OidcClient {
 	};
 
 	return {
-		async createAuthorization(): Promise<OidcAuthorization> {
+		async createAuthorization(authorizationOptions = {}): Promise<OidcAuthorization> {
 			const config = await getConfiguration();
 			const codeVerifier = client.randomPKCECodeVerifier();
 			const state = client.randomState();
@@ -61,7 +61,7 @@ export function createGoogleOidcClient(options: OidcOptions): OidcClient {
 				code_challenge_method: 'S256',
 				state,
 				nonce,
-				hd: options.hostedDomain,
+				...(authorizationOptions.hostedDomainHint !== false && { hd: options.hostedDomain }),
 			});
 			return { url: url.toString(), state, nonce, codeVerifier };
 		},

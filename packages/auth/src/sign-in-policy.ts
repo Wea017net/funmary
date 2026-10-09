@@ -40,6 +40,11 @@ export interface SignInInput {
 	readonly existingUser: ExistingUser | null;
 	/** 登録の前に受け取った招待コード。なければ null */
 	readonly invite: InviteCodeState | null;
+	/**
+	 * このメールアドレスが、管理者が用意したテストアカウントか。そうなら、大学のドメインでなくても、
+	 * 登録の方式を問わずに入れる (メールアドレスの確認は、これまでどおり要る)
+	 */
+	readonly testAccount?: boolean;
 	readonly now: Date;
 }
 
@@ -85,8 +90,11 @@ export function decideSignIn(input: SignInInput): SignInDecision {
 	const at = email.lastIndexOf('@');
 	const domain = at > 0 ? email.slice(at + 1) : '';
 	// 末尾が一致するだけの似た名前のドメインを許さないよう、ドメインの全体を比べる
-	if (!allowed.includes(domain)) return denied('domain-not-allowed');
-	if (!claims.hd || !allowed.includes(claims.hd.toLowerCase())) return denied('hd-mismatch');
+	const isTest = input.testAccount === true;
+	if (!isTest) {
+		if (!allowed.includes(domain)) return denied('domain-not-allowed');
+		if (!claims.hd || !allowed.includes(claims.hd.toLowerCase())) return denied('hd-mismatch');
+	}
 
 	const isAdminEmail = input.adminEmails.some((admin) => admin.toLowerCase() === email);
 
@@ -98,6 +106,8 @@ export function decideSignIn(input: SignInInput): SignInDecision {
 			promoteToAdmin: isAdminEmail && existingUser.role !== 'admin',
 		};
 	}
+
+	if (isTest) return { kind: 'sign-up', role: 'user', inviteCodeId: null };
 
 	const validInvite = input.invite && !inviteProblem(input.invite, now) ? input.invite : null;
 

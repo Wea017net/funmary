@@ -687,3 +687,55 @@ test.describe('招待コード', () => {
 		await expect(limit).toHaveValue('5');
 	});
 });
+
+test.describe('テストアカウント', () => {
+	test('管理者が、大学のアカウントでない Google のアカウントを足すと、そのアカウントでログインでき、データを写し、消せる', async ({
+		page,
+		browser,
+	}) => {
+		const tester = `e2e-tester-${Date.now()}@gmail.com`;
+		await signInAs(page, 'e2e-admin@fun.ac.jp');
+		await page.goto('/app/admin/test-accounts');
+
+		// 大学のアカウントと、形の違うものは足せない
+		await page.getByLabel(/Google アカウントのメールアドレス/).fill('someone@fun.ac.jp');
+		await page.getByRole('button', { name: '足す' }).click();
+		await expect(page.getByRole('alert')).toContainText('大学のアカウントは');
+
+		await page.getByLabel(/Google アカウントのメールアドレス/).fill(tester);
+		await page.getByRole('button', { name: '足す' }).click();
+		await expect(page.getByRole('status')).toContainText('足しました');
+		const item = page.getByRole('listitem').filter({ hasText: tester });
+		await expect(item).toContainText('まだログインしていません');
+
+		// 用意していない Google アカウントは、断られる
+		const guest = await browser.newContext();
+		const guestPage = await guest.newPage();
+		oidc.setIdentity({ sub: 'e2e-stranger', email: 'stranger@gmail.com', email_verified: true });
+		await guestPage.goto('/auth/google/test');
+		await expect(guestPage).toHaveURL(/\/login\?error=/);
+
+		// 用意したアカウントでは、入れる (規約への同意から)
+		oidc.setIdentity({ sub: tester, email: tester, email_verified: true });
+		await guestPage.goto('/auth/google/test');
+		await expect(guestPage).toHaveURL(/\/consent/);
+		await guestPage.getByLabel('利用規約とプライバシーポリシーに同意します').check();
+		await guestPage.getByRole('button', { name: '同意して続ける' }).click();
+		await expect(guestPage).toHaveURL('/app');
+
+		// ログインしたら、データを写せる
+		await page.reload();
+		await expect(item).toContainText('ログイン済み');
+		page.once('dialog', (dialog) => dialog.accept());
+		await item.getByRole('button', { name: '自分のデータを写す' }).click();
+		await expect(page.getByRole('status')).toContainText('写しました');
+
+		// 消すと、テストアカウントのセッションも使えなくなる
+		page.once('dialog', (dialog) => dialog.accept());
+		await item.getByRole('button', { name: '消す' }).click();
+		await expect(item).toHaveCount(0);
+		await guestPage.goto('/app');
+		await expect(guestPage).toHaveURL('/login');
+		await guest.close();
+	});
+});
