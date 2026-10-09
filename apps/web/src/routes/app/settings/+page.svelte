@@ -3,6 +3,7 @@
 	import { resolve } from '$app/paths';
 	import { confirmSubmit } from '#lib/actions/confirm-submit.ts';
 	import type { AdminSummary } from '#lib/server/admin-summary.ts';
+	import IconAccount from '~icons/material-symbols/manage-accounts-outline';
 	import IconAbout from '~icons/material-symbols/info-outline';
 	import IconAuditLog from '~icons/material-symbols/fact-check-outline';
 	import IconCalendar from '~icons/material-symbols/calendar-add-on-outline';
@@ -126,6 +127,12 @@
 				icon: IconInvite,
 				title: '招待コード',
 				description: '発行できる人と、発行されたコード',
+			},
+			{
+				href: resolve('app/admin/test-accounts'),
+				icon: IconAccount,
+				title: 'テストアカウント',
+				description: '大学のアカウントでない Google のアカウントで、機能を試す',
 			},
 			{
 				href: resolve('app/admin/status'),
@@ -280,6 +287,17 @@
 		<h2 id="account-heading">アカウント</h2>
 		<ul class="links">
 			<li>
+				<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- href は resolve 済み -->
+				<a href={resolve('app/settings/account')}>
+					<IconAccount aria-hidden="true" class="icon" />
+					<span class="text">
+						<span class="title">データの書き出しと退会</span>
+						<span class="description">自分のデータを JSON で受け取る。アカウントを消す</span>
+					</span>
+					<IconChevron aria-hidden="true" class="icon" />
+				</a>
+			</li>
+			<li>
 				<!-- /auth は、サーバーが処理する。SvelteKit の form の処理を通さず、通常の送信にする -->
 				<form
 					method="POST"
@@ -315,10 +333,6 @@
 </div>
 
 <style>
-	.page {
-		max-width: 44rem;
-	}
-
 	section {
 		margin-top: 2rem;
 	}

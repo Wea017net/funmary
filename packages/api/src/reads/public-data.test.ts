@@ -1,6 +1,4 @@
-import { mkdtempSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { detectChanges } from '@funmary/core';
 import {
 	createAcademicCalendarStore,
 	createAuthStore,
@@ -9,32 +7,23 @@ import {
 	createHolidayStore,
 	createPersonalSlotStore,
 	createSubjectStore,
-	openDatabase,
 	type Database,
 } from '@funmary/db';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
 	currentAcademicYear,
 	getAcademicCalendar,
 	getNextLesson,
+	getWeekGrid,
 	getPublicTimetable,
 	listPeriods,
 	listUserCourses,
 } from './public-data.ts';
 import type { TimetableSources } from './user-timetable.ts';
+import { useTestDatabase } from '@funmary/db/testing';
 
-let dir: string;
 let database: Database;
-
-beforeEach(() => {
-	dir = mkdtempSync(join(tmpdir(), 'funmary-public-data-'));
-	database = openDatabase(join(dir, 'funmary.db'), { backupDir: join(dir, 'backups') });
-});
-
-afterEach(() => {
-	database.close();
-	rmSync(dir, { recursive: true, force: true });
-});
+useTestDatabase('funmary-public-data-', (db) => (database = db));
 
 const NOW = new Date('2026-09-27T00:00:00Z');
 
@@ -249,5 +238,71 @@ describe('getAcademicCalendar', () => {
 	it('今日が属する年度は、4 月に替わる', () => {
 		expect(currentAcademicYear(new Date('2027-03-31T00:00:00Z'))).toBe(2026);
 		expect(currentAcademicYear(new Date('2027-04-01T00:00:00Z'))).toBe(2027);
+	});
+});
+
+describe('getWeekGrid', () => {
+	it('週の月曜から日曜の格子を返す。授業のない時限も入り、振替授業日は note に入る', () => {
+		const { userId } = setup();
+		createAcademicCalendarStore(database).saveSubstituteDay(
+			{ date: '2026-10-07', weekday: 1 },
+			'manual',
+		);
+
+		// 2026-10-07 (水) を含む週は、10-05 (月) から
+		const grid = getWeekGrid(sources(), userId, '2026-10-07');
+
+		expect(grid.weekStart).toBe('2026-10-05');
+		expect(grid.days.map((day) => day.weekday)).toEqual([1, 2, 3, 4, 5, 6, 7]);
+		expect(grid.days.every((day) => day.cells.length === grid.periods.length)).toBe(true);
+		const monday = grid.days[0]!;
+		expect(monday.cells.find((cell) => cell.period === 3)?.lessons).toHaveLength(1);
+		expect(monday.cells.find((cell) => cell.period === 1)?.lessons).toEqual([]);
+		// 水曜は、月曜の授業を行う日 (3 限に授業が入る)
+		const wednesday = grid.days[2]!;
+		expect(wednesday.note).toEqual({ date: '2026-10-07', kind: 'substitute', weekday: 1 });
+		expect(wednesday.cells.find((cell) => cell.period === 3)?.lessons).toHaveLength(1);
+	});
+});
+
+describe('休講などの詳細', () => {
+	it('休講のコメントと補講の予定、教室変更の移動元を、授業に付ける。変更がなければ null', () => {
+		const { userId, subjectId } = setup();
+		const changes = createClassChangeStore(database);
+		const detected = detectChanges({
+			previous: [],
+			scraped: [
+				{
+					kind: 'cancellation',
+					date: '2026-10-05',
+					period: 3,
+					lessonName: '架空の代数',
+					teacher: null,
+					campus: null,
+					room: null,
+					fromRoom: null,
+					comment: '補講あり。日程は後日',
+					makeupPlan: 'planned',
+				},
+			],
+			today: '2026-10-01',
+		});
+		if (detected.kind !== 'ok') throw new Error('ok のはず');
+		changes.apply(detected.next, NOW);
+		changes.assignSubject('架空の代数', subjectId);
+
+		const { lessons } = getPublicTimetable(sources(), userId, {
+			start: '2026-10-05',
+			end: '2026-10-07',
+		});
+
+		expect(lessons).toMatchObject([
+			{
+				date: '2026-10-05',
+				status: 'cancelled',
+				change: { comment: '補講あり。日程は後日', makeupPlan: 'planned' },
+			},
+			{ date: '2026-10-07', status: 'normal', change: null },
+		]);
 	});
 });

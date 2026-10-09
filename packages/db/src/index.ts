@@ -8,6 +8,14 @@ export {
 	type AccessTokenSummary,
 } from './access-token-store.ts';
 export {
+	createTestAccountStore,
+	MAX_TEST_ACCOUNTS_PER_ADMIN,
+	type AddTestAccountResult,
+	type TestAccount,
+	type TestAccountStore,
+} from './test-account-store.ts';
+export { createAccountStore, type AccountExport, type AccountStore } from './account-store.ts';
+export {
 	createOAuthStore,
 	MAX_OAUTH_CLIENTS,
 	OAUTH_ACCESS_TOKEN_LIFETIME_MS,

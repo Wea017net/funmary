@@ -1,22 +1,10 @@
-import { mkdtempSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { openDatabase, type Database } from './database.ts';
+import { describe, expect, it } from 'vitest';
+import type { Database } from './database.ts';
 import { createSettingsStore } from './settings-store.ts';
+import { useTestDatabase } from './testing.ts';
 
-let dir: string;
 let database: Database;
-
-beforeEach(() => {
-	dir = mkdtempSync(join(tmpdir(), 'funmary-settings-'));
-	database = openDatabase(join(dir, 'funmary.db'), { backupDir: join(dir, 'backups') });
-});
-
-afterEach(() => {
-	database.close();
-	rmSync(dir, { recursive: true, force: true });
-});
+useTestDatabase('funmary-settings-', (db) => (database = db));
 
 describe('管理画面で変える設定', () => {
 	it('なければ null を返し、保存した値 (JSON) を読み戻せる。保存し直すと上書きする', () => {

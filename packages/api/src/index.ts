@@ -1,8 +1,28 @@
 export { createApi, type ApiDeps } from './app.ts';
 export {
+	TERMS_NOT_ACCEPTED,
+	TERMS_REQUIRED,
+	termsRequiredBody,
+	termsRequiredMessage,
+	type TermsGate,
+} from './terms-gate.ts';
+export {
+	getDataStatus,
+	listUserEventOccurrences,
+	type DataStatus,
+	type PublicEvent,
+} from './reads/public-events.ts';
+export {
+	getSubjectSessions,
+	searchSubjects,
+	type PublicSubjectSummary,
+	type SubjectSession,
+} from './reads/public-subjects.ts';
+export {
 	currentAcademicYear,
 	getAcademicCalendar,
 	getNextLesson,
+	getWeekGrid,
 	getPublicTimetable,
 	listPeriods,
 	listUserCourses,
@@ -13,6 +33,7 @@ export {
 	type PublicLesson,
 	type PublicNextLesson,
 	type PublicTimetable,
+	type WeekGrid,
 } from './reads/public-data.ts';
 export {
 	RETURN_COOKIE_MAX_AGE_S,

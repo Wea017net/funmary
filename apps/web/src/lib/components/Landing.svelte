@@ -18,7 +18,13 @@
 	let {
 		registration,
 		signedIn,
-	}: { registration: 'invite' | 'open' | 'closed'; signedIn: boolean } = $props();
+		inviteCode = null,
+	}: {
+		registration: 'invite' | 'open' | 'closed';
+		signedIn: boolean;
+		/** 招待コードのリンクで来たときに、入力欄へ入れておく値 */
+		inviteCode?: string | null;
+	} = $props();
 
 	const FEATURES = [
 		{
@@ -105,6 +111,7 @@
 								<input
 									id="invite-code"
 									name="code"
+									value={inviteCode ?? ''}
 									required
 									autocomplete="off"
 									spellcheck="false"

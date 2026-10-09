@@ -3,15 +3,16 @@ import { fail, redirect, type Actions, type ServerLoad } from '@sveltejs/kit';
 import { jstDateTime } from '@funmary/core';
 import { echoFormValues, emptyFormValues, parseEventForm } from '#lib/event-form.ts';
 import { getServices } from '#lib/server/services.ts';
+import { requireSignedIn } from '#lib/server/admin.ts';
 
 export const load: ServerLoad = ({ locals }) => {
-	if (!locals.user) redirect(303, '/login');
+	requireSignedIn(locals);
 	return { values: emptyFormValues(jstDateTime(new Date()).date) };
 };
 
 export const actions: Actions = {
 	default: async ({ request, locals }) => {
-		if (!locals.user) redirect(303, '/login');
+		requireSignedIn(locals);
 		const form = await request.formData();
 		const parsed = parseEventForm(form);
 		if (!parsed.ok) {

@@ -49,7 +49,7 @@
 	<meta name="robots" content="noindex" />
 </svelte:head>
 
-<div class="page">
+<div class="page page-w-40">
 	<SettingsBreadcrumb current="Discord連携" />
 	<h1>Discord連携</h1>
 	{#if data.supportInvite}
@@ -337,10 +337,6 @@
 </div>
 
 <style>
-	.page {
-		max-width: 40rem;
-	}
-
 	.meta {
 		color: var(--fm-text-muted);
 		font-size: 0.875rem;

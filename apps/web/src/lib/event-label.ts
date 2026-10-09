@@ -1,7 +1,5 @@
 // 予定の画面に出す表記 (Issue #144)。ical.js は読み込まない。
-import type { EventTime, Recurrence } from '@funmary/core';
-
-const WEEKDAY_NAMES = ['', '月', '火', '水', '木', '金', '土', '日'];
+import { WEEKDAY_NAMES, type EventTime, type Recurrence } from '@funmary/core';
 
 /** 例: "毎週 月、水"、"2 週ごと 金"、"毎月 第 2 火曜日、5 回まで" */
 export function describeRecurrence(recurrence: Recurrence): string {

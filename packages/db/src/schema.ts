@@ -41,7 +41,41 @@ export const users = sqliteTable('users', {
 	}),
 	createdAt: createdAt(),
 	lastLoginAt: integer('last_login_at', { mode: 'timestamp_ms' }),
+	/** 同意した利用規約とプライバシーポリシーの版 (最終更新日)。一度も同意していなければ null */
+	termsAcceptedVersion: text('terms_accepted_version'),
+	termsAcceptedAt: integer('terms_accepted_at', { mode: 'timestamp_ms' }),
 });
+
+/** 利用規約への同意の履歴。いつ、どの版に同意したかの記録で、消さない */
+export const termsAcceptances = sqliteTable(
+	'terms_acceptances',
+	{
+		userId: text('user_id')
+			.notNull()
+			.references(() => users.id, { onDelete: 'cascade' }),
+		version: text('version').notNull(),
+		acceptedAt: integer('accepted_at', { mode: 'timestamp_ms' }).notNull(),
+	},
+	(table) => [primaryKey({ columns: [table.userId, table.version] })],
+);
+
+/**
+ * 管理者が用意するテストアカウント。大学のアカウントでない Google のアカウント (メールアドレス) で、
+ * ログインして試せるようにする。管理者ごとに持ち、データは引き継がない (必要なときだけ、管理者のデータを写す)
+ */
+export const testAccounts = sqliteTable(
+	'test_accounts',
+	{
+		id: integer('id').primaryKey({ autoIncrement: true }),
+		ownerId: text('owner_id')
+			.notNull()
+			.references(() => users.id, { onDelete: 'cascade' }),
+		/** 小文字にそろえて保存する。全体で 1 つだけ */
+		email: text('email').notNull().unique(),
+		createdAt: createdAt(),
+	},
+	(table) => [index('test_accounts_owner').on(table.ownerId)],
+);
 
 export const sessions = sqliteTable(
 	'sessions',

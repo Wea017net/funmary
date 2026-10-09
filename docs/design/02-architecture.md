@@ -74,18 +74,23 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 `/api/` の下には、画面が使う内部の API (未読数など) もあります。内部の API はログインの Cookie で認証し、形は予告なく変えます。公開 API は `/api/v1/` の下に分け、アクセストークンで認証し、形を保ちます。形を壊す変更は `/api/v2/` を作って行い、`v1` はしばらく残します。
 
-| メソッドとパス                             | 返すもの                                                 |
-| ------------------------------------------ | -------------------------------------------------------- |
-| `GET /api/v1/me`                           | トークンの持ち主の表示名と、許されている範囲 (scope)     |
-| `GET /api/v1/lessons`                      | 日付または期間の授業。休講、補講、教室変更を反映したもの |
-| `GET /api/v1/lessons/next`                 | 次の授業 (授業中ならその授業)                            |
-| `GET /api/v1/timetable`                    | 授業 (時刻つき) と、振替授業日、全学の休講日、祝日       |
-| `GET /api/v1/periods`                      | 時限ごとの開始と終了の時刻                               |
-| `GET /api/v1/courses`                      | 履修登録した科目と、その曜日と時限                       |
-| `GET /api/v1/academic-calendar`            | 年度の学期の期間と、祝日、全学の休講日、振替授業日       |
-| `GET /api/v1/changes`                      | 休講、補講、教室変更の一覧                               |
-| `GET /api/v1/subjects/{year}/{syllabusId}` | 授業の詳細 (公開シラバスの内容、教員、教室、休講の履歴)  |
-| `GET /api/v1/notifications`                | 通知欄                                                   |
+| メソッドとパス                                      | 返すもの                                                 |
+| --------------------------------------------------- | -------------------------------------------------------- |
+| `GET /api/v1/me`                                    | トークンの持ち主の表示名と、許されている範囲 (scope)     |
+| `GET /api/v1/lessons`                               | 日付または期間の授業。休講、補講、教室変更を反映したもの |
+| `GET /api/v1/lessons/next`                          | 次の授業 (授業中ならその授業)                            |
+| `GET /api/v1/timetable`                             | 授業 (時刻つき) と、振替授業日、全学の休講日、祝日       |
+| `GET /api/v1/timetable/week`                        | 週の曜日と時限の格子                                     |
+| `GET /api/v1/periods`                               | 時限ごとの開始と終了の時刻                               |
+| `GET /api/v1/courses`                               | 履修登録した科目と、その曜日と時限                       |
+| `GET /api/v1/academic-calendar`                     | 年度の学期の期間と、祝日、全学の休講日、振替授業日       |
+| `GET /api/v1/events`                                | 自分の予定と、時間割に加えた予定                         |
+| `GET /api/v1/status`                                | 休講などのデータが新しいか                               |
+| `GET /api/v1/subjects`                              | 科目の検索 (公開の科目だけ)                              |
+| `GET /api/v1/subjects/{year}/{syllabusId}/sessions` | 科目の全授業日                                           |
+| `GET /api/v1/changes`                               | 休講、補講、教室変更の一覧                               |
+| `GET /api/v1/subjects/{year}/{syllabusId}`          | 授業の詳細 (公開シラバスの内容、教員、教室、休講の履歴)  |
+| `GET /api/v1/notifications`                         | 通知欄                                                   |
 
 ### OpenAPI と Swagger UI
 
@@ -100,6 +105,11 @@ export const handle: Handle = async ({ event, resolve }) => {
 | ----------------------- | ---------------------------------------------------------------------- |
 | `get_lessons`           | 日付か期間の授業 (時刻つき) と、振替授業日などを返す。日付を省くと今日 |
 | `get_next_lesson`       | 今の時刻から見た、次の授業                                             |
+| `list_events`           | 自分の予定と、時間割に加えた予定                                       |
+| `get_data_status`       | 休講などのデータが新しいか                                             |
+| `search_subjects`       | 科目の検索 (公開の科目だけ)                                            |
+| `get_subject_sessions`  | 科目の全授業日                                                         |
+| `get_week`              | 週の曜日と時限の格子                                                   |
 | `get_periods`           | 時限ごとの開始と終了の時刻                                             |
 | `list_courses`          | 履修登録した科目と、その曜日と時限                                     |
 | `get_academic_calendar` | 年度の学期の期間と、祝日、全学の休講日、振替授業日                     |
@@ -110,6 +120,17 @@ export const handle: Handle = async ({ event, resolve }) => {
 - 道具はすべて読み取り専用の印 (`readOnlyHint`) を付けます。エージェントが確認なしに呼んでも、何も変わりません
 - 結果は、機械が読める形 (`structuredContent`) と、人が読める短い文の両方で返します
 - 公式の SDK (`@modelcontextprotocol/sdk`) と `@hono/mcp` を使います。SDK は道具の引数の型に zod を使うので、MCP の部分だけ zod が入ります。ほかの部分は Valibot のままにして、zod を持ち込みません
+
+### 利用規約への同意
+
+登録のあと、そして利用規約かプライバシーポリシーを更新したあとは、ログインしている全員に、同意の画面 (`/consent`) で同意を求めます。同意するまでは、すべての機能を止めます。
+
+- 求める版は、2 つの文書の最終更新日 (`apps/web/src/lib/legal-versions.ts`) のうち、新しいほうの日付です。どちらかの日付を書き換えると、全員がもう一度同意します。同意した版と日時は利用者に持たせ、履歴は `terms_acceptances` に残します
+- 画面 (`/app` と、API の同意の画面) は、同意の画面へ送ります。フォームの送信などは 403 です。同意のあとは、行こうとした画面へ戻ります
+- 公開 API は、403 と `error: "terms_not_accepted"` を返します。トークンは正しいので 401 にはしません (クライアントが認証をやり直そうとしないため)。本文の `consentUrl` と、`Link` ヘッダに、同意の画面の URL を入れます
+- MCP は、HTTP のエラーにしません。クライアントが、接続の失敗としか表示しないことが多いためです。データの道具の代わりに、同意が要ることと URL を答える道具を 1 つだけ出します
+- Discord のコマンドは、答えの代わりに同意の画面を案内します。通知の配信と毎日のまとめは、同意するまで送らず、待たせておきます。カレンダーと RSS の購読は、403 と説明を返します
+- 規約の本文 (`/terms`、`/privacy`)、ログイン、ログアウトは、同意の前でも使えます
 
 ### 認証
 

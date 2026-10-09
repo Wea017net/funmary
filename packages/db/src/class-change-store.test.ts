@@ -1,24 +1,12 @@
-import { mkdtempSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import { detectChanges, type ScrapedChange } from '@funmary/core';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { createClassChangeStore } from './class-change-store.ts';
-import { openDatabase, type Database } from './database.ts';
+import type { Database } from './database.ts';
 import { createSubjectStore } from './subject-store.ts';
+import { useTestDatabase } from './testing.ts';
 
-let dir: string;
 let database: Database;
-
-beforeEach(() => {
-	dir = mkdtempSync(join(tmpdir(), 'funmary-changes-'));
-	database = openDatabase(join(dir, 'funmary.db'), { backupDir: join(dir, 'backups') });
-});
-
-afterEach(() => {
-	database.close();
-	rmSync(dir, { recursive: true, force: true });
-});
+useTestDatabase('funmary-changes-', (db) => (database = db));
 
 const item = (over: Partial<ScrapedChange> = {}): ScrapedChange => ({
 	kind: 'roomChange',
@@ -265,7 +253,7 @@ describe('listAssignedBetween', () => {
 			.prepare("UPDATE class_changes SET withdrawn_at = 1 WHERE kind = 'cancellation'")
 			.run();
 
-		expect(store.listAssignedBetween('2026-10-05', '2026-10-11')).toEqual([
+		expect(store.listAssignedBetween('2026-10-05', '2026-10-11')).toMatchObject([
 			{ kind: 'roomChange', subjectId, date: '2026-10-05', period: 3, room: '502' },
 			{ kind: 'makeup', subjectId, date: '2026-10-07', period: 5, room: null },
 		]);

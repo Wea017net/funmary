@@ -18,7 +18,7 @@
 	<meta name="robots" content="noindex" />
 </svelte:head>
 
-<div class="page">
+<div class="page page-w-40">
 	<SettingsBreadcrumb current="Webhook の上限" />
 	<h1>Webhook の上限</h1>
 	<p>
@@ -55,10 +55,6 @@
 </div>
 
 <style>
-	.page {
-		max-width: 40rem;
-	}
-
 	form {
 		display: flex;
 		flex-direction: column;

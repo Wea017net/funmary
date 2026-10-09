@@ -16,9 +16,10 @@ import { getServices } from '#lib/server/services.ts';
 import { parseWeekView, WEEK_VIEW_COOKIE } from '#lib/week-view.ts';
 import { ABBREVIATION_DISPLAY_COOKIE } from '#lib/abbreviation-display.ts';
 import { resolveSubjectAbbreviation } from '#lib/server/subject-abbreviation.ts';
+import { requireSignedIn } from '#lib/server/admin.ts';
 
 export const load: ServerLoad = ({ cookies, locals, url }) => {
-	if (!locals.user) redirect(303, '/login');
+	requireSignedIn(locals);
 	const today = jstDateTime(new Date()).date;
 	const param = url.searchParams.get('date');
 	const date = parseDateParam(param);

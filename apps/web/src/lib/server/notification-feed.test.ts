@@ -1,44 +1,45 @@
-import { mkdtempSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import {
 	createAuthStore,
 	createFeedTokenStore,
 	createNotificationStore,
-	openDatabase,
 	type Database,
 } from '@funmary/db';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { loadNotificationFeed, notificationFeedLinks } from './notification-feed.ts';
+import { useTestDatabase } from '@funmary/db/testing';
 
-let dir: string;
+/** 同意済みの利用者の購読として読む。同意待ちの印が返ったら、テストの組み立てが違う */
+function loadAccepted(src: ReturnType<typeof sources>, token: string, now: Date) {
+	const loaded = loadNotificationFeed(src, token, now);
+	if (loaded === 'terms-required') throw new Error('同意済みの利用者のはず');
+	return loaded;
+}
+
 let database: Database;
-
-beforeEach(() => {
-	dir = mkdtempSync(join(tmpdir(), 'funmary-notification-feed-'));
-	database = openDatabase(join(dir, 'funmary.db'), { backupDir: join(dir, 'backups') });
-});
-
-afterEach(() => {
-	database.close();
-	rmSync(dir, { recursive: true, force: true });
-});
+useTestDatabase('funmary-notification-feed-', (db) => (database = db));
 
 const NOW = new Date('2026-10-07T00:00:00Z');
 
+const TERMS_VERSION = '2026-10-03';
+
 function sources() {
 	return {
+		auth: createAuthStore(database),
+		termsVersion: TERMS_VERSION,
 		feedTokens: createFeedTokenStore(database),
 		notifications: createNotificationStore(database),
 		origin: 'https://funmary.example.com',
 	};
 }
 
-function newUser(sub: string) {
-	return createAuthStore(database).createUser(
+function newUser(sub: string, accepted = true) {
+	const auth = createAuthStore(database);
+	const id = auth.createUser(
 		{ googleSub: sub, email: `${sub}@fun.ac.jp`, name: null, role: 'user' },
 		NOW,
 	);
+	if (accepted) auth.acceptTerms(id, TERMS_VERSION, NOW);
+	return id;
 }
 
 describe('通知のフィード', () => {
@@ -46,9 +47,9 @@ describe('通知のフィード', () => {
 		const src = sources();
 		const userId = newUser('a');
 		const token = src.feedTokens.issue(userId, 'feed', NOW);
-		expect(loadNotificationFeed(src, 'unknown', NOW)).toBeNull();
+		expect(loadAccepted(src, 'unknown', NOW)).toBeNull();
 		src.feedTokens.revoke(userId, 'feed', NOW);
-		expect(loadNotificationFeed(src, token, NOW)).toBeNull();
+		expect(loadAccepted(src, token, NOW)).toBeNull();
 	});
 
 	it('既定の種類 (休講、補講、教室変更、連携の不具合) だけを、新しい順に載せる', () => {
@@ -78,7 +79,7 @@ describe('通知のフィード', () => {
 			],
 			NOW,
 		);
-		const feed = loadNotificationFeed(src, token, NOW);
+		const feed = loadAccepted(src, token, NOW);
 		expect(feed?.items).toHaveLength(1);
 		expect(feed?.items[0]).toMatchObject({
 			title: '[休講] 情報処理演習 (10/3 2 限)',
@@ -127,7 +128,7 @@ describe('通知のフィード', () => {
 				NOW,
 			);
 		}
-		const feed = loadNotificationFeed(src, token, NOW);
+		const feed = loadAccepted(src, token, NOW);
 		expect(feed?.items).toHaveLength(50);
 		expect(feed?.items.map((item) => item.title)).not.toContain('古い休講');
 	});
@@ -160,7 +161,7 @@ describe('通知のフィード', () => {
 			],
 			NOW,
 		);
-		const feed = loadNotificationFeed(src, token, NOW);
+		const feed = loadAccepted(src, token, NOW);
 		expect(feed?.items.map((item) => item.title)).toEqual(['[補講] k2']);
 	});
 });
@@ -172,5 +173,27 @@ describe('notificationFeedLinks', () => {
 			atom: 'https://funmary.example.com/feed/tok/atom.xml',
 			json: 'https://funmary.example.com/feed/tok/feed.json',
 		});
+	});
+});
+
+describe('利用規約への同意', () => {
+	it('持ち主が同意するまで、購読は通知を返さない', () => {
+		const src = sources();
+		const userId = newUser('a', false);
+		const token = src.feedTokens.issue(userId, 'feed', NOW);
+
+		expect(loadNotificationFeed(src, token, NOW)).toBe('terms-required');
+	});
+
+	it('同意すれば返す。規約が新しい版になれば、また止まる', () => {
+		const src = sources();
+		const userId = newUser('a', false);
+		const token = src.feedTokens.issue(userId, 'feed', NOW);
+		src.auth.acceptTerms(userId, TERMS_VERSION, NOW);
+
+		expect(loadNotificationFeed(src, token, NOW)).not.toBe('terms-required');
+		expect(loadNotificationFeed({ ...src, termsVersion: '2026-11-01' }, token, NOW)).toBe(
+			'terms-required',
+		);
 	});
 });

@@ -38,10 +38,6 @@
 </div>
 
 <style>
-	.page {
-		max-width: 44rem;
-	}
-
 	details {
 		margin-top: 1rem;
 		padding: 0.75rem 1rem;

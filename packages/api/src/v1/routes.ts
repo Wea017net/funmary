@@ -9,15 +9,28 @@ import type {
 	NotificationStore,
 	SubjectStore,
 } from '@funmary/db';
+import { jstDateTime } from '@funmary/core';
 import { Hono } from 'hono';
 import { describeRoute, resolver, validator } from 'hono-openapi';
 import { rateLimiter } from 'hono-rate-limiter';
 import * as v from 'valibot';
 import { listUserNotifications, type NotificationsSources } from '../reads/notifications.ts';
 import {
+	getDataStatus,
+	listUserEventOccurrences,
+	type EventSources,
+	type StatusSources,
+} from '../reads/public-events.ts';
+import {
+	getSubjectSessions,
+	searchSubjects,
+	type SubjectSearchSources,
+} from '../reads/public-subjects.ts';
+import {
 	currentAcademicYear,
 	getAcademicCalendar,
 	getNextLesson,
+	getWeekGrid,
 	getPublicTimetable,
 	LESSON_STATUSES,
 	listPeriods,
@@ -27,6 +40,7 @@ import {
 } from '../reads/public-data.ts';
 import { getSubjectDetail } from '../reads/subject-detail.ts';
 import type { TimetableSources } from '../reads/user-timetable.ts';
+import type { TermsGate } from '../terms-gate.ts';
 import { requireScope, v1Auth, type V1AuthVariables } from './auth.ts';
 
 /** 1 分に 60 回まで。トークンごとに数える */
@@ -43,8 +57,17 @@ const isNotificationKind = (value: string): value is NotificationKind =>
 	(NOTIFICATION_KINDS as readonly string[]).includes(value);
 
 export interface V1RoutesDeps
-	extends TimetableSources, NotificationsSources, CourseSources, AcademicCalendarSources {
-	readonly subjects: Pick<SubjectStore, 'findById' | 'findBySyllabus'>;
+	extends
+		TimetableSources,
+		NotificationsSources,
+		CourseSources,
+		AcademicCalendarSources,
+		EventSources,
+		StatusSources,
+		SubjectSearchSources {
+	/** 利用規約の再同意を求めるとき。同意していない利用者のトークンは、403 を返す */
+	readonly termsGate?: TermsGate | undefined;
+	readonly subjects: Pick<SubjectStore, 'findById' | 'findBySyllabus' | 'list'>;
 	readonly accessGrants: Pick<AccessGrantStore, 'isGranted'>;
 	readonly classChanges: TimetableSources['classChanges'] & Pick<ClassChangeStore, 'listBySubject'>;
 	readonly notifications: Pick<NotificationStore, 'list'>;
@@ -53,6 +76,8 @@ export interface V1RoutesDeps
 }
 
 const DateParam = v.pipe(v.string(), v.isoDate());
+
+const WeekQuery = v.object({ date: v.optional(DateParam) });
 
 const RangeQuery = v.object({
 	start: DateParam,
@@ -63,6 +88,8 @@ const NotificationsQuery = v.object({
 	/** カンマ区切り。省けばすべての種類 */
 	kinds: v.optional(v.string()),
 	since: v.optional(DateParam),
+	/** 前回読んだ最大の ID。これより新しいものだけを返すので、差分の取得に使える */
+	afterId: v.optional(v.pipe(v.string(), v.transform(Number), v.integer(), v.minValue(0))),
 	limit: v.optional(
 		v.pipe(v.string(), v.transform(Number), v.integer(), v.minValue(1), v.maxValue(200)),
 	),
@@ -89,6 +116,19 @@ const LessonSchema = v.object({
 	roomIsTentative: v.pipe(
 		v.boolean(),
 		v.description('補講の教室が分からず、ふだんの教室を仮に出しているとき true'),
+	),
+	change: v.pipe(
+		v.nullable(
+			v.object({
+				comment: v.nullable(v.string()),
+				fromRoom: v.pipe(v.nullable(v.string()), v.description('教室変更の移動元の教室')),
+				makeupPlan: v.pipe(
+					v.nullable(v.picklist(['planned', 'none', 'undecided'])),
+					v.description('休講コメントにある補講の予定 (あり、なし、未定)'),
+				),
+			}),
+		),
+		v.description('休講、補講、教室変更の詳細。変更がなければ null'),
 	),
 	status: v.pipe(
 		v.picklist(LESSON_STATUSES),
@@ -151,6 +191,61 @@ const AcademicCalendarSchema = v.object({
 	days: v.array(DaySchema),
 });
 
+const EventSchema = v.object({
+	key: v.pipe(v.string(), v.description('回ごとに決まる ID')),
+	eventId: v.number(),
+	title: v.string(),
+	location: v.nullable(v.string()),
+	notes: v.pipe(
+		v.nullable(v.string()),
+		v.description('自分の予定のメモ。ほかの人の予定を加えたものは null'),
+	),
+	startDate: v.string(),
+	endDate: v.pipe(v.string(), v.description('この回の終わりの日 (この日を含む)')),
+	allDay: v.boolean(),
+	start: v.pipe(
+		v.nullable(v.string()),
+		v.description('HH:MM (日本時間)。時限で決めた予定は、時限の時刻。終日なら null'),
+	),
+	end: v.nullable(v.string()),
+	periods: v.pipe(
+		v.nullable(v.object({ from: v.number(), to: v.number() })),
+		v.description('時限で決めた予定の、時限の範囲'),
+	),
+	added: v.pipe(v.boolean(), v.description('ほかの人の予定を、自分の時間割に加えたもの')),
+});
+
+const StatusSchema = v.object({
+	timetable: v.object({
+		lastSuccessAt: v.pipe(
+			v.nullable(v.string()),
+			v.description('休講や教室の変更を最後に取れた日時 (ISO 8601)。一度も取れていなければ null'),
+		),
+		stale: v.pipe(
+			v.boolean(),
+			v.description('情報が古い。休講や教室の変更が、まだ反映されていないかもしれない'),
+		),
+	}),
+});
+
+const SubjectSummarySchema = v.object({
+	academicYear: v.number(),
+	syllabusId: v.string(),
+	name: v.string(),
+	teacher: v.nullable(v.string()),
+	credits: v.nullable(v.number()),
+	term: v.string(),
+});
+
+const SubjectSearchQuery = v.object({
+	q: v.optional(v.pipe(v.string(), v.maxLength(100))),
+	/** 省けば今日が属する年度 */
+	year: v.optional(
+		v.pipe(v.string(), v.transform(Number), v.integer(), v.minValue(2000), v.maxValue(2100)),
+	),
+	term: v.optional(v.string()),
+});
+
 const AcademicCalendarQuery = v.object({
 	/** 省けば今日が属する年度 */
 	year: v.optional(
@@ -172,18 +267,23 @@ const AUTHED_PATHS = [
 	'/api/v1/lessons',
 	'/api/v1/lessons/next',
 	'/api/v1/timetable',
+	'/api/v1/timetable/week',
 	'/api/v1/periods',
 	'/api/v1/courses',
 	'/api/v1/academic-calendar',
 	'/api/v1/changes',
+	'/api/v1/subjects',
 	'/api/v1/subjects/:year/:syllabusId',
+	'/api/v1/subjects/:year/:syllabusId/sessions',
+	'/api/v1/events',
+	'/api/v1/status',
 	'/api/v1/notifications',
 	'/api/v1/me',
 ] as const;
 
 export function createV1Routes(deps: V1RoutesDeps): Hono<{ Variables: V1AuthVariables }> {
 	const app = new Hono<{ Variables: V1AuthVariables }>();
-	const auth = v1Auth({ accessTokens: deps.accessTokens });
+	const auth = v1Auth({ accessTokens: deps.accessTokens, termsGate: deps.termsGate });
 	const limit = rateLimiter({
 		...RATE_LIMIT,
 		standardHeaders: 'draft-7',
@@ -255,6 +355,22 @@ export function createV1Routes(deps: V1RoutesDeps): Hono<{ Variables: V1AuthVari
 		(c) => {
 			const { start, end } = c.req.valid('query');
 			return c.json(getPublicTimetable(deps, c.get('tokenOwner').userId, { start, end }));
+		},
+	);
+
+	app.get(
+		'/api/v1/timetable/week',
+		requireScope('read:lessons'),
+		describeRoute({
+			description:
+				'date (省けば今日) を含む週 (月曜から日曜) の、曜日と時限の格子。画面の週の時間割と同じ並びで、クライアントでの整形が要らない。授業のない時限も cells に入る (lessons が空)',
+		}),
+		validator('query', WeekQuery),
+		(c) => {
+			const { date } = c.req.valid('query');
+			return c.json(
+				getWeekGrid(deps, c.get('tokenOwner').userId, date ?? jstDateTime(new Date()).date),
+			);
 		},
 	);
 
@@ -349,6 +465,110 @@ export function createV1Routes(deps: V1RoutesDeps): Hono<{ Variables: V1AuthVari
 	);
 
 	app.get(
+		'/api/v1/events',
+		requireScope('read:lessons'),
+		describeRoute({
+			description:
+				'日付の範囲の、自分の予定と、時間割に加えたほかの人の予定 (繰り返しは回ごとに展開する)',
+			responses: {
+				200: {
+					description: 'OK',
+					content: { 'application/json': { schema: resolver(v.array(EventSchema)) } },
+				},
+			},
+		}),
+		validator('query', RangeQuery),
+		(c) => {
+			const { start, end } = c.req.valid('query');
+			const user = deps.users.findUserById(c.get('tokenOwner').userId);
+			if (!user) return c.json({ error: 'not_found' }, 404);
+			return c.json(listUserEventOccurrences(deps, user, { start, end }));
+		},
+	);
+
+	app.get(
+		'/api/v1/status',
+		requireScope('read:lessons'),
+		describeRoute({
+			description: '休講や教室の変更のデータが新しいか。古いときは、反映が遅れているかもしれない',
+			responses: {
+				200: {
+					description: 'OK',
+					content: { 'application/json': { schema: resolver(StatusSchema) } },
+				},
+			},
+		}),
+		(c) => c.json(getDataStatus(deps, new Date())),
+	);
+
+	app.get(
+		'/api/v1/subjects',
+		requireScope('read:lessons'),
+		describeRoute({
+			description:
+				'年度 (省けば今年度) の科目を、名前、教員、授業コードで探す。公開の科目だけを、50 件まで返す',
+			responses: {
+				200: {
+					description: 'OK',
+					content: {
+						'application/json': {
+							schema: resolver(
+								v.object({ subjects: v.array(SubjectSummarySchema), truncated: v.boolean() }),
+							),
+						},
+					},
+				},
+			},
+		}),
+		validator('query', SubjectSearchQuery),
+		(c) => {
+			const { q, year, term } = c.req.valid('query');
+			return c.json(
+				searchSubjects(deps, { academicYear: year ?? currentAcademicYear(new Date()), q, term }),
+			);
+		},
+	);
+
+	app.get(
+		'/api/v1/subjects/:year/:syllabusId/sessions',
+		requireScope('read:lessons'),
+		describeRoute({
+			description:
+				'科目のその年度の全授業日 (時刻、教室、休講、補講、教室変更を反映)。sequence は休講を除いた通し番号',
+			responses: {
+				200: {
+					description: 'OK',
+					content: {
+						'application/json': {
+							schema: resolver(
+								v.object({
+									subject: SubjectSummarySchema,
+									sessions: v.array(
+										v.object({ ...LessonSchema.entries, sequence: v.nullable(v.number()) }),
+									),
+								}),
+							),
+						},
+					},
+				},
+			},
+		}),
+		validator('param', SubjectParam),
+		(c) => {
+			const { year, syllabusId } = c.req.valid('param');
+			const viewer = deps.users.findUserById(c.get('tokenOwner').userId);
+			if (!viewer) return c.json({ error: 'not_found' }, 404);
+			const result = getSubjectSessions(
+				deps,
+				{ academicYear: year, syllabusId },
+				{ id: viewer.id, email: viewer.email, role: viewer.role },
+			);
+			if (!result) return c.json({ error: 'not_found' }, 404);
+			return c.json(result);
+		},
+	);
+
+	app.get(
 		'/api/v1/notifications',
 		requireScope('read:notifications'),
 		describeRoute({
@@ -362,7 +582,7 @@ export function createV1Routes(deps: V1RoutesDeps): Hono<{ Variables: V1AuthVari
 		}),
 		validator('query', NotificationsQuery),
 		(c) => {
-			const { kinds, since, limit } = c.req.valid('query');
+			const { kinds, since, afterId, limit } = c.req.valid('query');
 			const { userId } = c.get('tokenOwner');
 			const list = listUserNotifications(deps, userId, {
 				...(kinds
@@ -374,6 +594,7 @@ export function createV1Routes(deps: V1RoutesDeps): Hono<{ Variables: V1AuthVari
 						}
 					: {}),
 				...(since ? { since: new Date(since) } : {}),
+				...(afterId === undefined ? {} : { afterId }),
 				...(limit === undefined ? {} : { limit }),
 			});
 			return c.json(list);

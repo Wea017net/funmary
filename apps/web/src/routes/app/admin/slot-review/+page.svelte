@@ -107,10 +107,6 @@
 </div>
 
 <style>
-	.page {
-		max-width: 44rem;
-	}
-
 	section {
 		margin-top: 2rem;
 	}

@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "27ebc88f-a62b-42ec-9abf-e21f33a7cf53",
+  "id": "0f1e0133-7121-4053-9496-68f26634052f",
   "prevId": "dc52c2df-dab3-4a3d-b674-70799cd8cacc",
   "tables": {
     "absences": {
@@ -2520,79 +2520,6 @@
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
-    "subject_abbreviations": {
-      "name": "subject_abbreviations",
-      "columns": {
-        "user_id": {
-          "name": "user_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "subject_id": {
-          "name": "subject_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "abbreviation": {
-          "name": "abbreviation",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "subject_abbreviations_user_id_users_id_fk": {
-          "name": "subject_abbreviations_user_id_users_id_fk",
-          "tableFrom": "subject_abbreviations",
-          "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "subject_abbreviations_subject_id_subjects_id_fk": {
-          "name": "subject_abbreviations_subject_id_subjects_id_fk",
-          "tableFrom": "subject_abbreviations",
-          "tableTo": "subjects",
-          "columnsFrom": [
-            "subject_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {
-        "subject_abbreviations_user_id_subject_id_pk": {
-          "columns": [
-            "user_id",
-            "subject_id"
-          ],
-          "name": "subject_abbreviations_user_id_subject_id_pk"
-        }
-      },
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
     "subjects": {
       "name": "subjects",
       "columns": {
@@ -2723,6 +2650,59 @@
         }
       },
       "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "terms_acceptances": {
+      "name": "terms_acceptances",
+      "columns": {
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "version": {
+          "name": "version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "accepted_at": {
+          "name": "accepted_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "terms_acceptances_user_id_users_id_fk": {
+          "name": "terms_acceptances_user_id_users_id_fk",
+          "tableFrom": "terms_acceptances",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "terms_acceptances_user_id_version_pk": {
+          "columns": [
+            "user_id",
+            "version"
+          ],
+          "name": "terms_acceptances_user_id_version_pk"
+        }
+      },
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
@@ -3232,6 +3212,20 @@
         },
         "last_login_at": {
           "name": "last_login_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "terms_accepted_version": {
+          "name": "terms_accepted_version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "terms_accepted_at": {
+          "name": "terms_accepted_at",
           "type": "integer",
           "primaryKey": false,
           "notNull": false,

@@ -48,6 +48,16 @@ export interface TimetableLesson {
 	/** 補講の教室が分からず、ふだんの教室を仮に出しているとき true */
 	readonly roomIsTentative: boolean;
 	readonly status: 'normal' | 'cancelled' | 'makeup' | 'roomChanged';
+	/** 休講、補講、教室変更の詳細 (ポータルのコメント、教室変更の移動元、補講の予定)。変更がなければ null */
+	readonly change: LessonChange | null;
+}
+
+export interface LessonChange {
+	readonly comment: string | null;
+	/** 教室変更の移動元の教室 */
+	readonly fromRoom: string | null;
+	/** 休講コメントにある補講の予定 (planned: あり、none: なし、undecided: 未定) */
+	readonly makeupPlan: 'planned' | 'none' | 'undecided' | null;
 }
 
 /** 授業の有無に関わる、その日の事情。画面で日付の横に出す */
@@ -134,6 +144,16 @@ export function buildUserTimetable(
 			classChanges: changes.map(toClassChange),
 		});
 		const byId = new Map(ofYear.map((subject) => [String(subject.id), subject]));
+		const detailOf = new Map(
+			changes.map((change) => [
+				`${change.subjectId}|${change.date}|${change.period}`,
+				{
+					comment: change.comment,
+					fromRoom: change.fromRoom,
+					makeupPlan: change.makeupPlan,
+				},
+			]),
+		);
 		for (const lesson of expanded) {
 			const subject = byId.get(lesson.subjectId);
 			lessons.push({
@@ -142,6 +162,10 @@ export function buildUserTimetable(
 				subjectName: subject?.name ?? '',
 				academicYear: year,
 				syllabusId: subject?.syllabusId ?? '',
+				change:
+					lesson.status === 'normal'
+						? null
+						: (detailOf.get(`${lesson.subjectId}|${lesson.date}|${lesson.period}`) ?? null),
 			});
 		}
 	}

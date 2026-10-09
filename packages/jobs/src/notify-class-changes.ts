@@ -1,6 +1,6 @@
 // 履修している科目の休講、補講、教室変更を、利用者の通知欄に入れる定期処理。
 // 候補を毎回すべて見直し、同じ出来事は通知欄の側で 1 回だけ足す。照合があとから済んだ休講も、次の回に拾える
-import { jstDateTime } from '@funmary/core';
+import { CLASS_CHANGE_KIND_LABELS, jstDateTime } from '@funmary/core';
 import type { JobDefinition } from './runner.ts';
 
 export interface ClassChangeNotificationSource {
@@ -29,8 +29,6 @@ export interface ClassChangeNotificationEntry {
 	readonly dedupeKey: string;
 }
 
-const KIND_LABELS = { cancellation: '休講', makeup: '補講', roomChange: '教室変更' } as const;
-
 /** 題は `[休講] 情報処理演習 (10/3 2 限)` の形 */
 export function classChangeNotification(
 	source: ClassChangeNotificationSource,
@@ -45,7 +43,7 @@ export function classChangeNotification(
 	return {
 		userId: source.userId,
 		kind: source.kind,
-		title: `[${KIND_LABELS[source.kind]}] ${source.subjectName} (${month}/${day} ${source.period} 限)`,
+		title: `[${CLASS_CHANGE_KIND_LABELS[source.kind]}] ${source.subjectName} (${month}/${day} ${source.period} 限)`,
 		body,
 		link: `/app/subjects/${source.academicYear}/${encodeURIComponent(source.syllabusId)}`,
 		subjectId: source.subjectId,

@@ -171,10 +171,6 @@
 </div>
 
 <style lang="scss">
-	.page {
-		max-width: 44rem;
-	}
-
 	h2 {
 		margin: 2.5rem 0 1rem;
 	}

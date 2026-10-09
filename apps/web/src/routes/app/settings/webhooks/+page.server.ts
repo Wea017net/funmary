@@ -1,7 +1,7 @@
 // 通知の送り先に使う Webhook の設定。Discord の Webhook と、利用者が自分で用意した
 // 汎用の Webhook の両方を扱う。登録、更新、テスト送信、有効と無効の切り替え、削除、署名の鍵の再発行。
 // URL (と署名の鍵) は暗号化して保存し、画面には末尾を伏せて出す。テスト送信は、先に連続で送らないよう、利用者ごとに間をあける
-import { fail, redirect, type Actions, type ServerLoad } from '@sveltejs/kit';
+import { fail, type Actions, type ServerLoad } from '@sveltejs/kit';
 import { DEFAULT_CHANNEL_KINDS } from '@funmary/db';
 import { generateSigningKey, maskWebhookUrl, type SendOutcome } from '@funmary/notify';
 import { CHANNEL_KIND_OPTIONS } from '#lib/server/channel-kind-form.ts';
@@ -11,6 +11,7 @@ import {
 	parseWebhookId,
 	parseWebhookUpdate,
 } from '#lib/server/webhook-form.ts';
+import { requireSignedIn } from '#lib/server/admin.ts';
 
 /** テスト送信と登録の間隔 */
 const SEND_COOLDOWN_MS = 10 * 1000;
@@ -44,7 +45,7 @@ function failureMessage(outcome: SendOutcome): string | null {
 }
 
 export const load: ServerLoad = ({ locals }) => {
-	if (!locals.user) redirect(303, '/login');
+	requireSignedIn(locals);
 	const { channels, webhooks } = getServices();
 	const list = channels.listWebhooks(locals.user.id);
 	return {
@@ -66,7 +67,7 @@ export const load: ServerLoad = ({ locals }) => {
 export const actions: Actions = {
 	/** 登録する。テスト通知を送れたものだけを登録する */
 	add: async ({ request, locals }) => {
-		if (!locals.user) redirect(303, '/login');
+		requireSignedIn(locals);
 		const { channels, webhooks } = getServices();
 		const parsed = parseWebhookCreate(await request.formData());
 		if (!parsed.ok) return fail(400, { error: parsed.error });
@@ -103,7 +104,7 @@ export const actions: Actions = {
 	},
 	/** 名前と、送る通知の種類を保存する */
 	update: async ({ request, locals }) => {
-		if (!locals.user) redirect(303, '/login');
+		requireSignedIn(locals);
 		const form = await request.formData();
 		const id = parseWebhookId(form);
 		const parsed = parseWebhookUpdate(form);
@@ -119,7 +120,7 @@ export const actions: Actions = {
 	},
 	/** 有効と無効を切り替える。止められていたものを有効に戻すと、止めた理由を消す */
 	toggle: async ({ request, locals }) => {
-		if (!locals.user) redirect(303, '/login');
+		requireSignedIn(locals);
 		const form = await request.formData();
 		const id = parseWebhookId(form);
 		if (id === null) return fail(400, { error: '入力が正しくありません。' });
@@ -131,7 +132,7 @@ export const actions: Actions = {
 		return { message: enable ? '有効にしました。' : '無効にしました。' };
 	},
 	test: async ({ request, locals }) => {
-		if (!locals.user) redirect(303, '/login');
+		requireSignedIn(locals);
 		const id = parseWebhookId(await request.formData());
 		if (id === null) return fail(400, { error: '入力が正しくありません。' });
 		const { channels, webhooks } = getServices();
@@ -147,7 +148,7 @@ export const actions: Actions = {
 	},
 	/** 汎用の Webhook の署名の鍵を作り直す。古い鍵はもう使えなくなる */
 	regenerateKey: async ({ request, locals }) => {
-		if (!locals.user) redirect(303, '/login');
+		requireSignedIn(locals);
 		const id = parseWebhookId(await request.formData());
 		if (id === null) return fail(400, { error: '入力が正しくありません。' });
 		const { channels } = getServices();
@@ -164,7 +165,7 @@ export const actions: Actions = {
 		};
 	},
 	remove: async ({ request, locals }) => {
-		if (!locals.user) redirect(303, '/login');
+		requireSignedIn(locals);
 		const id = parseWebhookId(await request.formData());
 		if (id === null) return fail(400, { error: '入力が正しくありません。' });
 		if (!getServices().channels.removeWebhook(locals.user.id, id)) {

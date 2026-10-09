@@ -1,29 +1,16 @@
-import { mkdtempSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import {
 	createAccessGrantStore,
 	createAuthStore,
 	createClassChangeStore,
 	createSubjectStore,
-	openDatabase,
 	type Database,
 } from '@funmary/db';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { getSubjectDetail } from './subject-detail.ts';
+import { useTestDatabase } from '@funmary/db/testing';
 
-let dir: string;
 let database: Database;
-
-beforeEach(() => {
-	dir = mkdtempSync(join(tmpdir(), 'funmary-subject-detail-'));
-	database = openDatabase(join(dir, 'funmary.db'), { backupDir: join(dir, 'backups') });
-});
-
-afterEach(() => {
-	database.close();
-	rmSync(dir, { recursive: true, force: true });
-});
+useTestDatabase('funmary-subject-detail-', (db) => (database = db));
 
 const NOW = new Date('2026-10-07T00:00:00Z');
 

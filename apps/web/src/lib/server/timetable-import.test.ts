@@ -1,29 +1,16 @@
-import { mkdtempSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import {
 	createCourseStore,
 	createSubjectStore,
 	createUnmatchedLessonStore,
-	openDatabase,
 	type Database,
 } from '@funmary/db';
 import type { TimetablePdfEntry, TimetablePdfResult } from '@funmary/sources';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { importTimetable } from './timetable-import.ts';
+import { useTestDatabase } from '@funmary/db/testing';
 
-let dir: string;
 let database: Database;
-
-beforeEach(() => {
-	dir = mkdtempSync(join(tmpdir(), 'funmary-timetable-import-'));
-	database = openDatabase(join(dir, 'funmary.db'), { backupDir: join(dir, 'backups') });
-});
-
-afterEach(() => {
-	database.close();
-	rmSync(dir, { recursive: true, force: true });
-});
+useTestDatabase('funmary-timetable-import-', (db) => (database = db));
 
 const NOW = new Date('2027-03-31T00:00:00Z');
 

@@ -1,52 +1,16 @@
-import { mkdtempSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import {
-	createAcademicCalendarStore,
-	createAccessGrantStore,
-	createAccessTokenStore,
-	createAuthStore,
-	createClassChangeStore,
-	createCourseStore,
-	createHolidayStore,
-	createNotificationStore,
-	createPersonalSlotStore,
-	createSubjectStore,
-	openDatabase,
-	type Database,
-} from '@funmary/db';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { type Database } from '@funmary/db';
+import { describe, expect, it } from 'vitest';
 import { createV1Routes } from './routes.ts';
+import { useTestDatabase } from '@funmary/db/testing';
+import { createTestApiDeps } from '../testing.ts';
 
-let dir: string;
 let database: Database;
-
-beforeEach(() => {
-	dir = mkdtempSync(join(tmpdir(), 'funmary-v1-routes-'));
-	database = openDatabase(join(dir, 'funmary.db'), { backupDir: join(dir, 'backups') });
-});
-
-afterEach(() => {
-	database.close();
-	rmSync(dir, { recursive: true, force: true });
-});
+useTestDatabase('funmary-v1-routes-', (db) => (database = db));
 
 const NOW = new Date('2026-10-07T00:00:00Z');
 
 function deps() {
-	return {
-		courses: createCourseStore(database),
-		personalSlots: createPersonalSlotStore(database),
-		subjects: createSubjectStore(database),
-		classChanges: createClassChangeStore(database),
-		academicCalendar: createAcademicCalendarStore(database),
-		holidays: createHolidayStore(database),
-		estimateHolidays: () => [],
-		notifications: createNotificationStore(database),
-		accessGrants: createAccessGrantStore(database),
-		accessTokens: createAccessTokenStore(database),
-		users: createAuthStore(database),
-	};
+	return createTestApiDeps(database);
 }
 
 function newUser(src: ReturnType<typeof deps>, sub: string) {
@@ -125,6 +89,18 @@ describe('createV1Routes', () => {
 			});
 		});
 
+		it('GET /api/v1/timetable/week は、月曜から日曜の格子を返す。日付が不正なら 400', async () => {
+			const { get } = lessonsApp();
+
+			const res = await get('/api/v1/timetable/week?date=2026-10-07');
+
+			expect(res.status).toBe(200);
+			const grid = (await res.json()) as { weekStart: string; days: unknown[] };
+			expect(grid.weekStart).toBe('2026-10-05');
+			expect(grid.days).toHaveLength(7);
+			expect((await get('/api/v1/timetable/week?date=abc')).status).toBe(400);
+		});
+
 		it('GET /api/v1/periods は、時限の時刻を返す', async () => {
 			const { get } = lessonsApp();
 
@@ -162,6 +138,73 @@ describe('createV1Routes', () => {
 			expect((await get('/api/v1/academic-calendar?year=abc')).status).toBe(400);
 		});
 
+		it('GET /api/v1/events は、自分の予定を日付の範囲で返す', async () => {
+			const { src, userId, get } = lessonsApp();
+			src.userEvents.create(
+				userId,
+				{
+					title: '架空のサークル',
+					location: null,
+					notes: null,
+					startDate: '2026-10-05',
+					endDate: '2026-10-05',
+					time: { kind: 'allDay' },
+					rrule: null,
+					excludedDates: [],
+					visibility: 'private',
+				},
+				NOW,
+			);
+
+			const res = await get('/api/v1/events?start=2026-10-01&end=2026-10-07');
+
+			expect(res.status).toBe(200);
+			expect(await res.json()).toMatchObject([
+				{ title: '架空のサークル', allDay: true, added: false },
+			]);
+		});
+
+		it('GET /api/v1/status は、データの新しさを返す', async () => {
+			const { get } = lessonsApp();
+
+			const res = await get('/api/v1/status');
+
+			expect(await res.json()).toEqual({ timetable: { lastSuccessAt: null, stale: true } });
+		});
+
+		it('GET /api/v1/subjects は、科目を探す。GET .../sessions は、見つからなければ 404', async () => {
+			const { src, get } = lessonsApp();
+			src.subjects.upsert(
+				{
+					academicYear: 2026,
+					syllabusId: '100001',
+					name: '架空の代数',
+					teacher: null,
+					credits: 2,
+					term: 'fall',
+					attributes: {},
+					syllabus: {},
+					syllabusUrl: null,
+				},
+				NOW,
+			);
+
+			const found = await get('/api/v1/subjects?year=2026&q=代数');
+			const sessions = await get('/api/v1/subjects/2026/100001/sessions');
+			const missing = await get('/api/v1/subjects/2026/none/sessions');
+
+			expect(await found.json()).toMatchObject({
+				subjects: [{ syllabusId: '100001', name: '架空の代数' }],
+				truncated: false,
+			});
+			expect(sessions.status).toBe(200);
+			expect(await sessions.json()).toMatchObject({
+				subject: { syllabusId: '100001' },
+				sessions: [],
+			});
+			expect(missing.status).toBe(404);
+		});
+
 		it('範囲が足りないトークンでは、どれも 403', async () => {
 			const src = deps();
 			const userId = newUser(src, 'b');
@@ -178,6 +221,10 @@ describe('createV1Routes', () => {
 				'/api/v1/lessons/next',
 				'/api/v1/courses',
 				'/api/v1/academic-calendar',
+				'/api/v1/events?start=2026-10-01&end=2026-10-07',
+				'/api/v1/status',
+				'/api/v1/subjects',
+				'/api/v1/subjects/2026/100001/sessions',
 			]) {
 				const res = await app.request(path, { headers: { Authorization: `Bearer ${token}` } });
 				expect(res.status, path).toBe(403);

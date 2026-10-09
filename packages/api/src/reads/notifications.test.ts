@@ -1,22 +1,10 @@
-import { mkdtempSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { createAuthStore, createNotificationStore, openDatabase, type Database } from '@funmary/db';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { createAuthStore, createNotificationStore, type Database } from '@funmary/db';
+import { describe, expect, it } from 'vitest';
 import { listUserNotifications } from './notifications.ts';
+import { useTestDatabase } from '@funmary/db/testing';
 
-let dir: string;
 let database: Database;
-
-beforeEach(() => {
-	dir = mkdtempSync(join(tmpdir(), 'funmary-notifications-'));
-	database = openDatabase(join(dir, 'funmary.db'), { backupDir: join(dir, 'backups') });
-});
-
-afterEach(() => {
-	database.close();
-	rmSync(dir, { recursive: true, force: true });
-});
+useTestDatabase('funmary-notifications-', (db) => (database = db));
 
 const NOW = new Date('2026-10-07T00:00:00Z');
 const DAY = 24 * 60 * 60 * 1000;
@@ -93,5 +81,20 @@ describe('listUserNotifications', () => {
 			NOW,
 		);
 		expect(listUserNotifications({ notifications }, a, { limit: 2 })).toHaveLength(2);
+	});
+});
+
+describe('afterId', () => {
+	it('指定した ID より新しい通知だけを返す (差分の取得)', () => {
+		const rows = [
+			{ id: 3, kind: 'notice', createdAt: new Date('2026-10-03T00:00:00Z') },
+			{ id: 2, kind: 'notice', createdAt: new Date('2026-10-02T00:00:00Z') },
+			{ id: 1, kind: 'notice', createdAt: new Date('2026-10-01T00:00:00Z') },
+		];
+		const sources = { notifications: { list: () => rows as never } };
+
+		const result = listUserNotifications(sources, 'u1', { afterId: 1 });
+
+		expect(result.map((row) => row.id)).toEqual([3, 2]);
 	});
 });

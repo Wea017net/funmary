@@ -23,7 +23,9 @@ export interface OidcAuthorization {
 
 export interface OidcClient {
 	/** PKCE、state、nonce を作り、認可の URL を返す。hd=fun.ac.jp を付けて、大学のアカウントが選ばれやすくする */
-	createAuthorization(): Promise<OidcAuthorization>;
+	createAuthorization(options?: {
+		readonly hostedDomainHint?: boolean;
+	}): Promise<OidcAuthorization>;
 	/**
 	 * 戻ってきた URL の state を確かめ、コードを ID トークンに交換し、署名と nonce を確かめて、中身を返す。
 	 * どれかが合わなければ例外を投げる
@@ -62,6 +64,8 @@ export type CompleteLoginResult =
 export interface AuthService {
 	startLogin(input: {
 		inviteCode: string | null;
+		/** 管理者が用意したテストアカウントでログインする入口。Google のアカウントの選択に、大学のドメインの絞り込みを付けない */
+		testAccount?: boolean;
 	}): Promise<{ redirectTo: string; flow: LoginFlow }>;
 	/** /signup?code=... で、Google に進む前にコードを確かめる */
 	checkInviteCode(code: string): InviteCheck;
@@ -77,6 +81,8 @@ export interface AuthServiceOptions {
 	readonly registration: Registration;
 	/** ADMIN_EMAILS */
 	readonly adminEmails: readonly string[];
+	/** 管理者が用意したテストアカウントのメールアドレスか。ないときは、テストアカウントを認めない */
+	readonly isTestAccount?: (email: string) => boolean;
 	readonly now?: () => Date;
 }
 
@@ -89,8 +95,9 @@ export function createAuthService(options: AuthServiceOptions): AuthService {
 	const now = options.now ?? (() => new Date());
 
 	return {
-		async startLogin({ inviteCode }) {
-			const authorization = await oidc.createAuthorization();
+		async startLogin({ inviteCode, testAccount = false }) {
+			// テストアカウントは、大学のアカウントではないので、Google のアカウントの選択に hd の絞り込みを付けない
+			const authorization = await oidc.createAuthorization({ hostedDomainHint: !testAccount });
 			return {
 				redirectTo: authorization.url,
 				flow: {
@@ -142,6 +149,7 @@ export function createAuthService(options: AuthServiceOptions): AuthService {
 					? { id: existing.id, status: existing.status, role: existing.role }
 					: null,
 				invite: inviteState(store, flow.inviteCode),
+				testAccount: options.isTestAccount?.(claims.email) ?? false,
 				now: at,
 			});
 

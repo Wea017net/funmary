@@ -161,10 +161,6 @@
 </div>
 
 <style lang="scss">
-	.page {
-		max-width: 44rem;
-	}
-
 	.install {
 		margin-top: 1.5rem;
 	}

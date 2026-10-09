@@ -3,6 +3,7 @@ import { fail, redirect, type Actions, type ServerLoad } from '@sveltejs/kit';
 import { jstDateTime } from '@funmary/core';
 import type { NotificationKind } from '@funmary/db';
 import { getServices } from '#lib/server/services.ts';
+import { requireSignedIn } from '#lib/server/admin.ts';
 
 /** 一覧に出す件数。90 日より古い通知は定期処理が消す */
 const LIMIT = 200;
@@ -23,7 +24,7 @@ const safeLink = (link: string | null) =>
 	link !== null && link.startsWith('/') && !link.startsWith('//') ? link : null;
 
 export const load: ServerLoad = ({ locals, url }) => {
-	if (!locals.user) redirect(303, '/login');
+	requireSignedIn(locals);
 	const kindParam = url.searchParams.get('kind');
 	const kind = isKind(kindParam) ? kindParam : null;
 	const { notifications } = getServices();
@@ -48,7 +49,7 @@ export const load: ServerLoad = ({ locals, url }) => {
 
 export const actions: Actions = {
 	open: async ({ request, locals }) => {
-		if (!locals.user) redirect(303, '/login');
+		requireSignedIn(locals);
 		const id = Number((await request.formData()).get('id'));
 		const notification = Number.isInteger(id)
 			? getServices().notifications.markRead(locals.user.id, id, new Date())
@@ -59,7 +60,7 @@ export const actions: Actions = {
 		return { message: '既読にしました。' };
 	},
 	readAll: ({ locals }) => {
-		if (!locals.user) redirect(303, '/login');
+		requireSignedIn(locals);
 		const count = getServices().notifications.markAllRead(locals.user.id, new Date());
 		return { message: count > 0 ? `${count} 件を既読にしました。` : '未読の通知はありません。' };
 	},

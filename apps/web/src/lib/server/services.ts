@@ -4,6 +4,8 @@ import type {
 	AcademicCalendarStore,
 	AccessGrantStore,
 	AccessTokenStore,
+	AccountStore,
+	TestAccountStore,
 	AuditLogStore,
 	AuthStore,
 	ChannelStore,
@@ -125,12 +127,20 @@ export interface Services {
 	readonly feedTokens: FeedTokenStore;
 	/** 公開 API と MCP サーバー向けの個人用アクセストークン */
 	readonly accessTokens: AccessTokenStore;
+	/** アカウントのデータの書き出しと、退会 */
+	readonly account: AccountStore;
+	/** 管理者が用意するテストアカウント (大学のアカウントでなくても、ログインして試せる) */
+	readonly testAccounts: TestAccountStore;
+	/** 大学のアカウントとして許すメールのドメイン (テストアカウントには使えない) */
+	readonly universityDomains: readonly string[];
 	/** MCP の認可 (OAuth 2.1)。同意の画面が、クライアントの確認と認可コードの発行に使う */
 	readonly oauth: OAuthStore;
 	/** 新規登録の方式。紹介の画面の案内に使う */
 	readonly registration: 'invite' | 'open' | 'closed';
 	/** 公開 URL の origin (ブックマークレットの戻り先に使う) */
 	readonly origin: string;
+	/** 同意を求めている利用規約とプライバシーポリシーの版 (最終更新日)。同意するまで、すべての機能を止める */
+	readonly termsVersion: string;
 	/** セルフホストの運営者の情報。設定されていなければ null */
 	readonly operator: { readonly name: string; readonly url: string } | null;
 	/** ロゴ、アイコン、OGP の画像を差し替えるディレクトリ。設定されていなければ null */

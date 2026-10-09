@@ -16,7 +16,7 @@ test('ログインしていなければ、アプリの紹介と、はじめる�
 		8,
 	);
 	await expect(page.getByText('準備中:')).toBeVisible();
-	await expect(page.getByRole('link', { name: 'X (@funmary_app)' }).first()).toHaveAttribute(
+	await expect(page.getByRole('link', { name: 'Twitter (@funmary_app)' }).first()).toHaveAttribute(
 		'href',
 		'https://x.com/funmary_app',
 	);
@@ -99,4 +99,11 @@ test('/favicon.ico は、ICO の形式で返る (ファビコンを集めるサ�
 	const body = await res.body();
 	// ICO の先頭: 予約 0、種別 1 (アイコン)、画像 1 枚
 	expect([...body.subarray(0, 6)]).toEqual([0, 0, 1, 0, 1, 0]);
+});
+
+test('だれでも登録できるときは、?code= があっても、招待コードの欄を出さない', async ({ page }) => {
+	await page.goto('/?code=abcdef');
+	await expect(page.getByLabel('はじめての方は、招待コードで登録します')).toHaveCount(0);
+	// 招待コードが URL にあるのは、招待制のときだけの使い方。参照元の制限も付けない
+	await expect(page.locator('meta[name="referrer"]')).toHaveCount(0);
 });

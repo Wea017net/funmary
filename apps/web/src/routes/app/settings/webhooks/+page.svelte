@@ -40,7 +40,7 @@
 	<meta name="robots" content="noindex" />
 </svelte:head>
 
-<div class="page">
+<div class="page page-w-40">
 	<SettingsBreadcrumb current="Webhook" />
 	<h1>Webhook</h1>
 	<p>
@@ -244,10 +244,6 @@
 </div>
 
 <style>
-	.page {
-		max-width: 40rem;
-	}
-
 	h2 {
 		margin-top: 2rem;
 		font-size: 1.125rem;

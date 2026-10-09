@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { PRIVACY_UPDATED_AT } from '#lib/legal-versions.ts';
 	import SettingsBreadcrumb from '#lib/components/SettingsBreadcrumb.svelte';
 
 	let {
@@ -10,7 +11,7 @@
 		};
 	} = $props();
 
-	const LAST_UPDATED = '2026-10-03';
+	const LAST_UPDATED = PRIVACY_UPDATED_AT;
 </script>
 
 <svelte:head>
@@ -96,7 +97,8 @@
 	<h2>6. 保存する期間</h2>
 	<p>
 		通知欄の記録は 90 日で消します。そのほかの情報は、アカウントを使っている間、保存します。退会
-		(アカウントの削除) を希望する場合は、下の連絡先にご連絡ください。
+		(アカウントの削除)
+		は、設定の「データの書き出しと退会」から、自分でできます。退会すると、あなたのデータをすべて消します。同じ画面で、自分のデータを書き出すこともできます。
 	</p>
 
 	<h2>7. 安全のための管理</h2>
@@ -136,10 +138,6 @@
 </div>
 
 <style>
-	.page {
-		max-width: 44rem;
-	}
-
 	h2 {
 		margin-top: 2rem;
 	}

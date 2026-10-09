@@ -1,24 +1,12 @@
-import { mkdtempSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { createAccessTokenStore } from './access-token-store.ts';
 import { createAuthStore } from './auth-store.ts';
-import { openDatabase, type Database } from './database.ts';
+import type { Database } from './database.ts';
 import { accessTokens } from './schema.ts';
+import { useTestDatabase } from './testing.ts';
 
-let dir: string;
 let database: Database;
-
-beforeEach(() => {
-	dir = mkdtempSync(join(tmpdir(), 'funmary-access-token-'));
-	database = openDatabase(join(dir, 'funmary.db'), { backupDir: join(dir, 'backups') });
-});
-
-afterEach(() => {
-	database.close();
-	rmSync(dir, { recursive: true, force: true });
-});
+useTestDatabase('funmary-access-token-', (db) => (database = db));
 
 const t0 = new Date('2026-10-01T00:00:00Z');
 const later = (ms: number) => new Date(t0.getTime() + ms);
@@ -112,5 +100,18 @@ describe('個人用アクセストークン', () => {
 		store.issue(a.id, { name: 'A のもの', scopes: ['read:lessons'] }, expiresAt, t0);
 		store.issue(b.id, { name: 'B のもの', scopes: ['read:lessons'] }, expiresAt, t0);
 		expect(store.list(a.id, t0).map((row) => row.name)).toEqual(['A のもの']);
+	});
+});
+
+describe('トークンの持ち主の利用規約への同意', () => {
+	it('持ち主が同意した版を、findOwner が返す', () => {
+		const { auth, id } = addUser('a@fun.ac.jp');
+		const store = createAccessTokenStore(database);
+		const token = store.issue(id, { name: 'test', scopes: ['read:lessons'] }, expiresAt, t0);
+
+		expect(store.findOwner(token, t0)?.termsAcceptedVersion).toBeNull();
+
+		auth.acceptTerms(id, '2026-10-03', t0);
+		expect(store.findOwner(token, t0)?.termsAcceptedVersion).toBe('2026-10-03');
 	});
 });

@@ -23,7 +23,7 @@
 	<meta name="robots" content="noindex" />
 </svelte:head>
 
-<div class="page">
+<div class="page page-w-40">
 	<p><a href={resolve('app/events')}>自分の予定</a></p>
 	<h1>{data.event.title}</h1>
 
@@ -66,9 +66,6 @@
 </div>
 
 <style>
-	.page {
-		max-width: 40rem;
-	}
 	dt {
 		margin-top: 0.75rem;
 		color: var(--fm-text-muted);

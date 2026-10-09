@@ -76,7 +76,7 @@
 	<meta name="robots" content="noindex" />
 </svelte:head>
 
-<div class="page">
+<div class="page page-w-48">
 	<SettingsBreadcrumb current="Discord設定" />
 	<h1>Discord設定</h1>
 
@@ -264,9 +264,6 @@
 </div>
 
 <style>
-	.page {
-		max-width: 48rem;
-	}
 	section {
 		margin-top: 2rem;
 	}

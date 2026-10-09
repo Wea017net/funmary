@@ -51,6 +51,11 @@ export interface AssignedClassChange {
 	readonly period: number;
 	/** 補講の教室、または教室変更の移動先 */
 	readonly room: string | null;
+	/** 教室変更の移動元 */
+	readonly fromRoom: string | null;
+	/** ポータルの休講などのコメント */
+	readonly comment: string | null;
+	readonly makeupPlan: TrackedChange['makeupPlan'];
 }
 
 type Row = typeof classChanges.$inferSelect;
@@ -164,6 +169,9 @@ export function createClassChangeStore(database: Database): ClassChangeStore {
 					date: classChanges.date,
 					period: classChanges.period,
 					room: classChanges.room,
+					fromRoom: classChanges.fromRoom,
+					comment: classChanges.comment,
+					makeupPlan: classChanges.makeupPlan,
 				})
 				.from(classChanges)
 				.where(

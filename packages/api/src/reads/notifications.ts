@@ -14,6 +14,8 @@ export interface ListNotificationsOptions {
 	readonly kinds?: readonly NotificationKind[];
 	/** この日時より新しいものだけ */
 	readonly since?: Date;
+	/** この ID より新しい (ID が大きい) ものだけ。前回読んだ最大の ID を渡すと、差分だけを読める */
+	readonly afterId?: number;
 	/** 返す最大件数 (絞り込みのあと) */
 	readonly limit?: number;
 }
@@ -28,7 +30,8 @@ export function listUserNotifications(
 	const filtered = rows.filter(
 		(notification) =>
 			(!options.kinds || options.kinds.includes(notification.kind)) &&
-			(!options.since || notification.createdAt >= options.since),
+			(!options.since || notification.createdAt >= options.since) &&
+			(options.afterId === undefined || notification.id > options.afterId),
 	);
 	return options.limit === undefined ? filtered : filtered.slice(0, options.limit);
 }

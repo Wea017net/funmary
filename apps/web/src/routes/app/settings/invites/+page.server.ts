@@ -1,6 +1,6 @@
 // 招待コードの発行。発行できる人は、管理画面のモードで決まる。
 // 発行したコードは DB にハッシュだけを保存するので、発行の直後に 1 回だけ画面に出す。
-import { fail, redirect, type Actions, type ServerLoad } from '@sveltejs/kit';
+import { fail, type Actions, type ServerLoad } from '@sveltejs/kit';
 import { parseInviteForm } from '#lib/server/invite-form.ts';
 import {
 	formatJstDateTime,
@@ -10,9 +10,10 @@ import {
 	usableInviteCodes,
 } from '#lib/server/invites.ts';
 import { getServices } from '#lib/server/services.ts';
+import { requireSignedIn } from '#lib/server/admin.ts';
 
 export const load: ServerLoad = ({ locals }) => {
-	if (!locals.user) redirect(303, '/login');
+	requireSignedIn(locals);
 	const services = getServices();
 	const now = new Date();
 	const { issuance } = loadInviteStatus(services, locals.user, now);
@@ -25,7 +26,7 @@ export const load: ServerLoad = ({ locals }) => {
 
 export const actions: Actions = {
 	issue: async ({ request, locals }) => {
-		if (!locals.user) redirect(303, '/login');
+		requireSignedIn(locals);
 		const parsed = parseInviteForm(await request.formData());
 		if (!parsed.ok) return fail(400, { error: parsed.error });
 		const services = getServices();
@@ -55,7 +56,7 @@ export const actions: Actions = {
 		}
 	},
 	revoke: async ({ request, locals }) => {
-		if (!locals.user) redirect(303, '/login');
+		requireSignedIn(locals);
 		const id = Number((await request.formData()).get('id'));
 		if (!Number.isInteger(id) || !revokeInvite(getServices(), locals.user, id, new Date())) {
 			return fail(404, { error: '取り消せる招待コードが見つかりません。' });

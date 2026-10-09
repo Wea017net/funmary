@@ -1,24 +1,12 @@
-import { mkdtempSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { createAuthStore } from './auth-store.ts';
-import { openDatabase, type Database } from './database.ts';
+import type { Database } from './database.ts';
 import { createNotificationStore } from './notification-store.ts';
 import { classChanges, courseRegistrations, subjects } from './schema.ts';
+import { useTestDatabase } from './testing.ts';
 
-let dir: string;
 let database: Database;
-
-beforeEach(() => {
-	dir = mkdtempSync(join(tmpdir(), 'funmary-notifications-'));
-	database = openDatabase(join(dir, 'funmary.db'), { backupDir: join(dir, 'backups') });
-});
-
-afterEach(() => {
-	database.close();
-	rmSync(dir, { recursive: true, force: true });
-});
+useTestDatabase('funmary-notifications-', (db) => (database = db));
 
 const at = (iso: string) => new Date(iso);
 

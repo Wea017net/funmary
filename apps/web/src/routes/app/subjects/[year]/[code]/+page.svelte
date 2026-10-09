@@ -69,7 +69,7 @@
 	<meta name="robots" content="noindex" />
 </svelte:head>
 
-<div class="page">
+<div class="page page-w-40">
 	<p><a href={resolve('app/courses')}>科目</a></p>
 	<h1>{data.subject.name}</h1>
 	{#if data.subject.userAdded}
@@ -364,10 +364,6 @@
 </div>
 
 <style>
-	.page {
-		max-width: 40rem;
-	}
-
 	.note {
 		color: var(--fm-text-muted);
 		font-size: 0.875rem;

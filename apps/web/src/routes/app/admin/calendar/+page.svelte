@@ -73,7 +73,7 @@
 	<meta name="robots" content="noindex" />
 </svelte:head>
 
-<div class="page">
+<div class="page page-w-64">
 	<SettingsBreadcrumb current="学年暦" />
 	<h1>{data.academicYear} 年度の学年暦</h1>
 
@@ -371,10 +371,6 @@
 </div>
 
 <style lang="scss">
-	.page {
-		max-width: 64rem;
-	}
-
 	details {
 		margin-top: 1rem;
 	}

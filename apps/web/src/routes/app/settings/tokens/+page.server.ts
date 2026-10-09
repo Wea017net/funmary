@@ -1,6 +1,6 @@
 // 公開 API と MCP サーバー向けの個人用アクセストークン。発行、一覧、無効化。
 // トークンは発行したときに 1 回だけ見せ、DB にはハッシュだけを保存する。
-import { fail, redirect, type Actions, type ServerLoad } from '@sveltejs/kit';
+import { fail, type Actions, type ServerLoad } from '@sveltejs/kit';
 import {
 	ACCESS_TOKEN_EXPIRES_OPTIONS,
 	ACCESS_TOKEN_SCOPE_OPTIONS,
@@ -8,9 +8,10 @@ import {
 	parseAccessTokenIssue,
 } from '#lib/server/access-token-form.ts';
 import { getServices } from '#lib/server/services.ts';
+import { requireSignedIn } from '#lib/server/admin.ts';
 
 export const load: ServerLoad = ({ locals }) => {
-	if (!locals.user) redirect(303, '/login');
+	requireSignedIn(locals);
 	const { accessTokens, origin } = getServices();
 	const now = new Date();
 	return {
@@ -32,7 +33,7 @@ export const load: ServerLoad = ({ locals }) => {
 
 export const actions: Actions = {
 	issue: async ({ request, locals }) => {
-		if (!locals.user) redirect(303, '/login');
+		requireSignedIn(locals);
 		const { accessTokens } = getServices();
 		const now = new Date();
 		const parsed = parseAccessTokenIssue(await request.formData(), now);
@@ -47,7 +48,7 @@ export const actions: Actions = {
 	},
 
 	revoke: async ({ request, locals }) => {
-		if (!locals.user) redirect(303, '/login');
+		requireSignedIn(locals);
 		const { accessTokens } = getServices();
 		const id = parseAccessTokenId(await request.formData());
 		if (id === null) return fail(400, { error: '指定が正しくありません。' });
