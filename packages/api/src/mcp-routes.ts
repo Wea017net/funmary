@@ -14,6 +14,8 @@ import {
 	listPeriods,
 	listUserCourses,
 } from './reads/public-data.ts';
+import { getDataStatus, listUserEventOccurrences } from './reads/public-events.ts';
+import { getSubjectSessions, searchSubjects } from './reads/public-subjects.ts';
 import { getSubjectDetail } from './reads/subject-detail.ts';
 import type { TimetableSources } from './reads/user-timetable.ts';
 import type { V1RoutesDeps } from './v1/routes.ts';
@@ -114,6 +116,71 @@ export function buildMcpServer(
 			},
 			({ year }) =>
 				jsonText(getAcademicCalendar(timetableSources, year ?? currentAcademicYear(new Date()))),
+		);
+		server.registerTool(
+			'list_events',
+			{
+				description:
+					'日付 (YYYY-MM-DD、日本時間) の範囲の、自分の予定と、時間割に加えたほかの人の予定 (繰り返しは回ごとに展開)。日付を省くと今日',
+				inputSchema: { start: z.string().optional(), end: z.string().optional() },
+				annotations: { readOnlyHint: true },
+			},
+			({ start, end }) => {
+				const user = deps.users.findUserById(owner.userId);
+				if (!user) return jsonText({ error: 'not_found' });
+				const today = jstDateTime(new Date()).date;
+				return jsonText({
+					events: listUserEventOccurrences(deps, user, {
+						start: start ?? today,
+						end: end ?? start ?? today,
+					}),
+				});
+			},
+		);
+		server.registerTool(
+			'get_data_status',
+			{
+				description:
+					'休講や教室の変更のデータが新しいか。stale が true のときは、反映が遅れているかもしれないので、授業の答えに添える',
+				annotations: { readOnlyHint: true },
+			},
+			() => jsonText(getDataStatus(deps, new Date())),
+		);
+		server.registerTool(
+			'search_subjects',
+			{
+				description:
+					'年度 (省けば今年度) の科目を、名前、教員、授業コードで探す。公開の科目だけを 50 件まで返す。term は spring、fall など',
+				inputSchema: {
+					q: z.string().max(100).optional(),
+					year: z.number().optional(),
+					term: z.string().optional(),
+				},
+				annotations: { readOnlyHint: true },
+			},
+			({ q, year, term }) =>
+				jsonText(
+					searchSubjects(deps, { academicYear: year ?? currentAcademicYear(new Date()), q, term }),
+				),
+		);
+		server.registerTool(
+			'get_subject_sessions',
+			{
+				description:
+					'科目のその年度の全授業日 (時刻、教室、休講、補講、教室変更を反映)。sequence は休講を除いた通し番号で、シラバスの第 n 回とは限らない',
+				inputSchema: { year: z.number(), syllabusId: z.string() },
+				annotations: { readOnlyHint: true },
+			},
+			({ year, syllabusId }) => {
+				const viewer = deps.users.findUserById(owner.userId);
+				if (!viewer) return jsonText({ error: 'not_found' });
+				const result = getSubjectSessions(
+					deps,
+					{ academicYear: year, syllabusId },
+					{ id: viewer.id, email: viewer.email, role: viewer.role },
+				);
+				return jsonText(result ?? { error: 'not_found' });
+			},
 		);
 		server.registerTool(
 			'get_subject',

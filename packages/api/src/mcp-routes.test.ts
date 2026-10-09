@@ -12,6 +12,8 @@ import {
 	createCourseStore,
 	createHolidayStore,
 	createNotificationStore,
+	createSourceHealthStore,
+	createUserEventStore,
 	createPersonalSlotStore,
 	createSubjectStore,
 	openDatabase,
@@ -45,6 +47,8 @@ function deps() {
 		holidays: createHolidayStore(database),
 		estimateHolidays: () => [],
 		notifications: createNotificationStore(database),
+		userEvents: createUserEventStore(database),
+		sourceHealth: createSourceHealthStore(database),
 		accessGrants: createAccessGrantStore(database),
 		accessTokens: createAccessTokenStore(database),
 		users: createAuthStore(database),
@@ -66,16 +70,20 @@ describe('buildMcpServer', () => {
 		const { tools } = await client.listTools();
 		expect(tools.map((tool) => tool.name).sort()).toEqual([
 			'get_academic_calendar',
+			'get_data_status',
 			'get_lessons',
 			'get_next_lesson',
 			'get_periods',
 			'get_subject',
+			'get_subject_sessions',
 			'list_courses',
+			'list_events',
+			'search_subjects',
 		]);
 		expect(tools.every((tool) => tool.annotations?.readOnlyHint)).toBe(true);
 	});
 
-	it('すべての範囲を持つトークンでは、8 つの道具がそろう', async () => {
+	it('すべての範囲を持つトークンでは、12 の道具がそろう', async () => {
 		const src = deps();
 		const server = buildMcpServer(src, {
 			userId: 'u1',
@@ -85,13 +93,17 @@ describe('buildMcpServer', () => {
 		const { tools } = await client.listTools();
 		expect(tools.map((tool) => tool.name).sort()).toEqual([
 			'get_academic_calendar',
+			'get_data_status',
 			'get_lessons',
 			'get_next_lesson',
 			'get_periods',
 			'get_subject',
+			'get_subject_sessions',
 			'list_changes',
 			'list_courses',
+			'list_events',
 			'list_notifications',
+			'search_subjects',
 		]);
 	});
 

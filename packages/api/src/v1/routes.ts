@@ -15,6 +15,17 @@ import { rateLimiter } from 'hono-rate-limiter';
 import * as v from 'valibot';
 import { listUserNotifications, type NotificationsSources } from '../reads/notifications.ts';
 import {
+	getDataStatus,
+	listUserEventOccurrences,
+	type EventSources,
+	type StatusSources,
+} from '../reads/public-events.ts';
+import {
+	getSubjectSessions,
+	searchSubjects,
+	type SubjectSearchSources,
+} from '../reads/public-subjects.ts';
+import {
 	currentAcademicYear,
 	getAcademicCalendar,
 	getNextLesson,
@@ -43,8 +54,15 @@ const isNotificationKind = (value: string): value is NotificationKind =>
 	(NOTIFICATION_KINDS as readonly string[]).includes(value);
 
 export interface V1RoutesDeps
-	extends TimetableSources, NotificationsSources, CourseSources, AcademicCalendarSources {
-	readonly subjects: Pick<SubjectStore, 'findById' | 'findBySyllabus'>;
+	extends
+		TimetableSources,
+		NotificationsSources,
+		CourseSources,
+		AcademicCalendarSources,
+		EventSources,
+		StatusSources,
+		SubjectSearchSources {
+	readonly subjects: Pick<SubjectStore, 'findById' | 'findBySyllabus' | 'list'>;
 	readonly accessGrants: Pick<AccessGrantStore, 'isGranted'>;
 	readonly classChanges: TimetableSources['classChanges'] & Pick<ClassChangeStore, 'listBySubject'>;
 	readonly notifications: Pick<NotificationStore, 'list'>;
@@ -151,6 +169,61 @@ const AcademicCalendarSchema = v.object({
 	days: v.array(DaySchema),
 });
 
+const EventSchema = v.object({
+	key: v.pipe(v.string(), v.description('回ごとに決まる ID')),
+	eventId: v.number(),
+	title: v.string(),
+	location: v.nullable(v.string()),
+	notes: v.pipe(
+		v.nullable(v.string()),
+		v.description('自分の予定のメモ。ほかの人の予定を加えたものは null'),
+	),
+	startDate: v.string(),
+	endDate: v.pipe(v.string(), v.description('この回の終わりの日 (この日を含む)')),
+	allDay: v.boolean(),
+	start: v.pipe(
+		v.nullable(v.string()),
+		v.description('HH:MM (日本時間)。時限で決めた予定は、時限の時刻。終日なら null'),
+	),
+	end: v.nullable(v.string()),
+	periods: v.pipe(
+		v.nullable(v.object({ from: v.number(), to: v.number() })),
+		v.description('時限で決めた予定の、時限の範囲'),
+	),
+	added: v.pipe(v.boolean(), v.description('ほかの人の予定を、自分の時間割に加えたもの')),
+});
+
+const StatusSchema = v.object({
+	timetable: v.object({
+		lastSuccessAt: v.pipe(
+			v.nullable(v.string()),
+			v.description('休講や教室の変更を最後に取れた日時 (ISO 8601)。一度も取れていなければ null'),
+		),
+		stale: v.pipe(
+			v.boolean(),
+			v.description('情報が古い。休講や教室の変更が、まだ反映されていないかもしれない'),
+		),
+	}),
+});
+
+const SubjectSummarySchema = v.object({
+	academicYear: v.number(),
+	syllabusId: v.string(),
+	name: v.string(),
+	teacher: v.nullable(v.string()),
+	credits: v.nullable(v.number()),
+	term: v.string(),
+});
+
+const SubjectSearchQuery = v.object({
+	q: v.optional(v.pipe(v.string(), v.maxLength(100))),
+	/** 省けば今日が属する年度 */
+	year: v.optional(
+		v.pipe(v.string(), v.transform(Number), v.integer(), v.minValue(2000), v.maxValue(2100)),
+	),
+	term: v.optional(v.string()),
+});
+
 const AcademicCalendarQuery = v.object({
 	/** 省けば今日が属する年度 */
 	year: v.optional(
@@ -176,7 +249,11 @@ const AUTHED_PATHS = [
 	'/api/v1/courses',
 	'/api/v1/academic-calendar',
 	'/api/v1/changes',
+	'/api/v1/subjects',
 	'/api/v1/subjects/:year/:syllabusId',
+	'/api/v1/subjects/:year/:syllabusId/sessions',
+	'/api/v1/events',
+	'/api/v1/status',
 	'/api/v1/notifications',
 	'/api/v1/me',
 ] as const;
@@ -345,6 +422,110 @@ export function createV1Routes(deps: V1RoutesDeps): Hono<{ Variables: V1AuthVari
 			);
 			if (!detail) return c.json({ error: 'not_found' }, 404);
 			return c.json(detail);
+		},
+	);
+
+	app.get(
+		'/api/v1/events',
+		requireScope('read:lessons'),
+		describeRoute({
+			description:
+				'日付の範囲の、自分の予定と、時間割に加えたほかの人の予定 (繰り返しは回ごとに展開する)',
+			responses: {
+				200: {
+					description: 'OK',
+					content: { 'application/json': { schema: resolver(v.array(EventSchema)) } },
+				},
+			},
+		}),
+		validator('query', RangeQuery),
+		(c) => {
+			const { start, end } = c.req.valid('query');
+			const user = deps.users.findUserById(c.get('tokenOwner').userId);
+			if (!user) return c.json({ error: 'not_found' }, 404);
+			return c.json(listUserEventOccurrences(deps, user, { start, end }));
+		},
+	);
+
+	app.get(
+		'/api/v1/status',
+		requireScope('read:lessons'),
+		describeRoute({
+			description: '休講や教室の変更のデータが新しいか。古いときは、反映が遅れているかもしれない',
+			responses: {
+				200: {
+					description: 'OK',
+					content: { 'application/json': { schema: resolver(StatusSchema) } },
+				},
+			},
+		}),
+		(c) => c.json(getDataStatus(deps, new Date())),
+	);
+
+	app.get(
+		'/api/v1/subjects',
+		requireScope('read:lessons'),
+		describeRoute({
+			description:
+				'年度 (省けば今年度) の科目を、名前、教員、授業コードで探す。公開の科目だけを、50 件まで返す',
+			responses: {
+				200: {
+					description: 'OK',
+					content: {
+						'application/json': {
+							schema: resolver(
+								v.object({ subjects: v.array(SubjectSummarySchema), truncated: v.boolean() }),
+							),
+						},
+					},
+				},
+			},
+		}),
+		validator('query', SubjectSearchQuery),
+		(c) => {
+			const { q, year, term } = c.req.valid('query');
+			return c.json(
+				searchSubjects(deps, { academicYear: year ?? currentAcademicYear(new Date()), q, term }),
+			);
+		},
+	);
+
+	app.get(
+		'/api/v1/subjects/:year/:syllabusId/sessions',
+		requireScope('read:lessons'),
+		describeRoute({
+			description:
+				'科目のその年度の全授業日 (時刻、教室、休講、補講、教室変更を反映)。sequence は休講を除いた通し番号',
+			responses: {
+				200: {
+					description: 'OK',
+					content: {
+						'application/json': {
+							schema: resolver(
+								v.object({
+									subject: SubjectSummarySchema,
+									sessions: v.array(
+										v.object({ ...LessonSchema.entries, sequence: v.nullable(v.number()) }),
+									),
+								}),
+							),
+						},
+					},
+				},
+			},
+		}),
+		validator('param', SubjectParam),
+		(c) => {
+			const { year, syllabusId } = c.req.valid('param');
+			const viewer = deps.users.findUserById(c.get('tokenOwner').userId);
+			if (!viewer) return c.json({ error: 'not_found' }, 404);
+			const result = getSubjectSessions(
+				deps,
+				{ academicYear: year, syllabusId },
+				{ id: viewer.id, email: viewer.email, role: viewer.role },
+			);
+			if (!result) return c.json({ error: 'not_found' }, 404);
+			return c.json(result);
 		},
 	);
 

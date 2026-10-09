@@ -2,8 +2,11 @@
 // 連携していない人、停止した利用者には、答えの代わりに連携の案内を返す。
 import {
 	buildUserTimetable,
+	getDataStatus,
 	getNextLesson,
+	listUserEventOccurrences,
 	type DayNote,
+	type PublicEvent,
 	type TimetableLesson,
 } from '@funmary/api';
 import { addDays, findPeriod, DEFAULT_PERIODS, jstDateTime, startOfWeek } from '@funmary/core';
@@ -25,23 +28,40 @@ function lessonLine(lesson: TimetableLesson): string {
 	return `${when} ${plain(lesson.subjectName)}${room}${status}`;
 }
 
+/** 予定の 1 行。終日、時刻のどちらで決めた予定かで、時間の書き方を変える */
+function eventLine(event: PublicEvent): string {
+	const when = event.allDay
+		? '終日'
+		: event.start && event.end
+			? `${event.start}-${event.end}`
+			: '';
+	const place = event.location ? ` (${plain(event.location)})` : '';
+	return `${when ? `${when} ` : ''}${plain(event.title)}${place} [予定]`;
+}
+
+/** 情報が古いときに、答えの終わりへ添える注意 */
+const STALE_NOTICE =
+	'\n※ 休講や教室の変更のデータが、しばらく更新されていません。反映が遅れているかもしれません。';
+
 /** 日付ごとに、授業を時限の順に並べる。授業のない日は、その事情だけを出す */
 function dayBlocks(
 	dates: readonly CalendarDate[],
 	lessons: readonly TimetableLesson[],
 	notes: ReadonlyMap<CalendarDate, DayNote>,
 	include: (lesson: TimetableLesson) => boolean,
+	events: readonly PublicEvent[] = [],
 ): string[] {
 	return dates.flatMap((date) => {
 		const ofDay = lessons
 			.filter((lesson) => lesson.date === date && include(lesson))
 			.sort((a, b) => a.period - b.period);
+		const eventsOfDay = events.filter((event) => event.startDate <= date && date <= event.endDate);
 		const note = notes.get(date);
-		if (ofDay.length === 0 && !note) return [];
+		if (ofDay.length === 0 && eventsOfDay.length === 0 && !note) return [];
 		const head = `**${formatDate(date)}**`;
 		const body =
 			ofDay.length > 0 ? ofDay.map(lessonLine) : note ? [plain(formatDayNote(note))] : [];
-		return [head, ...body];
+		return [head, ...body, ...eventsOfDay.map(eventLine)];
 	});
 }
 
@@ -74,17 +94,18 @@ export function answerCommand(
 		return 'この Funmary のアカウントは、いまは利用できません。';
 
 	const today = jstDateTime(now).date;
+	const stale = getDataStatus(services, now).timetable.stale ? STALE_NOTICE : '';
 	if (command === 'today') {
 		const timetable = buildUserTimetable(services, user.id, { start: today, end: today });
-		const body = dayBlocks([today], timetable.lessons, timetable.notes, () => true);
-		return body.length > 0 ? body.join('\n') : '今日は、授業も休みの知らせもありません。';
+		const events = listUserEventOccurrences(services, user, { start: today, end: today });
+		const body = dayBlocks([today], timetable.lessons, timetable.notes, () => true, events);
+		return (body.length > 0 ? body.join('\n') : '今日は、授業も休みの知らせもありません。') + stale;
 	}
 	if (command === 'next') {
 		const { next } = getNextLesson(services, user.id, now);
-		if (!next) return 'これから 14 日の間に、授業の予定はありません。';
+		if (!next) return `これから 14 日の間に、授業の予定はありません。${stale}`;
 		const label = next.inProgress ? '授業中' : '次の授業';
-		return `${label}: **${formatDate(next.date)}**
-${lessonLine(next)}`;
+		return `${label}: **${formatDate(next.date)}**\n${lessonLine(next)}${stale}`;
 	}
 	if (command === 'week') {
 		const weekStart = startOfWeek(today);
@@ -93,8 +114,12 @@ ${lessonLine(next)}`;
 			start: weekStart,
 			end: addDays(weekStart, 6),
 		});
-		const body = dayBlocks(dates, timetable.lessons, timetable.notes, () => true);
-		return body.length > 0 ? body.join('\n') : 'この週は、授業の予定がありません。';
+		const events = listUserEventOccurrences(services, user, {
+			start: weekStart,
+			end: addDays(weekStart, 6),
+		});
+		const body = dayBlocks(dates, timetable.lessons, timetable.notes, () => true, events);
+		return (body.length > 0 ? body.join('\n') : 'この週は、授業の予定がありません。') + stale;
 	}
 	if (command === 'changes') {
 		const dates = daysFrom(today, CHANGES_DAYS);
@@ -103,9 +128,11 @@ ${lessonLine(next)}`;
 			end: addDays(today, CHANGES_DAYS - 1),
 		});
 		const body = dayBlocks(dates, timetable.lessons, timetable.notes, CHANGES_FILTER);
-		return body.length > 0
-			? body.join('\n')
-			: `これから ${CHANGES_DAYS} 日の休講、補講、教室変更はありません。`;
+		return (
+			(body.length > 0
+				? body.join('\n')
+				: `これから ${CHANGES_DAYS} 日の休講、補講、教室変更はありません。`) + stale
+		);
 	}
 	return 'そのコマンドには対応していません。';
 }

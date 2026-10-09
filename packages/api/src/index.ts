@@ -1,5 +1,17 @@
 export { createApi, type ApiDeps } from './app.ts';
 export {
+	getDataStatus,
+	listUserEventOccurrences,
+	type DataStatus,
+	type PublicEvent,
+} from './reads/public-events.ts';
+export {
+	getSubjectSessions,
+	searchSubjects,
+	type PublicSubjectSummary,
+	type SubjectSession,
+} from './reads/public-subjects.ts';
+export {
 	currentAcademicYear,
 	getAcademicCalendar,
 	getNextLesson,
