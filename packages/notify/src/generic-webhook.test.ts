@@ -41,7 +41,7 @@ describe('genericWebhookBody', () => {
 		expect(body.type).toBe('something-new');
 	});
 
-	it('休講などの構造化データ (subject、date、period) があれば、data に添える (設計書 14.3.1)', () => {
+	it('休講などの構造化データ (subject、date、period) があれば、data に添える', () => {
 		const body = JSON.parse(
 			genericWebhookBody({
 				...message,

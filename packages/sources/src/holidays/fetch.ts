@@ -1,10 +1,10 @@
-// 内閣府の祝日の CSV を取得する (設計書 10 章)。週 1 回、ETag を付けて取得し、変わったときだけ取り込む。
+// 内閣府の祝日の CSV を取得する。週 1 回、ETag を付けて取得し、変わったときだけ取り込む。
 // 外部への通信は、定期処理からだけ呼ぶ。fetch は差し替えられる (テストと、通信の制御のため)。
 import { decodeHolidayCsv, parseHolidayCsv, type Holiday } from './parse.ts';
 
 export const HOLIDAY_CSV_URL = 'https://www8.cao.go.jp/chosei/shukujitsu/syukujitsu.csv';
 
-/** 外部の応答が遅いときに待つ時間 (設計書 4.5) */
+/** 外部の応答が遅いときに待つ時間 */
 const TIMEOUT_MS = 15_000;
 
 export interface FetchHolidaysDeps {
@@ -23,7 +23,7 @@ export type FetchHolidaysResult =
 	| { readonly kind: 'not-modified' }
 	| { readonly kind: 'failed'; readonly message: string };
 
-/** 例外は投げず、結果として返す。1 つの取得元の失敗を、ほかの処理に波及させないため (設計書 4.5) */
+/** 例外は投げず、結果として返す。1 つの取得元の失敗を、ほかの処理に波及させないため */
 export async function fetchHolidays(deps: FetchHolidaysDeps): Promise<FetchHolidaysResult> {
 	const headers = new Headers();
 	if (deps.etag) headers.set('If-None-Match', deps.etag);

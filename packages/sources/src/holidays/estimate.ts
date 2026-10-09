@@ -1,4 +1,4 @@
-// 内閣府の CSV にまだ載っていない先の年の祝日を、@holiday-jp/holiday_jp のデータで推定する (設計書 10 章)。
+// 内閣府の CSV にまだ載っていない先の年の祝日を、@holiday-jp/holiday_jp のデータで推定する。
 // 推定した値は、CSV に載ったら置き換わる。データにない年は、空を返す。
 import holidayJp from '@holiday-jp/holiday_jp';
 import type { Holiday } from './parse.ts';

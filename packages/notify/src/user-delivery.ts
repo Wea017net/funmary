@@ -1,4 +1,4 @@
-// 利用者への通知を Discord に送る部品 (設計書 14.3)。送り先は、利用者が登録した Webhook と、Discord 連携の Bot の 2 つ。
+// 利用者への通知を Discord に送る部品。送り先は、利用者が登録した Webhook と、Discord 連携の Bot の 2 つ。
 // 送った結果を「送れた」「届かない」「再送する」「再送しても直らない」に分け、いつ再送するかは呼び出し側 (@funmary/jobs) が決める。
 // 失敗の理由には、Webhook の URL (秘密) を含めない
 import type { ReadableStreamReadResult } from 'node:stream/web';
@@ -11,7 +11,7 @@ export interface DeliveryMessage {
 	/** 押したときに開く、絶対の URL */
 	readonly url: string | null;
 	readonly createdAt: Date;
-	/** 休講などの通知のときだけ持つ、構造化データ (設計書 14.3.1)。汎用 Webhook の data に使う。Discord の埋め込みには使わない */
+	/** 休講などの通知のときだけ持つ、構造化データ。汎用 Webhook の data に使う。Discord の埋め込みには使わない */
 	readonly subject?: { readonly name: string; readonly url: string } | null;
 	readonly date?: string | null;
 	readonly period?: number | null;
@@ -49,7 +49,7 @@ export function maskWebhookUrl(url: string): string {
 	}
 }
 
-/** 休講は赤、補講は緑、教室変更は黄 (設計書 14.3)。ほかは灰色 */
+/** 休講は赤、補講は緑、教室変更は黄。ほかは灰色 */
 const COLORS: Readonly<Record<string, number>> = {
 	cancellation: 0xe5484d,
 	makeup: 0x30a46c,
