@@ -1,4 +1,4 @@
-// 大学の公式サイトの「教育に関する情報」のページから、学年暦の PDF を探して取る (設計書 10 章)。
+// 大学の公式サイトの「教育に関する情報」のページから、学年暦の PDF を探して取る。
 // 外部への通信は、定期処理からだけ呼ぶ。fetch は差し替えられる (テストと、通信の制御のため)。
 // リンクは表示の文字 (例: "2026学年暦") で探し、大学サイトの https の PDF だけを使う。
 import { fromHtml } from 'hast-util-from-html';
@@ -9,7 +9,7 @@ import { readHtml } from '../portal/http.ts';
 export const ACADEMIC_INFO_URL = 'https://www.fun.ac.jp/about/univ-academic/';
 const SITE_HOST = 'www.fun.ac.jp';
 
-/** 外部の応答が遅いときに待つ時間 (設計書 4.5) */
+/** 外部の応答が遅いときに待つ時間 */
 const TIMEOUT_MS = 30_000;
 /** 学年暦の PDF の大きさの上限。今の PDF は 230 KB ほど */
 const MAX_PDF_BYTES = 10 * 1024 * 1024;
@@ -47,7 +47,7 @@ export type FetchAcademicCalendarResult =
 	| { readonly kind: 'ok'; readonly year: number; readonly url: string; readonly bytes: Uint8Array }
 	| { readonly kind: 'failed'; readonly message: string };
 
-/** 例外は投げず、結果として返す。1 つの取得元の失敗を、ほかの処理に波及させないため (設計書 4.5) */
+/** 例外は投げず、結果として返す。1 つの取得元の失敗を、ほかの処理に波及させないため */
 export async function fetchAcademicCalendarPdf(
 	deps: FetchAcademicCalendarDeps,
 ): Promise<FetchAcademicCalendarResult> {

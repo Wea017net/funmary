@@ -1,4 +1,4 @@
-// 大学サイトの学年暦の PDF を取り込む定期処理 (設計書 10 章)。月に 1 回取りに行き、内容が変わったときだけ読み取って取り込む。
+// 大学サイトの学年暦の PDF を取り込む定期処理。月に 1 回取りに行き、内容が変わったときだけ読み取って取り込む。
 // 読み取れないときや警告があるときは書き込まず、管理者に知らせて、管理画面からの取り込みを案内する。
 import { createHash } from 'node:crypto';
 import { isSourceDisabled, shouldAttempt, type SourceHealth } from '@funmary/core';

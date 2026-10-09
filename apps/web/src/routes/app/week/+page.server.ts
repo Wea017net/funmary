@@ -1,4 +1,4 @@
-// 週の時間割 (設計書 12.1、12.4)。?date= で、その日を含む週を出す。省けば今週
+// 週の時間割。?date= で、その日を含む週を出す。省けば今週
 import { redirect, type ServerLoad } from '@sveltejs/kit';
 import { buildUserTimetable } from '@funmary/api';
 import {

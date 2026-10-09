@@ -1,4 +1,4 @@
-// ビルド済みのアプリを、VPS に置けるリリースの tar.gz にまとめる (設計書 20.6)。
+// ビルド済みのアプリを、VPS に置けるリリースの tar.gz にまとめる。
 // 使い方: node scripts/package-release.js <版の名前>。先に pnpm build と、apps/web の pnpm bundle-cli を動かしておく。
 // 版の名前は build-<コミットの短い hash> か v<数字>.<数字>.<数字> の形にする (VPS の funmary-update が同じ形を確かめる)。
 import { execFileSync } from 'node:child_process';

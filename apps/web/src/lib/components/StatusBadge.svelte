@@ -4,7 +4,7 @@
 	import IconRoomChanged from '~icons/material-symbols/swap-horiz';
 	import { STATUS_LABELS } from '#lib/timetable-label.ts';
 
-	// 休講などを、色に加えて文字とアイコンで示す (設計書 12.3)。ふだんの授業には何も出さない
+	// 休講などを、色に加えて文字とアイコンで示す。ふだんの授業には何も出さない
 	let { status }: { status: 'normal' | 'cancelled' | 'makeup' | 'roomChanged' } = $props();
 
 	const ICONS = { cancelled: IconCancelled, makeup: IconMakeup, roomChanged: IconRoomChanged };

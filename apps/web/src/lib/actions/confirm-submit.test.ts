@@ -7,18 +7,38 @@ type Listener = (event: {
 	preventDefault: () => void;
 	stopImmediatePropagation: () => void;
 }) => void;
+type Options = { capture?: boolean } | undefined;
 
+// イベントの対象の要素での、ブラウザの動きをまねる。捕捉 (capture) のリスナーを登録の順に関係なく先に呼び、
+// stopImmediatePropagation のあとのリスナーは呼ばない。外すときは、登録と同じ capture を指定しないと外れない
 function createFakeForm() {
-	const listeners: Listener[] = [];
+	const listeners: { listener: Listener; capture: boolean }[] = [];
 	return {
-		addEventListener: (_type: string, listener: Listener) => listeners.push(listener),
-		removeEventListener: (_type: string, listener: Listener) => {
-			const index = listeners.indexOf(listener);
+		addEventListener: (_type: string, listener: Listener, options?: Options) =>
+			listeners.push({ listener, capture: options?.capture ?? false }),
+		removeEventListener: (_type: string, listener: Listener, options?: Options) => {
+			const capture = options?.capture ?? false;
+			const index = listeners.findIndex(
+				(entry) => entry.listener === listener && entry.capture === capture,
+			);
 			if (index >= 0) listeners.splice(index, 1);
 		},
 		fireSubmit: () => {
-			const event = { preventDefault: vi.fn(), stopImmediatePropagation: vi.fn() };
-			for (const listener of listeners) listener(event);
+			let stopped = false;
+			const event = {
+				preventDefault: vi.fn(),
+				stopImmediatePropagation: vi.fn(() => {
+					stopped = true;
+				}),
+			};
+			const ordered = [
+				...listeners.filter((entry) => entry.capture),
+				...listeners.filter((entry) => !entry.capture),
+			];
+			for (const { listener } of ordered) {
+				if (stopped) break;
+				listener(event);
+			}
 			return event;
 		},
 	};
@@ -52,6 +72,22 @@ describe('confirmSubmit', () => {
 
 		expect(event.preventDefault).toHaveBeenCalled();
 		expect(event.stopImmediatePropagation).toHaveBeenCalled();
+		vi.unstubAllGlobals();
+	});
+
+	it('断ると、先に登録された use:enhance のリスナーも呼ばない', () => {
+		vi.stubGlobal(
+			'confirm',
+			vi.fn(() => false),
+		);
+		const form = createFakeForm();
+		const enhanceListener = vi.fn();
+		form.addEventListener('submit', enhanceListener);
+		confirmSubmit(form as unknown as HTMLFormElement, '消しますか?');
+
+		form.fireSubmit();
+
+		expect(enhanceListener).not.toHaveBeenCalled();
 		vi.unstubAllGlobals();
 	});
 

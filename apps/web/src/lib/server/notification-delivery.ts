@@ -1,4 +1,4 @@
-// 利用者への通知を送る定期処理 (deliver-notifications) に渡す、DB と Discord への接続 (設計書 14.1、14.3)。
+// 利用者への通知を送る定期処理 (deliver-notifications) に渡す、DB と Discord への接続。
 // NOTIFY_DRY_RUN のときは、送らずに題だけをログに出して、送れたことにする (手元の開発で、本物の送り先に送らないため)
 import type {
 	ChannelStore,
@@ -108,7 +108,7 @@ export function deliverNotificationsDeps(
 			}
 			if (!bot) return { status: 'retry', afterMs: null, reason: 'Bot が設定されていません' };
 			// both (スレッドと DM の両方) なら、2 件に送る。片方だけ失敗したら再送し、両方に送り直す
-			// (届いた方には重複が届くが、害はない。設計書 14.9、#163)
+			// (届いた方には重複が届くが、害はない。#163)
 			const outcomes = await Promise.all(
 				delivery.target.destinations.map((destination) =>
 					sendViaBot(bot, destination.channelId, message, destination.mentionUserId ?? undefined),

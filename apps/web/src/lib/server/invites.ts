@@ -1,4 +1,4 @@
-// 招待コードの発行と取り消し (設計書 8.2)。発行できるかどうかは @funmary/core の inviteIssuance で決める。
+// 招待コードの発行と取り消し。発行できるかどうかは @funmary/core の inviteIssuance で決める。
 // 管理者でない人のコードは、指定にかかわらず 1 回だけ使えて 30 日で切れる。月の上限は、日本時間の暦の月で数える。
 import {
 	DEFAULT_INVITE_SETTINGS,

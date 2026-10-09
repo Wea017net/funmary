@@ -1,6 +1,6 @@
 name: Deploy
 
-# リリースができたら、SSH で VPS に反映を頼む (設計書 20.9)。
+# リリースができたら、SSH で VPS に反映を頼む。
 # VPS では funmary-update が版の名前を確かめ、update.sh が取得から切り戻しまでを行う。
 on:
   workflow_run:

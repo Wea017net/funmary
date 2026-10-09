@@ -1,4 +1,4 @@
-// 取得元の状態 (設計書 4.5)。管理画面 (/admin/status) と管理用コマンド sources status が使う。
+// 取得元の状態。管理画面 (/admin/status) と管理用コマンド sources status が使う。
 import { isUnhealthy, jstDateTime, type SourceHealth } from '@funmary/core';
 import { SOURCE_STATE_LABELS, type SourceState } from '../source-label.ts';
 

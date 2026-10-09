@@ -1,4 +1,4 @@
-// 通知のチャネル (Discord の Webhook、Discord 連携) に届ける通知の種類の選択肢と、フォームの読み取り (設計書 14.3、14.3.1、#163)。
+// 通知のチャネル (Discord の Webhook、Discord 連携) に届ける通知の種類の選択肢と、フォームの読み取り (#163)。
 import type { NotificationKind } from '@funmary/db';
 
 export const CHANNEL_KIND_OPTIONS: readonly { kind: NotificationKind; label: string }[] = [

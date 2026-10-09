@@ -1,4 +1,4 @@
-// 授業の詳細 (設計書 12.2)。シラバスの内容は取り込み時に保存したものを出し、画面を開くたびに大学のサイトへは取りに行かない。
+// 授業の詳細。シラバスの内容は取り込み時に保存したものを出し、画面を開くたびに大学のサイトへは取りに行かない。
 // シラバスにない授業として足した科目は、足した人と管理者が直したり消したりできる。
 import { error, fail, redirect, type Actions, type ServerLoad } from '@sveltejs/kit';
 import { getSubjectDetail, type SubjectDetail } from '@funmary/api';

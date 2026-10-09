@@ -13,9 +13,13 @@ test('ログインしていなければ、アプリの紹介と、はじめる�
 	// 招待コードの欄は、招待制のときだけ出す
 	await expect(page.getByLabel('はじめての方は、招待コードで登録します')).toHaveCount(0);
 	await expect(page.getByRole('region', { name: 'できること' }).getByRole('listitem')).toHaveCount(
-		6,
+		8,
 	);
 	await expect(page.getByText('準備中:')).toBeVisible();
+	await expect(page.getByRole('link', { name: 'X (@funmary_app)' }).first()).toHaveAttribute(
+		'href',
+		'https://x.com/funmary_app',
+	);
 	await expect(page.getByText('公式のアプリではありません').first()).toBeVisible();
 	// 画面の色のボタンは上部に置く
 	await expect(page.getByRole('banner').getByRole('button', { name: /^画面の色/ })).toBeVisible();
@@ -84,4 +88,15 @@ test('機械向けの口 (Hono) のエラーも、ブラウザで開けば猫の
 	const plain = await request.get('/cal/no-such-token.ics', { headers: { Accept: '*/*' } });
 	expect(plain.status()).toBe(404);
 	expect(await plain.text()).toBe('Not Found');
+});
+
+test('/favicon.ico は、ICO の形式で返る (ファビコンを集めるサービスが探す)', async ({
+	request,
+}) => {
+	const res = await request.get('/favicon.ico');
+	expect(res.status()).toBe(200);
+	expect(res.headers()['content-type']).toBe('image/x-icon');
+	const body = await res.body();
+	// ICO の先頭: 予約 0、種別 1 (アイコン)、画像 1 枚
+	expect([...body.subarray(0, 6)]).toEqual([0, 0, 1, 0, 1, 0]);
 });

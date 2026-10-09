@@ -1,4 +1,4 @@
-// ダーク用のテーマ (設計書 12.3)。端末の設定がダークのときだけ効くよう、変換のときに @media で囲む。
+// ダーク用のテーマ。端末の設定がダークのときだけ効くよう、変換のときに @media で囲む。
 @use '../../lib/styles/fonts';
 
 @use '@smui/common/theme/index' as theme with (

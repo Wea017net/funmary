@@ -1,6 +1,6 @@
 @use 'sass:string';
 
-// 文字は OS の標準フォントにし、Web フォントは読み込まない (設計書 4.2)
+// 文字は OS の標準フォントにし、Web フォントは読み込まない
 $system: string.unquote(
 	'system-ui, -apple-system, "Segoe UI", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", Meiryo, sans-serif'
 );

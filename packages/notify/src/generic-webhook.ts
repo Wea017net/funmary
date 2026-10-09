@@ -1,4 +1,4 @@
-// 利用者が自分で用意した Webhook への送信 (設計書 14.3.1)。Funmary 共通の JSON の形で送り、
+// 利用者が自分で用意した Webhook への送信。Funmary 共通の JSON の形で送り、
 // Standard Webhooks の署名を付ける。SSRF から守るため、送信にはいつも SSRF 対策済みの undici の Agent を使う。
 // 失敗の扱いは Discord の Webhook と違う: 410 (使えなくなった) だけを止める理由にし、ほかは最大 5 回まで再送する
 import { fetch as undiciFetch } from 'undici';
@@ -8,7 +8,7 @@ import { signWebhook } from './webhook-signature.ts';
 
 const TIMEOUT_MS = 10_000;
 
-/** 通知の種類 (NotificationKind) と、公開する JSON の type の対応 (設計書 14.3.1) */
+/** 通知の種類 (NotificationKind) と、公開する JSON の type の対応 */
 const TYPE_NAMES: Readonly<Record<string, string>> = {
 	cancellation: 'class.cancelled',
 	makeup: 'class.makeup',
@@ -22,7 +22,7 @@ export interface GenericWebhookMessage extends DeliveryMessage {
 	readonly id: string;
 }
 
-/** Funmary 共通の JSON の形にする (設計書 14.3.1)。data には、人が読む題と本文に加えて、
+/** Funmary 共通の JSON の形にする。data には、人が読む題と本文に加えて、
  * 機械的に読める構造化データ (subject、date、period) を、休講などの通知のときだけ足す */
 export function genericWebhookBody(message: GenericWebhookMessage): string {
 	return JSON.stringify({
@@ -102,7 +102,7 @@ export async function sendViaGenericWebhook(
 			reason: '送りすぎです (HTTP 429)',
 		};
 	}
-	// 410 以外は、再送しても直ることがあるので、最大 5 回まで再送する (設計書 14.3.1)
+	// 410 以外は、再送しても直ることがあるので、最大 5 回まで再送する
 	return {
 		status: 'retry',
 		afterMs: null,

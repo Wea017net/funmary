@@ -1,4 +1,4 @@
-// 通知のフィード (RSS、Atom、JSON Feed) に載せる項目 (設計書 14.5)。直近 30 日、最大 50 件。
+// 通知のフィード (RSS、Atom、JSON Feed) に載せる項目。直近 30 日、最大 50 件。
 // RSS リーダーが取りに来るだけの口なので、送信の失敗が起きない。Discord やプッシュ通知が不調なときの受け皿にもなる
 import { listUserNotifications, type FeedInput, type FeedItem } from '@funmary/api';
 import {

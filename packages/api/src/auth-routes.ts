@@ -1,4 +1,4 @@
-// ログインとログアウトの口 (設計書 8 章)。Google との通信と DB は @funmary/auth が受け持ち、ここでは、
+// ログインとログアウトの口。Google との通信と DB は @funmary/auth が受け持ち、ここでは、
 // Cookie の読み書きと、リダイレクトだけを行う。
 import { openFlow, sealFlow, type AuthService, type DenyReason } from '@funmary/auth';
 import { Hono, type Context } from 'hono';
@@ -14,7 +14,7 @@ export interface AuthRoutesDeps {
 	readonly flowKey: Buffer;
 	/** 公開 URL の origin。https なら、Cookie に Secure を付ける。ログアウトの送り元の確認にも使う */
 	readonly origin: string;
-	/** 新しい利用者が登録したときに呼ぶ (設計書 14.9)。メールアドレスなど、個人情報は渡さない */
+	/** 新しい利用者が登録したときに呼ぶ。メールアドレスなど、個人情報は渡さない */
 	readonly onNewUser?: () => void;
 }
 
@@ -30,6 +30,17 @@ const isSecure = (origin: string) => origin.startsWith('https://');
 export function sessionCookieName(origin: string): string {
 	return isSecure(origin) ? '__Host-funmary_session' : 'funmary_session';
 }
+
+/** ログインのあとに戻る先 (同意の画面) を覚える Cookie。ログインしていない人が /oauth/authorize を開いたときに使う */
+export function returnCookieName(origin: string): string {
+	return isSecure(origin) ? '__Host-funmary_return' : 'funmary_return';
+}
+
+export const RETURN_COOKIE_MAX_AGE_S = 10 * 60;
+
+/** 戻り先に使ってよいパスか。外のサイトへ飛ばされないよう、同意の画面だけに限る */
+export const isReturnPath = (value: string | undefined): value is string =>
+	value !== undefined && /^\/oauth\/authorize\?[!-~]*$/.test(value);
 
 export function sessionCookieOptions(origin: string): CookieOptions {
 	return {
@@ -95,8 +106,11 @@ export function createAuthRoutes(deps: AuthRoutesDeps): Hono {
 		if (result.isNewUser) deps.onNewUser?.();
 
 		setCookie(c, sessionName, result.sessionToken, sessionCookieOptions(deps.origin));
-		// アプリの画面は /app の下にある (/ は紹介の画面)
-		return c.redirect('/app', 302);
+		// 同意の画面から来たときは、そこへ戻す。アプリの画面は /app の下にある (/ は紹介の画面)
+		const returnName = returnCookieName(deps.origin);
+		const returnTo = getCookie(c, returnName);
+		deleteCookie(c, returnName, { path: '/', secure });
+		return c.redirect(isReturnPath(returnTo) ? returnTo : '/app', 302);
 	});
 
 	app.post('/auth/logout', (c) => {

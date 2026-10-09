@@ -1,6 +1,6 @@
 import type { Handle, ServerInit } from '@sveltejs/kit/hooks';
 
-// サーバーの起動と、リクエストの振り分け (設計書 3.2)。
+// サーバーの起動と、リクエストの振り分け。
 // 起動時に設定を検証して DB を開き、機械向けのパスだけを Hono に渡す。
 import { existsSync, mkdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
@@ -27,6 +27,7 @@ import {
 	createFeedTokenStore,
 	createHolidayStore,
 	createNotificationStore,
+	createOAuthStore,
 	createPersonalSlotStore,
 	createSubjectAbbreviationStore,
 	createSlotSubmissionStore,
@@ -73,6 +74,7 @@ import {
 } from '#lib/server/discord-admin.ts';
 import { legacyAppPath } from '#lib/server/legacy-path.ts';
 import { findMigrationsFolder } from '#lib/server/migrations-path.ts';
+import { isCsrfForbidden } from '#lib/server/csrf.ts';
 import { getServices, setServices } from '#lib/server/services.ts';
 import { dailyDigestDeps } from '#lib/server/daily-digest.ts';
 import { deliverNotificationsDeps, testMessage } from '#lib/server/notification-delivery.ts';
@@ -80,14 +82,27 @@ import { readWebhookLimit, WEBHOOKS_PER_USER_KEY } from '#lib/server/webhook-lim
 import { parseThemePreference, THEME_COOKIE } from '#lib/theme.ts';
 
 /** Hono に渡すパス。これ自身か、この下のパスが対象になる */
-const API_PATHS = ['/api', '/auth', '/cal', '/discord', '/feed', '/healthz', '/mcp', '/signup'];
+// 同意の画面 (/oauth/authorize) は SvelteKit の画面なので、/oauth の全体ではなく、口ごとに書く
+const API_PATHS = [
+	'/.well-known',
+	'/api',
+	'/auth',
+	'/cal',
+	'/discord',
+	'/feed',
+	'/healthz',
+	'/mcp',
+	'/oauth/register',
+	'/oauth/token',
+	'/signup',
+];
 
 /** ログイン用の Google の OAuth クライアントを、開発サーバーで試すときの公開 URL */
 const DEV_ORIGIN = 'http://localhost:5173';
 
 /** 定期処理の実行記録を残す期間 */
 const JOB_RUN_RETENTION_MS = 90 * 24 * 60 * 60 * 1000;
-/** 停止するときに、実行中の定期処理を待つ時間 (設計書 4.5)。systemd の TimeoutStopSec より短くする */
+/** 停止するときに、実行中の定期処理を待つ時間。systemd の TimeoutStopSec より短くする */
 const SHUTDOWN_GRACE_MS = 10_000;
 
 /** 開発サーバーで動くときの、リポジトリのルート (このファイルは apps/web/src にある) */
@@ -136,7 +151,7 @@ export const init: ServerInit = () => {
 		logger.withTag('app').warn(`途中で止まった定期処理の記録を ${interrupted} 件閉じました`);
 	jobRunStore.prune(new Date(Date.now() - JOB_RUN_RETENTION_MS));
 
-	// 管理用の Discord の Bot (設計書 14.9)。トークンとギルドの ID があれば、Webhook より先に使う
+	// 管理用の Discord の Bot。トークンとギルドの ID があれば、Webhook より先に使う
 	const settingsStore = createSettingsStore(database);
 	const discordBot = result.config.discordBot
 		? createDiscordBot({
@@ -187,7 +202,7 @@ export const init: ServerInit = () => {
 	});
 	// 予定のまとめは、利用者の Discord 連携 (Bot が送る) を使う。送る処理の中で getServices を呼ぶ (services はこのあと入れる)
 	if (discordBot) jobs.push(createSendDailyDigestJob(dailyDigestDeps(getServices, discordBot)));
-	// 利用者への通知 (通知欄に入ったもの) を、利用者のチャネルへ送る (設計書 14.1)
+	// 利用者への通知 (通知欄に入ったもの) を、利用者のチャネルへ送る
 	const channelStore = createChannelStore(database, discordSecretBox);
 	const deliveryStore = createDeliveryStore(database, discordSecretBox);
 	const deliveryOrigin = result.config.origin ?? DEV_ORIGIN;
@@ -245,6 +260,8 @@ export const init: ServerInit = () => {
 		: null;
 	const store = createAuthStore(database);
 	authStore = store;
+	const accessTokenStore = createAccessTokenStore(database);
+	const oauthStore = createOAuthStore(database, accessTokenStore);
 	const services = {
 		auth: store,
 		settings: settingsStore,
@@ -317,7 +334,8 @@ export const init: ServerInit = () => {
 		alertAdmin: (alert: Parameters<typeof alerter.send>[0]) => alerter.send(alert),
 		log: logger,
 		feedTokens: createFeedTokenStore(database),
-		accessTokens: createAccessTokenStore(database),
+		accessTokens: accessTokenStore,
+		oauth: oauthStore,
 		// リリースでは、tar.gz に同梱した build-info.json を、上の階層へたどって探す
 		build: findBuildInfo(dirname(fileURLToPath(import.meta.url))),
 		// ビルドでは、scripts/copy-legal.js が写した legal/ を、上の階層へたどって探す
@@ -346,7 +364,7 @@ export const init: ServerInit = () => {
 			deleteSession: (token) => store.deleteSession(token),
 			flowKey: Buffer.from(result.config.encryptionKey, 'base64'),
 			origin: publicOrigin,
-			// メールアドレスなど、個人情報は含めない (設計書 14.9)
+			// メールアドレスなど、個人情報は含めない
 			onNewUser: () => {
 				void alerter.send({
 					severity: 'info',
@@ -364,7 +382,13 @@ export const init: ServerInit = () => {
 			loadFeed: (token) => loadNotificationFeed(services, token, new Date()),
 		},
 		v1: { ...services, users: services.auth },
-		mcp: { ...services, users: services.auth },
+		mcp: {
+			...services,
+			users: services.auth,
+			resourceMetadataUrl: `${publicOrigin}/.well-known/oauth-protected-resource/mcp`,
+			origin: publicOrigin,
+		},
+		oauth: { oauth: oauthStore, origin: publicOrigin },
 		// 公開鍵がなければ、Discord の署名を確かめられないので、受け口を開けない
 		...(result.config.discordPublicKey
 			? {
@@ -381,6 +405,21 @@ export const init: ServerInit = () => {
 
 export const handle: Handle = async ({ event, resolve }) => {
 	const path = event.url.pathname;
+	// 開発サーバーでは、組み込みの検査も行われていなかった
+	if (
+		!dev &&
+		isCsrfForbidden({
+			method: event.request.method,
+			path,
+			contentType: event.request.headers.get('content-type'),
+			origin: event.request.headers.get('origin'),
+			selfOrigin: publicOrigin,
+		})
+	) {
+		return new Response(`Cross-site ${event.request.method} form submissions are forbidden`, {
+			status: 403,
+		});
+	}
 	// /app に移す前の画面の URL は、移した先へ転送する (308 は、POST も POST のまま送り直させる)
 	const moved = legacyAppPath(path);
 	if (moved) {

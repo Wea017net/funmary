@@ -152,8 +152,15 @@
     {
       "idx": 21,
       "version": "6",
-      "when": 1791513434196,
-      "tag": "0021_next_jane_foster",
+      "when": 1791524620513,
+      "tag": "0021_aberrant_electro",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "6",
+      "when": 1791528696655,
+      "tag": "0022_lethal_master_chief",
       "breakpoints": true
     }
   ]

@@ -1,4 +1,4 @@
-// 学期の期間と振替授業日の保存 (設計書 10 章)。値の出どころ (auto、manual) も一緒に残す。
+// 学期の期間と振替授業日の保存。値の出どころ (auto、manual) も一緒に残す。
 // 推定した値は保存しない (@funmary/core の resolveAcademicTerms が、読むときに補う)。
 import type {
 	CalendarDate,

@@ -1,6 +1,11 @@
-// Discord のスラッシュコマンドの答え (設計書 14.9、#36)。呼んだ本人の時間割と休講を、本人にだけ見える本文にする。
+// Discord のスラッシュコマンドの答え (#36)。呼んだ本人の時間割と休講を、本人にだけ見える本文にする。
 // 連携していない人、停止した利用者には、答えの代わりに連携の案内を返す。
-import { buildUserTimetable, type DayNote, type TimetableLesson } from '@funmary/api';
+import {
+	buildUserTimetable,
+	getNextLesson,
+	type DayNote,
+	type TimetableLesson,
+} from '@funmary/api';
 import { addDays, findPeriod, DEFAULT_PERIODS, jstDateTime, startOfWeek } from '@funmary/core';
 import type { CalendarDate } from '@funmary/core';
 import { formatDate, formatDayNote, STATUS_LABELS } from '#lib/timetable-label.ts';
@@ -14,7 +19,7 @@ const CHANGES_FILTER = (lesson: TimetableLesson) => lesson.status !== 'normal';
 
 function lessonLine(lesson: TimetableLesson): string {
 	const period = findPeriod(lesson.period, DEFAULT_PERIODS);
-	const when = period ? period.start : `${lesson.period} 限`;
+	const when = period ? `${period.start}-${period.end}` : `${lesson.period} 限`;
 	const room = lesson.room ? ` (${plain(lesson.room)})` : '';
 	const status = lesson.status === 'normal' ? '' : ` [${STATUS_LABELS[lesson.status]}]`;
 	return `${when} ${plain(lesson.subjectName)}${room}${status}`;
@@ -73,6 +78,13 @@ export function answerCommand(
 		const timetable = buildUserTimetable(services, user.id, { start: today, end: today });
 		const body = dayBlocks([today], timetable.lessons, timetable.notes, () => true);
 		return body.length > 0 ? body.join('\n') : '今日は、授業も休みの知らせもありません。';
+	}
+	if (command === 'next') {
+		const { next } = getNextLesson(services, user.id, now);
+		if (!next) return 'これから 14 日の間に、授業の予定はありません。';
+		const label = next.inProgress ? '授業中' : '次の授業';
+		return `${label}: **${formatDate(next.date)}**
+${lessonLine(next)}`;
 	}
 	if (command === 'week') {
 		const weekStart = startOfWeek(today);

@@ -157,9 +157,16 @@ describe('GET /signup', () => {
 });
 
 describe('GET /auth/google/callback', () => {
-	const callback = (api: ReturnType<typeof makeApi>, cookie?: string) =>
+	const callback = (api: ReturnType<typeof makeApi>, cookie?: string, returnTo?: string) =>
 		api.request('/auth/google/callback?code=c&state=state-1', {
-			headers: cookie ? { Cookie: `__Secure-funmary_login=${cookie}` } : {},
+			headers: {
+				Cookie: [
+					cookie ? `__Secure-funmary_login=${cookie}` : '',
+					returnTo ? `__Host-funmary_return=${encodeURIComponent(returnTo)}` : '',
+				]
+					.filter(Boolean)
+					.join('; '),
+			},
 		});
 
 	it('ログインできたら、セッションの Cookie を渡して、途中の Cookie を消し、アプリ (/app) に移る', async () => {
@@ -174,6 +181,23 @@ describe('GET /auth/google/callback', () => {
 		expect(session.attributes).toContain('Max-Age=2592000');
 		expect(store.resolveSession(session.value, new Date())?.email).toBe('taro@fun.ac.jp');
 		expect(set.get('__Secure-funmary_login')!.attributes).toContain('Max-Age=0');
+	});
+
+	it('同意の画面から来たときは、ログインのあとにそこへ戻し、戻り先の Cookie を消す', async () => {
+		const target = '/oauth/authorize?client_id=c1&state=a%20b';
+		const res = await callback(makeApi(), sealFlow(flowNow(), KEY), target);
+		expect(res.headers.get('Location')).toBe(target);
+		expect(cookies(res).get('__Host-funmary_return')!.attributes).toContain('Max-Age=0');
+	});
+
+	it.each([
+		'https://evil.example/',
+		'//evil.example/oauth/authorize?x=1',
+		'/app/settings',
+		'/oauth/authorizeX?x=1',
+	])('戻り先が同意の画面でなければ、%s には移らず /app に移る', async (target) => {
+		const res = await callback(makeApi(), sealFlow(flowNow(), KEY), target);
+		expect(res.headers.get('Location')).toBe('/app');
 	});
 
 	it('新しい利用者が登録したときだけ、onNewUser を呼ぶ (個人情報は渡さない)', async () => {

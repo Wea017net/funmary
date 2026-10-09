@@ -7,7 +7,7 @@ import { CookieJar } from 'tough-cookie';
 
 export const PORTAL_ORIGIN = 'https://students.fun.ac.jp';
 
-/** 作者の判断で、一般的なブラウザ (デスクトップの Chrome) のものに合わせる (設計書 9 章) */
+/** 作者の判断で、一般的なブラウザ (デスクトップの Chrome) のものに合わせる */
 const USER_AGENT =
 	'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36';
 

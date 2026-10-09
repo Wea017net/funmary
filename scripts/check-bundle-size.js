@@ -1,4 +1,4 @@
-// ページごとに端末へ送る JavaScript の量を測り、目標 (設計書 4.1) を超えたら失敗にする。
+// ページごとに端末へ送る JavaScript の量を測り、目標 を超えたら失敗にする。
 // `pnpm build` の最後に実行する。
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';

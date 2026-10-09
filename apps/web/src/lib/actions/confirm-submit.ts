@@ -2,13 +2,10 @@
 // ブラウザ標準の confirm() を使うので、新しい依存は要らない。JavaScript が無効なブラウザでは
 // 確認なしでそのまま送信される (フォームの送信自体は動く)。
 //
-// use:enhance と同じ <form> に付けるときは、この決まりを守る。
-//
-//     <form use:confirmSubmit={'…'} use:enhance>
-//
-// use:enhance より先に書くこと。Svelte のアクションは書いた順に登録され、後から登録した
-// リスナーほど先に呼ばれる。confirmSubmit を先に書けば、あとから登録される enhance のリスナーより
-// 先に確認でき、断ったときに stopImmediatePropagation で enhance の送信処理も止められる。
+// use:enhance と同じ <form> に付けてよく、書く順は問わない。enhance は submit のリスナーを
+// ふつうに (バブリングで) 登録し、ほかのリスナーが送信を止めたかを見ずに送信する。そこで、こちらは
+// 捕捉 (capture) で登録する。イベントの対象の要素では、捕捉のリスナーが、登録の順に関係なく先に
+// 呼ばれるので、断ったときに stopImmediatePropagation で enhance の送信処理を必ず止められる。
 export function confirmSubmit(node: HTMLFormElement, message: string) {
 	let currentMessage = message;
 	const onSubmit = (event: SubmitEvent) => {
@@ -16,13 +13,13 @@ export function confirmSubmit(node: HTMLFormElement, message: string) {
 		event.preventDefault();
 		event.stopImmediatePropagation();
 	};
-	node.addEventListener('submit', onSubmit);
+	node.addEventListener('submit', onSubmit, { capture: true });
 	return {
 		update(newMessage: string) {
 			currentMessage = newMessage;
 		},
 		destroy() {
-			node.removeEventListener('submit', onSubmit);
+			node.removeEventListener('submit', onSubmit, { capture: true });
 		},
 	};
 }

@@ -2,7 +2,7 @@ import { builtinModules } from 'node:module';
 import { defineConfig } from 'tsdown';
 import { BUILD_ALIASES, UNBUNDLED_DEPS } from './bundled-deps.js';
 
-// 管理用コマンド (cli.js) と、本番の入口 (server.js) を、本番で node だけで動かせる JavaScript にまとめる (設計書 20.6)。
+// 管理用コマンド (cli.js) と、本番の入口 (server.js) を、本番で node だけで動かせる JavaScript にまとめる。
 // better-sqlite3 は C++ の拡張なので同梱せず、リリースの package.json から入れる
 export default defineConfig({
 	entry: { cli: 'src/cli.ts', server: 'src/server.ts' },

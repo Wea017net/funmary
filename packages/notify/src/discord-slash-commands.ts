@@ -1,4 +1,4 @@
-// Discord のスラッシュコマンドの定義と、その登録 (設計書 14.9、#36)。
+// Discord のスラッシュコマンドの定義と、その登録 (#36)。
 // グローバルコマンドとして登録し、サポートサーバーとユーザーインストールの両方で使えるようにする (integration_types と contexts)。
 // 反映までは最大 1 時間かかる。Bot のトークンは、ログにも例外の文にも出さない。
 const DISCORD_API = 'https://discord.com/api/v10';
@@ -8,6 +8,10 @@ export const SLASH_COMMANDS = [
 	{
 		name: 'today',
 		description: '今日の授業と予定を、本人にだけ見せます',
+	},
+	{
+		name: 'next',
+		description: '次の授業の時刻と教室を、本人にだけ見せます',
 	},
 	{
 		name: 'week',

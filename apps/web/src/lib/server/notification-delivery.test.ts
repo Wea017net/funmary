@@ -78,7 +78,7 @@ describe('通知の文面', () => {
 		).toBeNull();
 	});
 
-	it('科目があれば、構造化データ (subject、date、period) を添える (設計書 14.3.1)', () => {
+	it('科目があれば、構造化データ (subject、date、period) を添える', () => {
 		const message = messageFor(delivery(), ORIGIN, subjects);
 		expect(subjects.findById).toHaveBeenCalledWith(42);
 		expect(message.subject).toEqual({

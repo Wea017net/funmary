@@ -1,4 +1,4 @@
-// 利用者が登録できる Webhook の個数の上限 (設計書 14.3.1)。管理者が管理画面で決め、DB の settings に置く
+// 利用者が登録できる Webhook の個数の上限。管理者が管理画面で決め、DB の settings に置く
 export const WEBHOOKS_PER_USER_KEY = 'webhooks-per-user';
 export const DEFAULT_WEBHOOK_LIMIT = 5;
 export const MAX_WEBHOOK_LIMIT = 50;

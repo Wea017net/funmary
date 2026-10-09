@@ -1,4 +1,4 @@
-// 学年暦の管理画面 (/admin/calendar) のフォームの値の検査 (設計書 10 章)。管理者のブラウザから来る値でも、信用しない。
+// 学年暦の管理画面 (/admin/calendar) のフォームの値の検査。管理者のブラウザから来る値でも、信用しない。
 import { isTerm, type CalendarDate, type Term, type Weekday } from '@funmary/core';
 import * as v from 'valibot';
 import { parseDateParam } from './date-param.ts';

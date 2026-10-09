@@ -18,7 +18,7 @@ import {
 	type Database,
 } from '@funmary/db';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { buildMcpServer } from './mcp-routes.ts';
+import { buildMcpServer, createMcpRoutes } from './mcp-routes.ts';
 
 let dir: string;
 let database: Database;
@@ -64,11 +64,18 @@ describe('buildMcpServer', () => {
 		const server = buildMcpServer(src, { userId: 'u1', scopes: ['read:lessons'] });
 		const client = await connectedClient(server);
 		const { tools } = await client.listTools();
-		expect(tools.map((tool) => tool.name).sort()).toEqual(['get_lessons', 'get_subject']);
+		expect(tools.map((tool) => tool.name).sort()).toEqual([
+			'get_academic_calendar',
+			'get_lessons',
+			'get_next_lesson',
+			'get_periods',
+			'get_subject',
+			'list_courses',
+		]);
 		expect(tools.every((tool) => tool.annotations?.readOnlyHint)).toBe(true);
 	});
 
-	it('すべての範囲を持つトークンでは、4 つの道具がそろう', async () => {
+	it('すべての範囲を持つトークンでは、8 つの道具がそろう', async () => {
 		const src = deps();
 		const server = buildMcpServer(src, {
 			userId: 'u1',
@@ -77,9 +84,13 @@ describe('buildMcpServer', () => {
 		const client = await connectedClient(server);
 		const { tools } = await client.listTools();
 		expect(tools.map((tool) => tool.name).sort()).toEqual([
+			'get_academic_calendar',
 			'get_lessons',
+			'get_next_lesson',
+			'get_periods',
 			'get_subject',
 			'list_changes',
+			'list_courses',
 			'list_notifications',
 		]);
 	});
@@ -96,7 +107,21 @@ describe('buildMcpServer', () => {
 			name: 'get_lessons',
 			arguments: { start: '2026-10-01', end: '2026-10-07' },
 		});
-		expect(result.structuredContent).toEqual({ lessons: [] });
+		expect(result.structuredContent).toMatchObject({ lessons: [], days: [] });
+	});
+
+	it('get_periods は時限の時刻を、get_next_lesson は授業がなければ null を返す', async () => {
+		const src = deps();
+		const server = buildMcpServer(src, { userId: 'u1', scopes: ['read:lessons'] });
+		const client = await connectedClient(server);
+
+		const periods = await client.callTool({ name: 'get_periods', arguments: {} });
+		const next = await client.callTool({ name: 'get_next_lesson', arguments: {} });
+
+		const list = (periods.structuredContent as { periods: { number: number }[] }).periods;
+		expect(list[0]).toEqual({ number: 1, start: '09:00', end: '10:30' });
+		expect(list).toHaveLength(6);
+		expect(next.structuredContent).toEqual({ next: null });
 	});
 
 	it('list_notifications は、呼んだ本人の通知欄だけを返す', async () => {
@@ -123,5 +148,37 @@ describe('buildMcpServer', () => {
 		const client = await connectedClient(server);
 		const result = await client.callTool({ name: 'list_notifications', arguments: {} });
 		expect(result.structuredContent).toMatchObject({ notifications: [{ title: '休講' }] });
+	});
+});
+
+describe('OAuth 向けの案内', () => {
+	it('トークンなしの 401 に、保護されたリソースの情報の URL を載せる', async () => {
+		const app = createMcpRoutes({
+			...deps(),
+			resourceMetadataUrl: 'https://funmary.example.com/.well-known/oauth-protected-resource/mcp',
+		});
+
+		const res = await app.request('/mcp', { method: 'POST' });
+
+		expect(res.status).toBe(401);
+		expect(res.headers.get('WWW-Authenticate')).toBe(
+			'Bearer resource_metadata="https://funmary.example.com/.well-known/oauth-protected-resource/mcp"',
+		);
+	});
+
+	it('オリジンを渡すと、サーバーの情報に、アイコンの絶対 URL を載せる', async () => {
+		const server = buildMcpServer(
+			{ ...deps(), origin: 'https://funmary.example.com/' },
+			{ userId: 'u1', scopes: [] },
+		);
+		const client = await connectedClient(server);
+
+		const icons = client.getServerVersion()?.icons ?? [];
+
+		expect(icons.map((icon) => icon.src)).toEqual([
+			'https://funmary.example.com/brand/icon-512.png',
+			'https://funmary.example.com/brand/icon.svg',
+			'https://funmary.example.com/brand/icon-dark.svg',
+		]);
 	});
 });

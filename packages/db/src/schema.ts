@@ -123,7 +123,7 @@ export const subjects = sqliteTable(
 			onDelete: 'set null',
 		}),
 		/**
-		 * 公開範囲 (source が user のときだけ意味を持つ。syllabus は常に public)。設計書 14.9、Issue #164。
+		 * 公開範囲 (source が user のときだけ意味を持つ。syllabus は常に public)。Issue #164。
 		 * public は誰でも探せる、link は URL を知っていれば開ける、private は足した人と管理者だけ
 		 */
 		visibility: text('visibility', { enum: ['public', 'link', 'private'] })
@@ -466,7 +466,7 @@ export const feedTokens = sqliteTable(
 	(table) => [index('feed_tokens_user').on(table.userId)],
 );
 
-/** 公開 API と MCP サーバー向けの個人用アクセストークン (設計書 3.3)。1 人が複数を同時に持てる */
+/** 公開 API と MCP サーバー向けの個人用アクセストークン。1 人が複数を同時に持てる */
 export const accessTokens = sqliteTable(
 	'access_tokens',
 	{
@@ -485,6 +485,59 @@ export const accessTokens = sqliteTable(
 		revokedAt: integer('revoked_at', { mode: 'timestamp_ms' }),
 	},
 	(table) => [index('access_tokens_user').on(table.userId)],
+);
+
+/** MCP の認可で、動的に登録されたクライアント (Claude など)。公開クライアントなので、秘密は持たない */
+export const oauthClients = sqliteTable('oauth_clients', {
+	/** client_id。推測できない乱数 */
+	id: text('id').primaryKey(),
+	name: text('name').notNull(),
+	redirectUris: text('redirect_uris', { mode: 'json' }).notNull().$type<string[]>(),
+	createdAt: createdAt(),
+});
+
+/** 認可コード。1 回使うと消える。コードそのものでなく、ハッシュを保存する */
+export const oauthCodes = sqliteTable('oauth_codes', {
+	codeHash: text('code_hash').primaryKey(),
+	clientId: text('client_id')
+		.notNull()
+		.references(() => oauthClients.id, { onDelete: 'cascade' }),
+	userId: text('user_id')
+		.notNull()
+		.references(() => users.id, { onDelete: 'cascade' }),
+	redirectUri: text('redirect_uri').notNull(),
+	/** PKCE の code_challenge (S256) */
+	codeChallenge: text('code_challenge').notNull(),
+	scopes: text('scopes', { mode: 'json' }).notNull().$type<string[]>(),
+	expiresAt: integer('expires_at', { mode: 'timestamp_ms' }).notNull(),
+	createdAt: createdAt(),
+});
+
+/** リフレッシュトークン。使うたびに新しいものに替え、同じ系列 (familyId) でまとめて無効にできる */
+export const oauthRefreshTokens = sqliteTable(
+	'oauth_refresh_tokens',
+	{
+		id: integer('id').primaryKey({ autoIncrement: true }),
+		tokenHash: text('token_hash').notNull().unique(),
+		familyId: text('family_id').notNull(),
+		clientId: text('client_id')
+			.notNull()
+			.references(() => oauthClients.id, { onDelete: 'cascade' }),
+		userId: text('user_id')
+			.notNull()
+			.references(() => users.id, { onDelete: 'cascade' }),
+		scopes: text('scopes', { mode: 'json' }).notNull().$type<string[]>(),
+		/** 一緒に発行したアクセストークン。設定の画面で無効にされたら、このリフレッシュも使えなくする */
+		accessTokenId: integer('access_token_id').references(() => accessTokens.id, {
+			onDelete: 'set null',
+		}),
+		expiresAt: integer('expires_at', { mode: 'timestamp_ms' }).notNull(),
+		createdAt: createdAt(),
+		/** 新しいものに替えた日時。これが入ったトークンがまた来たら、盗まれたとみなす */
+		usedAt: integer('used_at', { mode: 'timestamp_ms' }),
+		revokedAt: integer('revoked_at', { mode: 'timestamp_ms' }),
+	},
+	(table) => [index('oauth_refresh_tokens_family').on(table.familyId)],
 );
 
 export const shares = sqliteTable(
@@ -534,7 +587,7 @@ export const hopeEvents = sqliteTable(
 );
 
 // ---------------------------------------------------------------------------
-// 利用者の Discord 連携 (設計書 14.9)
+// 利用者の Discord 連携
 
 /**
  * 利用者の Discord アカウントと Funmary のアカウントの紐付け。1 人につき 1 行。
@@ -554,7 +607,7 @@ export const discordLinks = sqliteTable('discord_links', {
 	/** DM チャンネルの ID。まだ用意していない間は null */
 	dmChannelId: text('dm_channel_id'),
 	/**
-	 * 通知の種類ごとの送り先とメンション (設計書 14.9、#163)。
+	 * 通知の種類ごとの送り先とメンション (#163)。
 	 * JSON (Partial<Record<NotificationKind, { destination: 'thread' | 'dm' | 'both'; mention: boolean }>>)。
 	 * 無い種類は、スレッド、メンション無しとみなす
 	 */
@@ -601,7 +654,7 @@ export const notifications = sqliteTable(
 		/** 押したときに開く画面のパス */
 		link: text('link'),
 		subjectId: integer('subject_id').references(() => subjects.id, { onDelete: 'set null' }),
-		/** 授業の日付 (YYYY-MM-DD)。休講などの通知のときだけ持つ。汎用 Webhook の構造化データに使う (設計書 14.3.1) */
+		/** 授業の日付 (YYYY-MM-DD)。休講などの通知のときだけ持つ。汎用 Webhook の構造化データに使う */
 		date: text('date'),
 		/** 授業の時限。休講などの通知のときだけ持つ */
 		period: integer('period'),

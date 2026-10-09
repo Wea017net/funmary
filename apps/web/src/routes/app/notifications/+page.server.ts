@@ -1,4 +1,4 @@
-// 通知欄 (設計書 14.2)。種類で絞り込み、開くと既読にして該当の画面へ移る。まとめて既読にもできる
+// 通知欄。種類で絞り込み、開くと既読にして該当の画面へ移る。まとめて既読にもできる
 import { fail, redirect, type Actions, type ServerLoad } from '@sveltejs/kit';
 import { jstDateTime } from '@funmary/core';
 import type { NotificationKind } from '@funmary/db';

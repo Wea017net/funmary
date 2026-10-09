@@ -1,4 +1,4 @@
-// 学生ポータルの休講、補講、教室変更を取得して記録する定期処理 (設計書 9.1、9.2、4.5)。
+// 学生ポータルの休講、補講、教室変更を取得して記録する定期処理。
 // 取得、解析、変更の検知、見張りの記録、管理者への知らせ、監視サービスへの知らせを、順に行う。
 // 外との通信と保存は、すべて deps で受け取る (テストで差し替えられる)。
 import { createHash } from 'node:crypto';
@@ -50,7 +50,7 @@ export interface ScrapePortalDeps {
 	readonly onEvents?: (events: readonly ChangeEvent[]) => void | Promise<void>;
 	/** 取得が成功したときに、監視サービス (HEARTBEAT_URL) に知らせる。失敗しても、処理の結果には影響しない */
 	readonly heartbeat?: () => Promise<unknown>;
-	/** 授業名と科目の照合 (設計書 9.1 の 7)。科目は、履修登録と同じく、保存されている最新の年度のものを使う */
+	/** 授業名と科目の照合。科目は、履修登録と同じく、保存されている最新の年度のものを使う */
 	readonly matching?: {
 		unassignedLessonNames(): string[];
 		assignSubject(lessonName: string, subjectId: number): number;

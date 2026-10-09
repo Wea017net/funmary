@@ -1,4 +1,4 @@
-// 内閣府の祝日の CSV (syukujitsu.csv) を解析する (設計書 10 章)。
+// 内閣府の祝日の CSV (syukujitsu.csv) を解析する。
 // 取得した内容は信用しない。1 行ずつ形を確かめ、読めない行は捨てて数える。
 import type { CalendarDate } from '@funmary/core';
 import Papa from 'papaparse';

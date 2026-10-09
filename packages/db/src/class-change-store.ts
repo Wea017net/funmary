@@ -1,4 +1,4 @@
-// 休講、補講、教室変更の、前回までの記録 (設計書 9.2、11 章)。@funmary/core の detectChanges の入出力を保存する。
+// 休講、補講、教室変更の、前回までの記録。@funmary/core の detectChanges の入出力を保存する。
 // 科目との照合 (subject_id) は、apply では変えず、照合のあとに assignSubject で入れる。
 import type { ScrapedChange, TrackedChange } from '@funmary/core';
 import { and, asc, between, desc, eq, isNotNull, isNull } from 'drizzle-orm';
