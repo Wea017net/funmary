@@ -1,4 +1,4 @@
-// 管理画面の Discord の設定 (設計書 14.9)。チャンネルとロールを、Bot に任せるか、管理者が既存のものに置き換えるかを決める。
+// 管理画面の Discord の設定。チャンネルとロールを、Bot に任せるか、管理者が既存のものに置き換えるかを決める。
 import {
 	ADMIN_CHANNELS,
 	ADMIN_ROLES,
@@ -25,7 +25,7 @@ export function readPresenceEnabled(value: unknown): boolean {
 	);
 }
 
-/** 利用者の Discord 連携 (設計書 14.9、#163) を、管理者が有効にしたかを保存する設定の名前。値は { enabled: boolean }。なければ、無効 (新しい機能なので既定はオフ) */
+/** 利用者の Discord 連携 (#163) を、管理者が有効にしたかを保存する設定の名前。値は { enabled: boolean }。なければ、無効 (新しい機能なので既定はオフ) */
 export const DISCORD_LINKING_KEY = 'discord-linking';
 
 export function readLinkingEnabled(value: unknown): boolean {

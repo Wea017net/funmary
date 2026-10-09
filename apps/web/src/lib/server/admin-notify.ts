@@ -1,4 +1,4 @@
-// 管理用コマンド (funmary-admin notify) が使う、管理用の Discord への通知 (設計書 14.9)。
+// 管理用コマンド (funmary-admin notify) が使う、管理用の Discord への通知。
 // VPS の update.sh が、反映の結果を deploy のチャンネルに送るために呼ぶ。
 import type { Logger } from '@funmary/log';
 import {

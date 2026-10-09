@@ -1,4 +1,4 @@
-// カレンダー購読の ICS に載せる予定 (設計書 13 章)。トークンの持ち主の時間割を、Hono の ICS の組み立てに渡す形にする。
+// カレンダー購読の ICS に載せる予定。トークンの持ち主の時間割を、Hono の ICS の組み立てに渡す形にする。
 import {
 	buildUserTimetable,
 	type CalendarFeed,

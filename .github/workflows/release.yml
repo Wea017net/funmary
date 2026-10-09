@@ -1,6 +1,6 @@
 name: Release
 
-# main の CI が成功したら、その変更をリリースにして GitHub Releases に置く (設計書 20.9)。
+# main の CI が成功したら、その変更をリリースにして GitHub Releases に置く。
 # CI が落ちた変更は、リリースも反映もされない。
 on:
   workflow_run:

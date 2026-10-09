@@ -1,6 +1,6 @@
 import type { Handle, ServerInit } from '@sveltejs/kit/hooks';
 
-// サーバーの起動と、リクエストの振り分け (設計書 3.2)。
+// サーバーの起動と、リクエストの振り分け。
 // 起動時に設定を検証して DB を開き、機械向けのパスだけを Hono に渡す。
 import { existsSync, mkdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
@@ -86,7 +86,7 @@ const DEV_ORIGIN = 'http://localhost:5173';
 
 /** 定期処理の実行記録を残す期間 */
 const JOB_RUN_RETENTION_MS = 90 * 24 * 60 * 60 * 1000;
-/** 停止するときに、実行中の定期処理を待つ時間 (設計書 4.5)。systemd の TimeoutStopSec より短くする */
+/** 停止するときに、実行中の定期処理を待つ時間。systemd の TimeoutStopSec より短くする */
 const SHUTDOWN_GRACE_MS = 10_000;
 
 /** 開発サーバーで動くときの、リポジトリのルート (このファイルは apps/web/src にある) */
@@ -135,7 +135,7 @@ export const init: ServerInit = () => {
 		logger.withTag('app').warn(`途中で止まった定期処理の記録を ${interrupted} 件閉じました`);
 	jobRunStore.prune(new Date(Date.now() - JOB_RUN_RETENTION_MS));
 
-	// 管理用の Discord の Bot (設計書 14.9)。トークンとギルドの ID があれば、Webhook より先に使う
+	// 管理用の Discord の Bot。トークンとギルドの ID があれば、Webhook より先に使う
 	const settingsStore = createSettingsStore(database);
 	const discordBot = result.config.discordBot
 		? createDiscordBot({
@@ -186,7 +186,7 @@ export const init: ServerInit = () => {
 	});
 	// 予定のまとめは、利用者の Discord 連携 (Bot が送る) を使う。送る処理の中で getServices を呼ぶ (services はこのあと入れる)
 	if (discordBot) jobs.push(createSendDailyDigestJob(dailyDigestDeps(getServices, discordBot)));
-	// 利用者への通知 (通知欄に入ったもの) を、利用者のチャネルへ送る (設計書 14.1)
+	// 利用者への通知 (通知欄に入ったもの) を、利用者のチャネルへ送る
 	const channelStore = createChannelStore(database, discordSecretBox);
 	const deliveryStore = createDeliveryStore(database, discordSecretBox);
 	const deliveryOrigin = result.config.origin ?? DEV_ORIGIN;
@@ -344,7 +344,7 @@ export const init: ServerInit = () => {
 			deleteSession: (token) => store.deleteSession(token),
 			flowKey: Buffer.from(result.config.encryptionKey, 'base64'),
 			origin: publicOrigin,
-			// メールアドレスなど、個人情報は含めない (設計書 14.9)
+			// メールアドレスなど、個人情報は含めない
 			onNewUser: () => {
 				void alerter.send({
 					severity: 'info',

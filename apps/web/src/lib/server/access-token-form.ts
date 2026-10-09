@@ -1,4 +1,4 @@
-// 公開 API と MCP サーバー向けの個人用アクセストークンの発行フォームを読む (設計書 3.3)。
+// 公開 API と MCP サーバー向けの個人用アクセストークンの発行フォームを読む。
 import { ACCESS_TOKEN_SCOPES, type AccessTokenScope } from '@funmary/db';
 
 const MAX_NAME = 50;

@@ -1,4 +1,4 @@
-// Google のログインの通し (設計書 21 章)。Google の代わりに、テスト用の OpenID Connect のサーバーを使う。
+// Google のログインの通し。Google の代わりに、テスト用の OpenID Connect のサーバーを使う。
 // サーバーは本物の RS256 で署名した ID トークンを返すので、アプリは本番と同じ手順 (PKCE、state、nonce、署名の検証) を通る。
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
