@@ -89,3 +89,14 @@ test('機械向けの口 (Hono) のエラーも、ブラウザで開けば猫の
 	expect(plain.status()).toBe(404);
 	expect(await plain.text()).toBe('Not Found');
 });
+
+test('/favicon.ico は、ICO の形式で返る (ファビコンを集めるサービスが探す)', async ({
+	request,
+}) => {
+	const res = await request.get('/favicon.ico');
+	expect(res.status()).toBe(200);
+	expect(res.headers()['content-type']).toBe('image/x-icon');
+	const body = await res.body();
+	// ICO の先頭: 予約 0、種別 1 (アイコン)、画像 1 枚
+	expect([...body.subarray(0, 6)]).toEqual([0, 0, 1, 0, 1, 0]);
+});

@@ -130,21 +130,42 @@
 	<section aria-labelledby="usage-heading">
 		<h2 id="usage-heading">使い方</h2>
 		<p>
-			REST API は <code>{data.apiBase}</code> の下にあります。<code
-				>Authorization: Bearer &lt;トークン&gt;</code
-			> を付けて呼んでください。
+			MCP (Model Context Protocol) に対応した AI アプリから、Funmary
+			の時間割や通知を読ませられます。読むだけで、データは書き換わりません。
 		</p>
-		<p>MCP (Model Context Protocol) のサーバーの URL は、次のとおりです。</p>
-		<code class="mcp-url">{data.mcpUrl}</code>
-		<h3>claude.ai などのコネクタ</h3>
+		<CopyField id="mcp-url" label="MCP サーバーの URL" value={data.mcpUrl} {copyState} />
+
+		<h3>claude.ai (Web、デスクトップ、スマホ)</h3>
+		<p>トークンは要りません。Funmary のアカウントで許可します。</p>
+		<ol>
+			<li>claude.ai の「設定」から「コネクタ」を開き、「カスタムコネクタを追加」を選ぶ</li>
+			<li>名前に「Funmary」、URL に上の URL を入れて追加する</li>
+			<li>
+				「接続」を押すと、Funmary
+				の許可の画面が開く。ログインして、読ませる範囲を選び、「許可する」を押す
+			</li>
+			<li>チャットで、コネクタの一覧から Funmary を有効にして、「今日の授業は?」のように聞く</li>
+		</ol>
 		<p>
-			トークンは要りません。コネクタの追加で、上の URL
-			を登録すると、この画面に戻って許可を求められます。許可したあとの接続は、上の一覧に「(OAuth)」付きの名前で出て、ここから取り消せます。
+			許可した接続は、上の一覧に「(OAuth)」付きの名前で出ます。ここで無効にすると、その接続は切れ、claude.ai
+			では再び「接続」から許可し直します。アクセスの期限は 1 時間ですが、claude.ai
+			が自動で更新するので、操作は要りません。
 		</p>
-		<h3>Claude Code など、ヘッダを付けられるもの</h3>
+
+		<h3>Claude Code など、ヘッダを付けて登録するもの</h3>
 		<p>
-			上で発行したトークンを、<code>Authorization: Bearer &lt;トークン&gt;</code>
-			のヘッダとして付けて登録してください。
+			上でトークンを発行し、<code>Authorization: Bearer &lt;トークン&gt;</code> のヘッダとして付けて登録します。Claude
+			Code なら、次のコマンドです。
+		</p>
+		<code class="mcp-url"
+			>claude mcp add --transport http funmary {data.mcpUrl} --header "Authorization: Bearer &lt;トークン&gt;"</code
+		>
+
+		<h3>REST API</h3>
+		<p>
+			<code>{data.apiBase}</code> の下にあります。トークンを同じヘッダで付けて呼びます。仕様は
+			<a href={data.docsUrl} target="_blank" rel="noopener noreferrer">API の文書</a>
+			にあります。
 		</p>
 	</section>
 </div>
