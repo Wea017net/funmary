@@ -1,6 +1,5 @@
+import { CLASS_CHANGE_KIND_LABELS } from '@funmary/core';
 import type { SubjectClassChange } from '@funmary/db';
-
-const KIND_LABELS = { cancellation: '休講', makeup: '補講', roomChange: '教室変更' } as const;
 
 const MAKEUP_PLAN_LABELS = {
 	planned: '補講あり',
@@ -13,7 +12,7 @@ export function describeClassChange(change: SubjectClassChange): {
 	label: string;
 	detail: string | null;
 } {
-	const label = KIND_LABELS[change.kind];
+	const label = CLASS_CHANGE_KIND_LABELS[change.kind];
 	switch (change.kind) {
 		case 'cancellation':
 			return { label, detail: change.makeupPlan ? MAKEUP_PLAN_LABELS[change.makeupPlan] : null };

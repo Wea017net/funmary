@@ -1,8 +1,6 @@
 // 時間割の画面 (/、/week) に出す表記。
 import type { DayNote } from '@funmary/api';
-import { addDays, isoWeekday, type CalendarDate } from '@funmary/core';
-
-const WEEKDAY_NAMES = ['', '月', '火', '水', '木', '金', '土', '日'];
+import { WEEKDAY_NAMES, addDays, isoWeekday, type CalendarDate } from '@funmary/core';
 
 /** 休講などのラベル。休講と主色がどちらも赤なので、色だけで伝えず、必ず文字で出す */
 export const STATUS_LABELS = {
