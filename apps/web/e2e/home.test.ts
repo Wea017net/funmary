@@ -100,3 +100,10 @@ test('/favicon.ico は、ICO の形式で返る (ファビコンを集めるサ�
 	// ICO の先頭: 予約 0、種別 1 (アイコン)、画像 1 枚
 	expect([...body.subarray(0, 6)]).toEqual([0, 0, 1, 0, 1, 0]);
 });
+
+test('だれでも登録できるときは、?code= があっても、招待コードの欄を出さない', async ({ page }) => {
+	await page.goto('/?code=abcdef');
+	await expect(page.getByLabel('はじめての方は、招待コードで登録します')).toHaveCount(0);
+	// 招待コードが URL にあるのは、招待制のときだけの使い方。参照元の制限も付けない
+	await expect(page.locator('meta[name="referrer"]')).toHaveCount(0);
+});
