@@ -81,9 +81,6 @@
 </div>
 
 <style>
-	.page {
-		max-width: 44rem;
-	}
 	.actions {
 		display: flex;
 		flex-wrap: wrap;

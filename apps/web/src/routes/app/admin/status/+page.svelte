@@ -63,7 +63,7 @@
 	<meta name="robots" content="noindex" />
 </svelte:head>
 
-<div class="page">
+<div class="page page-w-56">
 	<SettingsBreadcrumb current="取得元と実行履歴" />
 	<h1>取得元と実行履歴</h1>
 
@@ -270,10 +270,6 @@
 </div>
 
 <style lang="scss">
-	.page {
-		max-width: 56rem;
-	}
-
 	.sources {
 		margin: 0;
 		padding: 0;

@@ -1,24 +1,12 @@
-import { mkdtempSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { createAccessTokenStore } from './access-token-store.ts';
 import { createAuthStore } from './auth-store.ts';
-import { openDatabase, type Database } from './database.ts';
+import type { Database } from './database.ts';
 import { accessTokens } from './schema.ts';
+import { useTestDatabase } from './testing.ts';
 
-let dir: string;
 let database: Database;
-
-beforeEach(() => {
-	dir = mkdtempSync(join(tmpdir(), 'funmary-access-token-'));
-	database = openDatabase(join(dir, 'funmary.db'), { backupDir: join(dir, 'backups') });
-});
-
-afterEach(() => {
-	database.close();
-	rmSync(dir, { recursive: true, force: true });
-});
+useTestDatabase('funmary-access-token-', (db) => (database = db));
 
 const t0 = new Date('2026-10-01T00:00:00Z');
 const later = (ms: number) => new Date(t0.getTime() + ms);

@@ -1,6 +1,3 @@
-import { mkdtempSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import {
 	createAcademicCalendarStore,
 	createAuthStore,
@@ -11,25 +8,15 @@ import {
 	createSourceHealthStore,
 	createSubjectStore,
 	createUserEventStore,
-	openDatabase,
 	type Database,
 } from '@funmary/db';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { answerCommand } from './discord-commands.ts';
 import type { Services } from './services.ts';
+import { useTestDatabase } from '@funmary/db/testing';
 
-let dir: string;
 let database: Database;
-
-beforeEach(() => {
-	dir = mkdtempSync(join(tmpdir(), 'funmary-discord-commands-'));
-	database = openDatabase(join(dir, 'funmary.db'), { backupDir: join(dir, 'backups') });
-});
-
-afterEach(() => {
-	database.close();
-	rmSync(dir, { recursive: true, force: true });
-});
+useTestDatabase('funmary-discord-commands-', (db) => (database = db));
 
 const NOW = new Date('2026-10-07T01:00:00Z');
 const TERMS_VERSION = '2026-10-03';

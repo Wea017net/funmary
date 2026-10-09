@@ -20,7 +20,7 @@
 	<meta name="robots" content="noindex" />
 </svelte:head>
 
-<div class="page">
+<div class="page page-w-56">
 	<SettingsBreadcrumb current="操作の記録" />
 	<h1>操作の記録</h1>
 	<p class="muted">
@@ -64,10 +64,6 @@
 </div>
 
 <style>
-	.page {
-		max-width: 56rem;
-	}
-
 	.scroll {
 		overflow-x: auto;
 	}

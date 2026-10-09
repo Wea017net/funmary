@@ -1,4 +1,4 @@
-import type { Term } from '@funmary/core';
+import { WEEKDAY_NAMES, type Term } from '@funmary/core';
 
 const TERM_LABELS = new Map<string, string>([
 	['full-year', '通年'],
@@ -26,8 +26,6 @@ export const WEEKDAY_LABELS = [
 	{ weekday: 5, label: '金' },
 	{ weekday: 6, label: '土' },
 ] as const;
-
-const WEEKDAY_NAMES = ['', '月', '火', '水', '木', '金', '土', '日'];
 
 /** 曜日と時限の表記。例: "月曜 2 限" */
 export function formatSlot(slot: { readonly weekday: number; readonly period: number }): string {

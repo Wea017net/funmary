@@ -1,23 +1,11 @@
-import { mkdtempSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import { INITIAL_SOURCE_HEALTH, recordFailure, recordSuccess } from '@funmary/core';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { openDatabase, type Database } from './database.ts';
+import { describe, expect, it } from 'vitest';
+import type { Database } from './database.ts';
 import { createSourceHealthStore } from './source-health-store.ts';
+import { useTestDatabase } from './testing.ts';
 
-let dir: string;
 let database: Database;
-
-beforeEach(() => {
-	dir = mkdtempSync(join(tmpdir(), 'funmary-health-'));
-	database = openDatabase(join(dir, 'funmary.db'), { backupDir: join(dir, 'backups') });
-});
-
-afterEach(() => {
-	database.close();
-	rmSync(dir, { recursive: true, force: true });
-});
+useTestDatabase('funmary-health-', (db) => (database = db));
 
 const at = (iso: string) => new Date(iso);
 const options = { intervalMs: 60 * 60 * 1000 };

@@ -40,9 +40,6 @@
 </div>
 
 <style>
-	.page {
-		max-width: 44rem;
-	}
 	.events {
 		padding: 0;
 		list-style: none;

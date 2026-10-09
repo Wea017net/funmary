@@ -22,7 +22,7 @@
 	<meta name="robots" content="noindex" />
 </svelte:head>
 
-<div class="page">
+<div class="page page-w-36">
 	<h1>アクセスの許可</h1>
 
 	{#if data.fatal}
@@ -57,10 +57,6 @@
 </div>
 
 <style lang="scss">
-	.page {
-		max-width: 36rem;
-	}
-
 	fieldset {
 		margin: 1.5rem 0;
 		padding: 1rem;

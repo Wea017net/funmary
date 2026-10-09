@@ -1,26 +1,14 @@
-import { mkdtempSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { createAcademicCalendarStore, openDatabase, type Database } from '@funmary/db';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { createAcademicCalendarStore, type Database } from '@funmary/db';
+import { describe, expect, it } from 'vitest';
 import {
 	importAcademicCalendar,
 	importAcademicCalendarPdf,
 	type ParsedAcademicCalendar,
 } from './academic-calendar-import.ts';
+import { useTestDatabase } from '@funmary/db/testing';
 
-let dir: string;
 let database: Database;
-
-beforeEach(() => {
-	dir = mkdtempSync(join(tmpdir(), 'funmary-calendar-import-'));
-	database = openDatabase(join(dir, 'funmary.db'), { backupDir: join(dir, 'backups') });
-});
-
-afterEach(() => {
-	database.close();
-	rmSync(dir, { recursive: true, force: true });
-});
+useTestDatabase('funmary-calendar-import-', (db) => (database = db));
 
 const NOW = new Date('2030-03-20T00:00:00Z');
 

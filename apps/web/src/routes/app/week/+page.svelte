@@ -135,7 +135,7 @@
 	<title>週の時間割 - Funmary</title>
 </svelte:head>
 
-<div class="page">
+<div class="page page-w-72">
 	<h1>{formatDate(data.monday)} からの週</h1>
 
 	<div class="toolbar">
@@ -275,9 +275,6 @@
 <style lang="scss">
 	@use 'breakpoints';
 
-	.page {
-		max-width: 72rem;
-	}
 	.toolbar {
 		display: flex;
 		flex-wrap: wrap;

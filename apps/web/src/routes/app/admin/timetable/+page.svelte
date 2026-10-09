@@ -78,7 +78,7 @@
 	{/if}
 {/snippet}
 
-<div class="page">
+<div class="page page-w-48">
 	<SettingsBreadcrumb current="授業時間割の取り込み" />
 	<h1>授業時間割の取り込み</h1>
 	<p>
@@ -151,10 +151,6 @@
 </div>
 
 <style>
-	.page {
-		max-width: 48rem;
-	}
-
 	section {
 		margin-top: 2rem;
 	}

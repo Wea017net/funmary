@@ -1,15 +1,12 @@
-import { mkdtempSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import {
 	createAuthStore,
 	createFeedTokenStore,
 	createNotificationStore,
-	openDatabase,
 	type Database,
 } from '@funmary/db';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { loadNotificationFeed, notificationFeedLinks } from './notification-feed.ts';
+import { useTestDatabase } from '@funmary/db/testing';
 
 /** 同意済みの利用者の購読として読む。同意待ちの印が返ったら、テストの組み立てが違う */
 function loadAccepted(src: ReturnType<typeof sources>, token: string, now: Date) {
@@ -18,18 +15,8 @@ function loadAccepted(src: ReturnType<typeof sources>, token: string, now: Date)
 	return loaded;
 }
 
-let dir: string;
 let database: Database;
-
-beforeEach(() => {
-	dir = mkdtempSync(join(tmpdir(), 'funmary-notification-feed-'));
-	database = openDatabase(join(dir, 'funmary.db'), { backupDir: join(dir, 'backups') });
-});
-
-afterEach(() => {
-	database.close();
-	rmSync(dir, { recursive: true, force: true });
-});
+useTestDatabase('funmary-notification-feed-', (db) => (database = db));
 
 const NOW = new Date('2026-10-07T00:00:00Z');
 

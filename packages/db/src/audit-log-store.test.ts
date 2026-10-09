@@ -1,24 +1,12 @@
-import { mkdtempSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { createAuditLogStore } from './audit-log-store.ts';
 import { createAuthStore } from './auth-store.ts';
-import { openDatabase, type Database } from './database.ts';
+import type { Database } from './database.ts';
 import { createSubjectStore } from './subject-store.ts';
+import { useTestDatabase } from './testing.ts';
 
-let dir: string;
 let database: Database;
-
-beforeEach(() => {
-	dir = mkdtempSync(join(tmpdir(), 'funmary-audit-log-'));
-	database = openDatabase(join(dir, 'funmary.db'), { backupDir: join(dir, 'backups') });
-});
-
-afterEach(() => {
-	database.close();
-	rmSync(dir, { recursive: true, force: true });
-});
+useTestDatabase('funmary-audit-log-', (db) => (database = db));
 
 const at = (iso: string) => new Date(iso);
 

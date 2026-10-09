@@ -8,7 +8,7 @@ export interface SearchableSubject {
 }
 
 /** 検索で返す件数の既定の上限 */
-export const SEARCH_LIMIT = 30;
+const SEARCH_LIMIT = 30;
 
 /** 全角と半角、ローマ数字 (Ⅱ と II)、波ダッシュとチルダ、ハイフンの類、大文字と小文字、空白の違いを揃える */
 function normalize(text: string): string {

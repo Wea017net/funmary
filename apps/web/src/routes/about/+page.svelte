@@ -88,10 +88,6 @@
 </div>
 
 <style>
-	.page {
-		max-width: 44rem;
-	}
-
 	.links {
 		margin: 1rem 0 0;
 		padding: 0;

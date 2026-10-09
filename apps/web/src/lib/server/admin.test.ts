@@ -1,6 +1,6 @@
 import { isHttpError, isRedirect } from '@sveltejs/kit';
 import { describe, expect, it } from 'vitest';
-import { requireAdmin } from './admin.ts';
+import { requireAdmin, requireSignedIn } from './admin.ts';
 
 const user = (role: 'user' | 'admin') =>
 	({
@@ -20,6 +20,17 @@ function thrown(fn: () => unknown): unknown {
 	}
 	throw new Error('例外になるはず');
 }
+
+describe('requireSignedIn', () => {
+	it('ログインしていれば、何もしない', () => {
+		expect(() => requireSignedIn({ user: user('user') })).not.toThrow();
+	});
+
+	it('ログインしていなければ、ログインの画面に移す', () => {
+		const error = thrown(() => requireSignedIn({ user: null }));
+		expect(isRedirect(error) && error.location).toBe('/login');
+	});
+});
 
 describe('requireAdmin', () => {
 	it('管理者なら、その利用者を返す', () => {

@@ -52,10 +52,6 @@
 </div>
 
 <style>
-	.page {
-		max-width: 44rem;
-	}
-
 	.contributors {
 		display: grid;
 		grid-template-columns: repeat(auto-fill, minmax(5.5rem, 1fr));

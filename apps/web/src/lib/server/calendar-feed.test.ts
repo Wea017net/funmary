@@ -1,6 +1,3 @@
-import { mkdtempSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import {
 	createAcademicCalendarStore,
 	createAuthStore,
@@ -11,11 +8,11 @@ import {
 	createPersonalSlotStore,
 	createSubjectStore,
 	createUserEventStore,
-	openDatabase,
 	type Database,
 } from '@funmary/db';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { loadCalendarFeed, type CalendarFeedSources } from './calendar-feed.ts';
+import { useTestDatabase } from '@funmary/db/testing';
 
 const TERMS_VERSION = '2026-10-03';
 
@@ -26,18 +23,8 @@ function loadAccepted(sources: CalendarFeedSources, token: string, now: Date) {
 	return loaded;
 }
 
-let dir: string;
 let database: Database;
-
-beforeEach(() => {
-	dir = mkdtempSync(join(tmpdir(), 'funmary-calendar-feed-'));
-	database = openDatabase(join(dir, 'funmary.db'), { backupDir: join(dir, 'backups') });
-});
-
-afterEach(() => {
-	database.close();
-	rmSync(dir, { recursive: true, force: true });
-});
+useTestDatabase('funmary-calendar-feed-', (db) => (database = db));
 
 // 2026-10-07 (水) の日本時間の朝
 const NOW = new Date('2026-10-07T00:00:00+09:00');

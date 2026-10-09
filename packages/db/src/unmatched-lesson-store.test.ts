@@ -1,23 +1,11 @@
-import { mkdtempSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { openDatabase, type Database } from './database.ts';
+import { describe, expect, it } from 'vitest';
+import type { Database } from './database.ts';
 import { createSubjectStore } from './subject-store.ts';
 import { createUnmatchedLessonStore } from './unmatched-lesson-store.ts';
+import { useTestDatabase } from './testing.ts';
 
-let dir: string;
 let database: Database;
-
-beforeEach(() => {
-	dir = mkdtempSync(join(tmpdir(), 'funmary-unmatched-'));
-	database = openDatabase(join(dir, 'funmary.db'), { backupDir: join(dir, 'backups') });
-});
-
-afterEach(() => {
-	database.close();
-	rmSync(dir, { recursive: true, force: true });
-});
+useTestDatabase('funmary-unmatched-', (db) => (database = db));
 
 const T0 = new Date('2026-09-27T00:00:00Z');
 const T1 = new Date('2026-10-01T00:00:00Z');

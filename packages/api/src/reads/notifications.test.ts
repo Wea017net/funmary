@@ -1,22 +1,10 @@
-import { mkdtempSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { createAuthStore, createNotificationStore, openDatabase, type Database } from '@funmary/db';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { createAuthStore, createNotificationStore, type Database } from '@funmary/db';
+import { describe, expect, it } from 'vitest';
 import { listUserNotifications } from './notifications.ts';
+import { useTestDatabase } from '@funmary/db/testing';
 
-let dir: string;
 let database: Database;
-
-beforeEach(() => {
-	dir = mkdtempSync(join(tmpdir(), 'funmary-notifications-'));
-	database = openDatabase(join(dir, 'funmary.db'), { backupDir: join(dir, 'backups') });
-});
-
-afterEach(() => {
-	database.close();
-	rmSync(dir, { recursive: true, force: true });
-});
+useTestDatabase('funmary-notifications-', (db) => (database = db));
 
 const NOW = new Date('2026-10-07T00:00:00Z');
 const DAY = 24 * 60 * 60 * 1000;

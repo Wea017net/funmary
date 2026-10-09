@@ -17,7 +17,7 @@
 	<meta name="robots" content="noindex" />
 </svelte:head>
 
-<div class="page">
+<div class="page page-w-36">
 	<h1>{data.reconsent ? '利用規約が更新されました' : '利用規約への同意'}</h1>
 
 	<FormNotice error={form?.error ?? null} />
@@ -62,10 +62,6 @@
 </div>
 
 <style lang="scss">
-	.page {
-		max-width: 36rem;
-	}
-
 	.documents {
 		margin: 1rem 0 1.5rem;
 		padding-left: 1.25rem;

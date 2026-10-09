@@ -1,30 +1,17 @@
 import { createHash } from 'node:crypto';
-import { mkdtempSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import {
 	createAccessTokenStore,
 	createAuthStore,
 	createOAuthStore,
-	openDatabase,
 	type Database,
 } from '@funmary/db';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { buildRedirect, parseAuthorizeRequest } from './oauth-authorize.ts';
 import { createOAuthRoutes, isAllowedRedirectUri, verifyPkce } from './oauth-routes.ts';
+import { useTestDatabase } from '@funmary/db/testing';
 
-let dir: string;
 let database: Database;
-
-beforeEach(() => {
-	dir = mkdtempSync(join(tmpdir(), 'funmary-oauth-routes-'));
-	database = openDatabase(join(dir, 'funmary.db'), { backupDir: join(dir, 'backups') });
-});
-
-afterEach(() => {
-	database.close();
-	rmSync(dir, { recursive: true, force: true });
-});
+useTestDatabase('funmary-oauth-routes-', (db) => (database = db));
 
 const ORIGIN = 'https://funmary.example.com';
 const REDIRECT = 'https://claude.ai/api/mcp/auth_callback';

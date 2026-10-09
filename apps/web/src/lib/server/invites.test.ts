@@ -1,14 +1,5 @@
-import { mkdtempSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import {
-	createAuthStore,
-	createSettingsStore,
-	openDatabase,
-	type AuthUser,
-	type Database,
-} from '@funmary/db';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { createAuthStore, createSettingsStore, type AuthUser, type Database } from '@funmary/db';
+import { describe, expect, it } from 'vitest';
 import {
 	issueInvite,
 	loadInviteStatus,
@@ -18,19 +9,10 @@ import {
 	toInviteCodeView,
 	usableInviteCodes,
 } from './invites.ts';
+import { useTestDatabase } from '@funmary/db/testing';
 
-let dir: string;
 let database: Database;
-
-beforeEach(() => {
-	dir = mkdtempSync(join(tmpdir(), 'funmary-invites-'));
-	database = openDatabase(join(dir, 'funmary.db'), { backupDir: join(dir, 'backups') });
-});
-
-afterEach(() => {
-	database.close();
-	rmSync(dir, { recursive: true, force: true });
-});
+useTestDatabase('funmary-invites-', (db) => (database = db));
 
 const NOW = new Date('2026-10-15T03:00:00Z');
 
