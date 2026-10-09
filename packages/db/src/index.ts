@@ -7,6 +7,7 @@ export {
 	type AccessTokenStore,
 	type AccessTokenSummary,
 } from './access-token-store.ts';
+export { createAccountStore, type AccountExport, type AccountStore } from './account-store.ts';
 export {
 	createOAuthStore,
 	MAX_OAUTH_CLIENTS,

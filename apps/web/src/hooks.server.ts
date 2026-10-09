@@ -14,6 +14,7 @@ import {
 	createAcademicCalendarStore,
 	createAccessGrantStore,
 	createAccessTokenStore,
+	createAccountStore,
 	createAuditLogStore,
 	createAuthStore,
 	createChannelStore,
@@ -339,6 +340,7 @@ export const init: ServerInit = () => {
 		feedTokens: createFeedTokenStore(database),
 		accessTokens: accessTokenStore,
 		oauth: oauthStore,
+		account: createAccountStore(database),
 		// リリースでは、tar.gz に同梱した build-info.json を、上の階層へたどって探す
 		build: findBuildInfo(dirname(fileURLToPath(import.meta.url))),
 		// ビルドでは、scripts/copy-legal.js が写した legal/ を、上の階層へたどって探す
