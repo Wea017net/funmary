@@ -1,4 +1,4 @@
-// 利用者の Discord アカウントの連携 (設計書 14.9)。OAuth の認可コードの交換と、取り消しだけを行う。
+// 利用者の Discord アカウントの連携。OAuth の認可コードの交換と、取り消しだけを行う。
 // Bot のトークンとは別の、アプリの Client ID と Client Secret を使う (Discord Developer Portal の OAuth2 タブ)。
 
 const AUTHORIZE_URL = 'https://discord.com/api/oauth2/authorize';
@@ -41,7 +41,7 @@ export interface DiscordOAuthClient {
 	exchangeCode(code: string): Promise<DiscordOAuthTokens>;
 	/** アクセストークンで、連携した本人の Discord のユーザーを取る */
 	fetchCurrentUser(accessToken: string): Promise<DiscordOAuthUser>;
-	/** トークンを取り消す。失敗しても投げない (呼び出し側で無視してよい、設計書 14.9) */
+	/** トークンを取り消す。失敗しても投げない (呼び出し側で無視してよい) */
 	revoke(token: string): Promise<void>;
 }
 
@@ -117,7 +117,7 @@ export function createDiscordOAuthClient(options: DiscordOAuthOptions): DiscordO
 					body,
 				});
 			} catch {
-				// 取り消せなくても、Funmary 側の連携解除は止めない (設計書 14.9)
+				// 取り消せなくても、Funmary 側の連携解除は止めない
 			}
 		},
 	};

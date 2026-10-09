@@ -1,4 +1,4 @@
-// 管理用コマンドの user (設計書 19.4) の判断の部分。利用者をメールアドレスで探し、権限の段階と、利用の停止を変える
+// 管理用コマンドの user の判断の部分。利用者をメールアドレスで探し、権限の段階と、利用の停止を変える
 import type { AuthStore, AuthUser, UserRole, UserSummary } from '@funmary/db';
 
 export const ROLE_LABELS: Readonly<Record<UserRole, string>> = {

@@ -1,4 +1,4 @@
-// 学生ポータルのログイン画面 (ASP.NET Web Forms) のフォームを読む (設計書 9.1)。
+// 学生ポータルのログイン画面 (ASP.NET Web Forms) のフォームを読む。
 // 送るものは、hidden の値 (__VIEWSTATE など)、年度と学期の既定値、ID、パスワード、ボタン。
 // 入力欄の名前は "ctl00$MainContent$LoginId" のように接頭辞が付くので、末尾で探す。
 import { fromHtml } from 'hast-util-from-html';

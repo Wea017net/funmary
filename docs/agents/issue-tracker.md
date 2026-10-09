@@ -29,7 +29,7 @@ gh issue create --title "<タイトル>" --label task --body-file <本文のフ�
 | `documentation`                            | 文書                                       |
 | `dependencies`                             | 依存の更新 (Renovate が付ける)             |
 | `major`                                    | メジャーの更新 (Renovate が付ける)         |
-| `phase-0`、`phase-1`、`phase-2`、`phase-3` | 設計書のロードマップのどの段階の作業か     |
+| `phase-0`、`phase-1`、`phase-2`、`phase-3` | ロードマップのどの段階の作業か             |
 | `needs-author`                             | 作者の判断や、作者にしかできない作業が要る |
 
 ## PR

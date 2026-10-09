@@ -1,6 +1,6 @@
 name: 節目の版のリリース
 
-# 節目の版 (v*) のリリースを、手で実行して作る (設計書 20.9)。入力は patch/minor/major、または X.Y.Z の直接指定。
+# 節目の版 (v*) のリリースを、手で実行して作る。入力は patch/minor/major、または X.Y.Z の直接指定。
 # patch/minor/major は、直前の v* タグから上げる。対象のコミットには、CI が通って作られた build-<hash> のリリースが
 # 必要 (publish-version-tag.js が確かめる)。同じ版のタグがあれば、作らずに止まる
 on:

@@ -1,4 +1,4 @@
-// 管理用の通知を、Bot でチャンネルに送る部品 (設計書 14.9)。通知の種類からチャンネルを選び、必要なときだけロールにメンションする。
+// 管理用の通知を、Bot でチャンネルに送る部品。通知の種類からチャンネルを選び、必要なときだけロールにメンションする。
 import type { AdminAlertSeverity } from './admin-alert.ts';
 import type { DiscordBot } from './discord-bot.ts';
 import type { AdminChannel, AdminRole, DiscordLayout } from './discord-layout.ts';

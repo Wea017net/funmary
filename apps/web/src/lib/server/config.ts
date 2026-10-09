@@ -37,10 +37,10 @@ export interface Config {
 	/** メールの送信。SMTP_URL が空ならない */
 	readonly smtp: { readonly url: string; readonly from: string } | undefined;
 	readonly adminDiscordWebhookUrl: string | undefined;
-	/** 管理用の Discord の Bot (設計書 14.9)。トークンとギルドの ID の両方があるときだけある */
+	/** 管理用の Discord の Bot。トークンとギルドの ID の両方があるときだけある */
 	readonly discordBot: { readonly token: string; readonly guildId: string } | undefined;
 	/**
-	 * 利用者の Discord 連携 (設計書 14.9、#163) の OAuth。Bot と同じ Discord Application の
+	 * 利用者の Discord 連携 (#163) の OAuth。Bot と同じ Discord Application の
 	 * OAuth2 タブにある Client ID と Client Secret。両方あるときだけある
 	 */
 	readonly discordOAuth: { readonly clientId: string; readonly clientSecret: string } | undefined;
@@ -52,7 +52,7 @@ export interface Config {
 	readonly logFormat: 'text' | 'json';
 	/** リバースプロキシ経由で利用者の IP アドレスを得るための設定 */
 	readonly proxy: { readonly addressHeader: string; readonly xffDepth: number } | undefined;
-	/** セルフホストの運営者の情報 (設計書、Issue #109)。フッターに出す。設定しなければ出さない */
+	/** セルフホストの運営者の情報 (Issue #109)。フッターに出す。設定しなければ出さない */
 	readonly operator: { readonly name: string; readonly url: string } | undefined;
 	/** ロゴ、アイコン、OGP の画像を差し替えるディレクトリ (LICENSE-ASSETS)。設定しなければ同梱の画像を使う */
 	readonly brandDir: string | undefined;

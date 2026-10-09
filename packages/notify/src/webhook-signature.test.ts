@@ -47,7 +47,7 @@ describe('signWebhook', () => {
 		expect(new Set(signatures).size).toBe(5);
 	});
 
-	// 公式の Standard Webhooks のライブラリが、この署名をそのまま検証できることを確かめる (設計書 14.3.1)。
+	// 公式の Standard Webhooks のライブラリが、この署名をそのまま検証できることを確かめる。
 	// 公式ライブラリは「今から 5 分以上ずれた時刻」を断るので、ここだけは今の時刻を使う
 	it('公式の standardwebhooks ライブラリで検証が通る', () => {
 		const now = new Date();

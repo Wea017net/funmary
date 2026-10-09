@@ -1,4 +1,4 @@
-// 取得元の状態、定期処理の実行履歴、応答時間 (設計書 4.5、12.1)。
+// 取得元の状態、定期処理の実行履歴、応答時間。
 // 定期処理は、ここから今すぐ動かせる (サーバーの中で動かすので、同じ処理が同時に 2 つ動くことはない)
 import { fail, type Actions, type ServerLoad } from '@sveltejs/kit';
 import { jstDateTime } from '@funmary/core';

@@ -1,4 +1,4 @@
-// 招待コードの発行 (設計書 8.2)。発行できる人は、管理画面のモードで決まる。
+// 招待コードの発行。発行できる人は、管理画面のモードで決まる。
 // 発行したコードは DB にハッシュだけを保存するので、発行の直後に 1 回だけ画面に出す。
 import { fail, redirect, type Actions, type ServerLoad } from '@sveltejs/kit';
 import { parseInviteForm } from '#lib/server/invite-form.ts';
@@ -38,7 +38,7 @@ export const actions: Actions = {
 					error: `今月は、招待コードを発行できる数 (${result.limit} つ) に達しました。`,
 				});
 			case 'issued':
-				// 渡した相手のメモなど、個人情報は含めない (設計書 14.9)
+				// 渡した相手のメモなど、個人情報は含めない
 				await services.alertAdmin({
 					severity: 'info',
 					title: '招待コードが発行されました',

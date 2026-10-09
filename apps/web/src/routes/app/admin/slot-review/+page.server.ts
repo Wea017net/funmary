@@ -1,4 +1,4 @@
-// 「モデレーターが確認してから登録する」設定のときの、曜日と時限の確認 (設計書、監査ログの節)。
+// 「モデレーターが確認してから登録する」設定のときの、曜日と時限の確認 (監査ログの節)。
 // 確認待ちの一覧はモデレーターと管理者が見られるが、設定そのもの (だれでも/確認して/だれも) は管理者だけが変えられる。
 import { fail, type Actions, type ServerLoad } from '@sveltejs/kit';
 import { jstDateTime } from '@funmary/core';

@@ -123,7 +123,7 @@ export const subjects = sqliteTable(
 			onDelete: 'set null',
 		}),
 		/**
-		 * 公開範囲 (source が user のときだけ意味を持つ。syllabus は常に public)。設計書 14.9、Issue #164。
+		 * 公開範囲 (source が user のときだけ意味を持つ。syllabus は常に public)。Issue #164。
 		 * public は誰でも探せる、link は URL を知っていれば開ける、private は足した人と管理者だけ
 		 */
 		visibility: text('visibility', { enum: ['public', 'link', 'private'] })
@@ -449,7 +449,7 @@ export const feedTokens = sqliteTable(
 	(table) => [index('feed_tokens_user').on(table.userId)],
 );
 
-/** 公開 API と MCP サーバー向けの個人用アクセストークン (設計書 3.3)。1 人が複数を同時に持てる */
+/** 公開 API と MCP サーバー向けの個人用アクセストークン。1 人が複数を同時に持てる */
 export const accessTokens = sqliteTable(
 	'access_tokens',
 	{
@@ -517,7 +517,7 @@ export const hopeEvents = sqliteTable(
 );
 
 // ---------------------------------------------------------------------------
-// 利用者の Discord 連携 (設計書 14.9)
+// 利用者の Discord 連携
 
 /**
  * 利用者の Discord アカウントと Funmary のアカウントの紐付け。1 人につき 1 行。
@@ -537,7 +537,7 @@ export const discordLinks = sqliteTable('discord_links', {
 	/** DM チャンネルの ID。まだ用意していない間は null */
 	dmChannelId: text('dm_channel_id'),
 	/**
-	 * 通知の種類ごとの送り先とメンション (設計書 14.9、#163)。
+	 * 通知の種類ごとの送り先とメンション (#163)。
 	 * JSON (Partial<Record<NotificationKind, { destination: 'thread' | 'dm' | 'both'; mention: boolean }>>)。
 	 * 無い種類は、スレッド、メンション無しとみなす
 	 */
@@ -584,7 +584,7 @@ export const notifications = sqliteTable(
 		/** 押したときに開く画面のパス */
 		link: text('link'),
 		subjectId: integer('subject_id').references(() => subjects.id, { onDelete: 'set null' }),
-		/** 授業の日付 (YYYY-MM-DD)。休講などの通知のときだけ持つ。汎用 Webhook の構造化データに使う (設計書 14.3.1) */
+		/** 授業の日付 (YYYY-MM-DD)。休講などの通知のときだけ持つ。汎用 Webhook の構造化データに使う */
 		date: text('date'),
 		/** 授業の時限。休講などの通知のときだけ持つ */
 		period: integer('period'),

@@ -1,4 +1,4 @@
-// 利用者、セッション、招待コード、利用者の権限の保存 (設計書 8 章)。
+// 利用者、セッション、招待コード、利用者の権限の保存。
 // セッションの ID と招待コードは、DB には SHA-256 だけを保存する。DB が漏れても、そのまま使われないようにするため。
 import { randomBytes } from 'node:crypto';
 import type { Permission } from '@funmary/core';

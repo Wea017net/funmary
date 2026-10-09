@@ -1,4 +1,4 @@
-// 祝日の保存 (設計書 10 章)。保存するのは内閣府の CSV か同梱の CSV の内容だけで、推定した祝日は保存しない
+// 祝日の保存。保存するのは内閣府の CSV か同梱の CSV の内容だけで、推定した祝日は保存しない
 // (推定は @funmary/core の resolveHolidays が、読むときに補う)。
 import type { ResolvedHoliday } from '@funmary/core';
 import type { Database } from './database.ts';

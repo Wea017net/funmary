@@ -1,4 +1,4 @@
-// 管理用の Discord のチャンネルとロールの配置 (設計書 14.9)。
+// 管理用の Discord のチャンネルとロールの配置。
 // 足りないものだけを Bot が作り (何度実行しても同じ結果になる)、管理者が置き換えたものは作り直さない。
 import { CHANNEL_TYPES, PERMISSIONS, type DiscordBot, type DiscordChannel } from './discord-bot.ts';
 

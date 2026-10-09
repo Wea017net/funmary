@@ -1,4 +1,4 @@
-// 機械向けの口 (設計書 3 章)。SvelteKit のフックから、決まったパスだけがここに渡される。
+// 機械向けの口。SvelteKit のフックから、決まったパスだけがここに渡される。
 import { Hono } from 'hono';
 import { createAuthRoutes, type AuthRoutesDeps } from './auth-routes.ts';
 import { createCalendarRoutes, type CalendarRoutesDeps } from './calendar-routes.ts';

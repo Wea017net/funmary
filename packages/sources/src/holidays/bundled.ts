@@ -1,4 +1,4 @@
-// 内閣府に届かないとき (初回の起動など) の備えとして、リポジトリに同梱した祝日 (設計書 10 章)。
+// 内閣府に届かないとき (初回の起動など) の備えとして、リポジトリに同梱した祝日。
 import { BUNDLED_HOLIDAY_CSV } from './bundled-data.ts';
 import { parseHolidayCsv, type Holiday } from './parse.ts';
 

@@ -1,4 +1,4 @@
-// 招待コードの管理 (設計書 8.2)。発行できる人のモードと月の上限を変え、全員のコードを見て取り消し、
+// 招待コードの管理。発行できる人のモードと月の上限を変え、全員のコードを見て取り消し、
 // 利用者ごとに発行の権限を付ける。発行そのものは /app/settings/invites で行う (管理者も同じ画面を使う)。
 import { fail, type Actions, type ServerLoad } from '@sveltejs/kit';
 import { requireAdmin } from '#lib/server/admin.ts';
@@ -60,7 +60,7 @@ export const actions: Actions = {
 			return fail(404, { error: '利用者が見つかりません。' });
 		}
 		auth.setPermission(target.id, 'invite:create', granted, admin.id, new Date());
-		// メールアドレスなど、個人情報は含めない (設計書 14.9)
+		// メールアドレスなど、個人情報は含めない
 		await getServices().alertAdmin({
 			severity: 'info',
 			title: granted ? '招待コードの発行を許可しました' : '招待コードの発行の許可を外しました',

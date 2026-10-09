@@ -1,4 +1,4 @@
-// 利用者の Discord 連携 (設計書 14.9、#163)。OAuth の途中経過 (state) の封印と、
+// 利用者の Discord 連携 (#163)。OAuth の途中経過 (state) の封印と、
 // 認可コードを受け取ったあとの、ギルドへの参加、スレッドか DM の用意、紐付けの保存をまとめる。
 import type { DiscordBot, DiscordOAuthClient } from '@funmary/notify';
 import {
@@ -55,9 +55,9 @@ export interface CompleteLinkDeps {
 	readonly oauth: DiscordOAuthClient;
 	readonly bot: DiscordBot | null;
 	readonly store: DiscordLinkStore;
-	/** 利用者ごとの非公開スレッドの親チャンネル (設計書 14.9) の ID。管理者が「チャンネルとロールを整える」を実行していなければ null */
+	/** 利用者ごとの非公開スレッドの親チャンネル の ID。管理者が「チャンネルとロールを整える」を実行していなければ null */
 	readonly linksChannelId: string | null;
-	/** 参加した利用者に付けるロール。管理者が選んでいなければ空配列 (設計書 14.9) */
+	/** 参加した利用者に付けるロール。管理者が選んでいなければ空配列 */
 	readonly joinRoleIds: readonly string[];
 	readonly log: Pick<Logger, 'warn'>;
 }

@@ -1,4 +1,4 @@
-// 汎用の Webhook に、Funmary からの送信だと確かめられる署名を付ける (設計書 14.3.1)。
+// 汎用の Webhook に、Funmary からの送信だと確かめられる署名を付ける。
 // 形式は Standard Webhooks (https://www.standardwebhooks.com/) に合わせる。鍵は Webhook ごとに作り、
 // 登録した直後に 1 回だけ見せて、保存は暗号化する (保存は呼び出し側の @funmary/db が行う)
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';

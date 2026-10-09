@@ -1,4 +1,4 @@
-// 管理用の Discord の Bot (設計書 14.9)。ギルドは 1 つだけ。チャンネルとロールを作り、メッセージを送り、ロールを付ける。
+// 管理用の Discord の Bot。ギルドは 1 つだけ。チャンネルとロールを作り、メッセージを送り、ロールを付ける。
 // Discord の API の呼び出し、レート制限、再試行は、公式の @discordjs/core と @discordjs/rest に任せる。
 // このファイルは、Funmary が使う操作だけに絞った入れ物 (DiscordBot) にして、例外を、トークンを含まない形にそろえる。
 import { API, ChannelType, OverwriteType } from '@discordjs/core';
@@ -227,7 +227,7 @@ export function createDiscordBot(options: DiscordBotOptions): DiscordBot {
 			try {
 				await guarded(() => api.channels.edit(threadId, { archived: true, locked: true }));
 			} catch {
-				// 消えている、権限がないなどでも、呼び出し側の処理は止めない (設計書 14.9)
+				// 消えている、権限がないなどでも、呼び出し側の処理は止めない
 			}
 		},
 		deleteThread: (threadId) => guarded(async () => void (await api.channels.delete(threadId))),

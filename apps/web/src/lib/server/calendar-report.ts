@@ -1,4 +1,4 @@
-// 管理用コマンド calendar show と calendar import の表示 (設計書 19.4)。学期の期間は値の出どころ付きで出す。
+// 管理用コマンド calendar show と calendar import の表示。学期の期間は値の出どころ付きで出す。
 import type { ResolvedTerm, SubstituteDay, TermSource } from '@funmary/core';
 import type { NoClassDay } from '@funmary/db';
 import type { AcademicCalendarImportReport } from './academic-calendar-import.ts';

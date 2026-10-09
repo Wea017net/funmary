@@ -1,4 +1,4 @@
-// 管理用の通知 (設計書 14.8)。Funmary 自体の状態 (取得元の不調、件数の急な減少、予期しないエラーなど) を、
+// 管理用の通知。Funmary 自体の状態 (取得元の不調、件数の急な減少、予期しないエラーなど) を、
 // 運用する人に Discord の Webhook で知らせる。利用者への通知 (通知欄、チャネル) とは分け、送り先の型も共有しない。
 //
 // - ログに warn 以上で残したうえで、その場で送る。通知欄にも送信待ちにも入れない
@@ -31,7 +31,7 @@ export interface AdminAlerter {
 export interface AdminAlerterOptions {
 	/** ADMIN_DISCORD_WEBHOOK_URL。Bot がないときの送り先。空ならログにだけ残す */
 	readonly webhookUrl: string | undefined;
-	/** Bot での送り先 (設計書 14.9)。あれば Webhook より先に使う */
+	/** Bot での送り先。あれば Webhook より先に使う */
 	readonly discord?: AdminDiscordSink;
 	/** NOTIFY_DRY_RUN。true なら送らず、ログに出す */
 	readonly dryRun: boolean;

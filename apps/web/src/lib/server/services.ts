@@ -43,7 +43,7 @@ export interface Services {
 	readonly auth: AuthStore;
 	/** 管理画面で変える設定 (招待コードを発行できる人など) */
 	readonly settings: SettingsStore;
-	/** 管理用の Discord の Bot と、チャンネルとロールの配置 (設計書 14.9)。Bot は設定されていなければ null */
+	/** 管理用の Discord の Bot と、チャンネルとロールの配置。Bot は設定されていなければ null */
 	readonly discord: {
 		readonly bot: DiscordBot | null;
 		layout(): DiscordLayout;
@@ -54,7 +54,7 @@ export interface Services {
 			enabled(): boolean;
 			setEnabled(enabled: boolean): void;
 		};
-		/** 利用者の Discord 連携 (設計書 14.9、#163) */
+		/** 利用者の Discord 連携 (#163) */
 		readonly link: {
 			/** OAuth の Client ID と Secret が設定されているか。false なら連携の入口を出さない */
 			readonly configured: boolean;
@@ -70,11 +70,11 @@ export interface Services {
 		};
 	};
 	readonly courses: CourseStore;
-	/** 利用者の通知欄 (設計書 14.1、14.2) */
+	/** 利用者の通知欄 */
 	readonly notifications: NotificationStore;
-	/** 利用者が登録した通知の送り先 (Discord の Webhook、汎用の Webhook) (設計書 14.3、14.3.1) */
+	/** 利用者が登録した通知の送り先 (Discord の Webhook、汎用の Webhook) */
 	readonly channels: ChannelStore;
-	/** 通知の送信待ちと、送れたか (設計書 14.1)。管理画面の「配信の失敗」はここから出す */
+	/** 通知の送信待ちと、送れたか。管理画面の「配信の失敗」はここから出す */
 	readonly deliveries: DeliveryStore;
 	readonly webhooks: {
 		/** 1 人が登録できる Webhook の個数 (管理者が決める)。discord と generic を合わせた数 */
@@ -110,7 +110,7 @@ export interface Services {
 	};
 	/** 直近 24 時間の応答時間 (サーバーのメモリにだけある) */
 	readonly responseTimes: ResponseTimes;
-	/** 利用者が全体に影響する操作をしたときの記録 (設計書、監査ログ) */
+	/** 利用者が全体に影響する操作をしたときの記録 (監査ログ) */
 	readonly auditLog: AuditLogStore;
 	readonly estimateHolidays: TimetableSources['estimateHolidays'];
 	/** 動いているアプリの版。手元の開発では null */
@@ -119,9 +119,9 @@ export interface Services {
 	readonly legal: LegalInfo | null;
 	/** カレンダー購読の URL のトークン */
 	readonly feedTokens: FeedTokenStore;
-	/** 公開 API と MCP サーバー向けの個人用アクセストークン (設計書 3.3) */
+	/** 公開 API と MCP サーバー向けの個人用アクセストークン */
 	readonly accessTokens: AccessTokenStore;
-	/** 新規登録の方式 (設計書 8.2)。紹介の画面の案内に使う */
+	/** 新規登録の方式。紹介の画面の案内に使う */
 	readonly registration: 'invite' | 'open' | 'closed';
 	/** 公開 URL の origin (ブックマークレットの戻り先に使う) */
 	readonly origin: string;
@@ -137,10 +137,10 @@ export interface Services {
 		title: string;
 		message?: string;
 		key?: string;
-		/** 送るチャンネル (設計書 14.9)。省くと、error は errors、それ以外は sources */
+		/** 送るチャンネル。省くと、error は errors、それ以外は sources */
 		category?: AdminChannel;
 	}) => Promise<unknown>;
-	/** サーバーのログ。個人情報や秘密の値を含まない内容だけを書き込む (設計書 4.6) */
+	/** サーバーのログ。個人情報や秘密の値を含まない内容だけを書き込む */
 	readonly log: Logger;
 }
 

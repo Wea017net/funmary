@@ -4,7 +4,7 @@ import { addDays, isoWeekday, type CalendarDate } from '@funmary/core';
 
 const WEEKDAY_NAMES = ['', '月', '火', '水', '木', '金', '土', '日'];
 
-/** 休講などのラベル。休講と主色がどちらも赤なので、色だけで伝えず、必ず文字で出す (設計書 12.3) */
+/** 休講などのラベル。休講と主色がどちらも赤なので、色だけで伝えず、必ず文字で出す */
 export const STATUS_LABELS = {
 	cancelled: '休講',
 	makeup: '補講',

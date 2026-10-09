@@ -1,4 +1,4 @@
-// Webhook の登録と更新のフォームを読む (設計書 14.3、14.3.1)。
+// Webhook の登録と更新のフォームを読む。
 import type { NotificationKind, WebhookKind } from '@funmary/db';
 import { checkWebhookUrl, isDiscordWebhookUrl } from '@funmary/notify';
 import { parseChannelKinds } from './channel-kind-form.ts';

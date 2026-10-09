@@ -1,4 +1,4 @@
-// 管理用コマンド。手元では pnpm funmary-admin <コマンド>、本番では funmary-admin <コマンド> で使う (設計書 19.4)。
+// 管理用コマンド。手元では pnpm funmary-admin <コマンド>、本番では funmary-admin <コマンド> で使う。
 // 秘密の値は画面に出さない。出すのは変数の名前だけにする。
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -730,7 +730,7 @@ const userPromote = defineCommand({
 					'この人は ADMIN_EMAILS にあるので、次にログインすると管理者に戻ります。ADMIN_EMAILS からも外してください。',
 				);
 			}
-			// メールアドレスなど、個人情報は含めない (設計書 14.9)
+			// メールアドレスなど、個人情報は含めない
 			await createCliAlerter(config, database).send({
 				severity: 'info',
 				title: `利用者の権限の段階を${ROLE_LABELS[role]}にしました`,

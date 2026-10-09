@@ -1,4 +1,4 @@
-// 利用者の通知欄 (設計書 14.1、14.2)。通知はまずここに入り、送り先 (Discord など) へは送信待ちを経て送る。
+// 利用者の通知欄。通知はまずここに入り、送り先 (Discord など) へは送信待ちを経て送る。
 // 同じ出来事は、dedupeKey で利用者ごとに 1 回だけ足す
 import { and, desc, eq, gte, isNotNull, isNull, lt, sql } from 'drizzle-orm';
 import type { Database } from './database.ts';

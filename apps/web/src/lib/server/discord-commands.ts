@@ -1,4 +1,4 @@
-// Discord のスラッシュコマンドの答え (設計書 14.9、#36)。呼んだ本人の時間割と休講を、本人にだけ見える本文にする。
+// Discord のスラッシュコマンドの答え (#36)。呼んだ本人の時間割と休講を、本人にだけ見える本文にする。
 // 連携していない人、停止した利用者には、答えの代わりに連携の案内を返す。
 import { buildUserTimetable, type DayNote, type TimetableLesson } from '@funmary/api';
 import { addDays, findPeriod, DEFAULT_PERIODS, jstDateTime, startOfWeek } from '@funmary/core';

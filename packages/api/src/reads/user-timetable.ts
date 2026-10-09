@@ -1,4 +1,4 @@
-// 利用者の時間割 (設計書 11.2)。DB から、履修科目、学期、祝日、振替授業日、休講などを集めて expandTimetable に渡す。
+// 利用者の時間割。DB から、履修科目、学期、祝日、振替授業日、休講などを集めて expandTimetable に渡す。
 // 今日の画面 (/) と週の画面 (/week) が使う。
 import {
 	academicYearOf,

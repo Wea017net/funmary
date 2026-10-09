@@ -1,4 +1,4 @@
-// 公開シラバスの詳細 (Lesson/Syllabus) を解析する (設計書 9.4)。
+// 公開シラバスの詳細 (Lesson/Syllabus) を解析する。
 // 取得した HTML は信用しない。項目は見出し (th) の名前で探し、位置には頼らない。
 // 知らない項目が増えても、attributes か sections にそのまま入れる。
 import type { Term } from '@funmary/core';

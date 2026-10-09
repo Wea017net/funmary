@@ -9,7 +9,7 @@ export const load: ServerLoad = ({ locals, request }) => ({
 	theme: locals.theme,
 	// フッターに出す、版とクライアントの情報 (不具合の報告に使う)
 	about: aboutInfo(request.headers.get('user-agent')),
-	// セルフホストの運営者の情報。設定されていなければ null (設計書、Issue #109)
+	// セルフホストの運営者の情報。設定されていなければ null (Issue #109)
 	operator: getServices().operator,
 });
 
