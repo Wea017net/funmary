@@ -33,6 +33,8 @@ const serverEnv = {
 export default defineConfig({
 	testDir: 'e2e',
 	forbidOnly: !!process.env['CI'],
+	// ログインの OpenID Connect のサーバーを、同じポートで 1 つずつ立てるので、ファイルも 1 つずつ動かす
+	workers: 1,
 	retries: process.env['CI'] ? 2 : 0,
 	reporter: process.env['CI'] ? [['github'], ['html', { open: 'never' }]] : 'list',
 	use: {
