@@ -9,8 +9,6 @@
 
 # Funmary
 
-</div>
-
 [![CI](https://github.com/funmary-app/funmary/actions/workflows/ci.yml/badge.svg)](https://github.com/funmary-app/funmary/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-BSD--3--Clause%20OR%20Apache--2.0-blue)](#ライセンス)
 [![X](https://img.shields.io/badge/X-@funmary__app-000000?logo=x&logoColor=white)](https://x.com/funmary_app)
@@ -26,6 +24,8 @@
 ![Vite](https://img.shields.io/badge/Vite-646CFF?logo=vite&logoColor=white)
 ![Vitest](https://img.shields.io/badge/Vitest-6E9F18?logo=vitest&logoColor=white)
 ![Playwright](https://img.shields.io/badge/Playwright-2EAD33?logo=playwright&logoColor=white)
+
+</div>
 
 ---
 
