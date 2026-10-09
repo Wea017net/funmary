@@ -13,9 +13,13 @@ test('ログインしていなければ、アプリの紹介と、はじめる�
 	// 招待コードの欄は、招待制のときだけ出す
 	await expect(page.getByLabel('はじめての方は、招待コードで登録します')).toHaveCount(0);
 	await expect(page.getByRole('region', { name: 'できること' }).getByRole('listitem')).toHaveCount(
-		6,
+		8,
 	);
 	await expect(page.getByText('準備中:')).toBeVisible();
+	await expect(page.getByRole('link', { name: 'X (@funmary_app)' }).first()).toHaveAttribute(
+		'href',
+		'https://x.com/funmary_app',
+	);
 	await expect(page.getByText('公式のアプリではありません').first()).toBeVisible();
 	// 画面の色のボタンは上部に置く
 	await expect(page.getByRole('banner').getByRole('button', { name: /^画面の色/ })).toBeVisible();

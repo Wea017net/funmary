@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
 	import SettingsBreadcrumb from '#lib/components/SettingsBreadcrumb.svelte';
+	import { OFFICIAL_ACCOUNTS } from '#lib/official-accounts.ts';
 	import { REPOSITORY_URL } from '#lib/repository.ts';
 
 	let {
@@ -38,6 +39,14 @@
 			</a>
 		</li>
 
+		{#each OFFICIAL_ACCOUNTS as account (account.url)}
+			<li>
+				<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- 外部サイトへのリンク -->
+				<a href={account.url} target="_blank" rel="noopener noreferrer">
+					公式アカウント: {account.label}
+				</a>
+			</li>
+		{/each}
 		<li><a href={resolve('contributors')}>コードを書いてくれた人たち</a></li>
 		<li><a href={resolve('license')}>ライセンス</a></li>
 		<li><a href={resolve('third-party-licenses')}>サードパーティライセンス</a></li>
