@@ -1,4 +1,4 @@
-// 公開 API (設計書 3.3)。個人用のアクセストークンで認証する、読み取り専用の口。
+// 公開 API。個人用のアクセストークンで認証する、読み取り専用の口。
 // 読み取りの処理は reads/ の関数にまとめ、画面・MCP (mcp-routes.ts) と同じ関数を呼ぶ。
 import type {
 	AccessGrantStore,
@@ -18,7 +18,7 @@ import { getSubjectDetail } from '../reads/subject-detail.ts';
 import { buildUserTimetable, type TimetableSources } from '../reads/user-timetable.ts';
 import { requireScope, v1Auth, type V1AuthVariables } from './auth.ts';
 
-/** 1 分に 60 回まで。トークンごとに数える (設計書 3.3) */
+/** 1 分に 60 回まで。トークンごとに数える */
 const RATE_LIMIT = { windowMs: 60 * 1000, limit: 60 };
 
 const NOTIFICATION_KINDS: readonly NotificationKind[] = [

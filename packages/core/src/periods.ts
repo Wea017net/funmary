@@ -6,8 +6,7 @@ export interface Period {
 }
 
 /**
- * 時限の時刻の初期値。実際の値は管理画面で変えられる設定として持つ (設計書 11.2)。
- * 大学の資料との照合は Phase 0 で行う。
+ * 時限の時刻の初期値。実際の値は管理画面で変えられる設定として持つ。
  */
 export const DEFAULT_PERIODS: readonly Period[] = [
 	{ number: 1, start: '09:00', end: '10:30' },

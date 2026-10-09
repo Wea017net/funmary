@@ -1,4 +1,4 @@
-// カレンダー購読の URL (設計書 13 章)。カレンダーアプリが /cal/<トークン>.ics を取りに来る。
+// カレンダー購読の URL。カレンダーアプリが /cal/<トークン>.ics を取りに来る。
 import { Hono } from 'hono';
 import { etag } from 'hono/etag';
 import { rateLimiter } from 'hono-rate-limiter';

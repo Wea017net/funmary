@@ -1,4 +1,4 @@
-// /api/v1 の認証 (設計書 3.3)。Authorization: Bearer <トークン> を検証し、持ち主と範囲を c に置く。
+// /api/v1 の認証。Authorization: Bearer <トークン> を検証し、持ち主と範囲を c に置く。
 // Cookie では認証しないので、CSRF の心配はない。
 import type { AccessTokenScope, AccessTokenStore } from '@funmary/db';
 import { createMiddleware } from 'hono/factory';

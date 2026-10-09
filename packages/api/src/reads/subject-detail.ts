@@ -1,4 +1,4 @@
-// 授業の詳細 (設計書 12.2)。画面の授業の詳細と、公開 API・MCP の get_subject が、この関数を通して同じ科目を読む。
+// 授業の詳細。画面の授業の詳細と、公開 API・MCP の get_subject が、この関数を通して同じ科目を読む。
 // 閲覧権限の判定は @funmary/core の canViewSubject に任せ、ここでは科目を探して組み立てるだけにする。
 import { canViewSubject } from '@funmary/core';
 import type {

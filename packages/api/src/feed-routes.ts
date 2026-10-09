@@ -1,4 +1,4 @@
-// 通知のフィード (設計書 14.5)。RSS リーダーなどが /feed/<トークン>/rss.xml を取りに来る。
+// 通知のフィード。RSS リーダーなどが /feed/<トークン>/rss.xml を取りに来る。
 // 書式、XML のエスケープ、ETag と 304、HEAD への応答は hono-feed の serveFeed() に任せる
 import { Hono, type Context } from 'hono';
 import { rateLimiter } from 'hono-rate-limiter';

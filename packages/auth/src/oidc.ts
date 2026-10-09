@@ -1,4 +1,4 @@
-// Google の OpenID Connect との通信 (設計書 8.1)。手順は openid-client に任せ、
+// Google の OpenID Connect との通信。手順は openid-client に任せ、
 // PKCE、state、nonce、ID トークンの署名の検証を正しく行う。要求するスコープは openid、email、profile だけにする。
 import { createRemoteJWKSet, jwtVerify } from 'jose';
 import * as client from 'openid-client';
@@ -76,7 +76,7 @@ export function createGoogleOidcClient(options: OidcOptions): OidcClient {
 				idTokenExpected: true,
 			});
 			// openid-client は、ID トークンをトークンエンドポイントから直接受け取るとき、OIDC の規格 (Core 3.1.3.7) に沿って
-			// 署名を検証しない (TLS で直接受け取るので、代わりになる)。設計書は署名の検証を求めているので、JWKS で検証する
+			// 署名を検証しない (TLS で直接受け取るので、代わりになる)。ID トークンの署名は検証したいので、JWKS で検証する
 			if (!tokens.id_token) throw new Error('ID トークンがありません');
 			const metadata = config.serverMetadata();
 			if (!metadata.jwks_uri) throw new Error('issuer が jwks_uri を公開していません');

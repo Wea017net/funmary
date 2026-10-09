@@ -1,4 +1,4 @@
-// /mcp の MCP サーバー (設計書 3.3)。公開 API と同じ個人用のアクセストークンで認証し、
+// /mcp の MCP サーバー。公開 API と同じ個人用のアクセストークンで認証し、
 // 同じ reads/ の関数を呼ぶので、REST と中身が食い違わない。道具はすべて読み取り専用 (readOnlyHint)。
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPTransport } from '@hono/mcp';

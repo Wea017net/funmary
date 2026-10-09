@@ -1,4 +1,4 @@
-// /api/v1/openapi.json と /api/docs (設計書 3.3)。describeRoute() で付けた定義から、
+// /api/v1/openapi.json と /api/docs。describeRoute() で付けた定義から、
 // OpenAPI 3.1 の文書と Swagger UI を作る。利用者のデータは載せないので、ログインなしで開ける。
 import { swaggerUI } from '@hono/swagger-ui';
 import { Hono } from 'hono';
