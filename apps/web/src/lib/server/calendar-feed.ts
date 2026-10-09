@@ -1,11 +1,12 @@
 // カレンダー購読の ICS に載せる予定。トークンの持ち主の時間割を、Hono の ICS の組み立てに渡す形にする。
 import {
 	buildUserTimetable,
+	TERMS_REQUIRED,
 	type CalendarFeed,
 	type CalendarUserEvent,
 	type TimetableSources,
 } from '@funmary/api';
-import { addDays, findPeriod, jstDateTime, type UserEvent } from '@funmary/core';
+import { addDays, findPeriod, hasAcceptedTerms, jstDateTime, type UserEvent } from '@funmary/core';
 import type { AuthStore, FeedTokenStore, UserEventStore } from '@funmary/db';
 import { formatDayNote } from '#lib/timetable-label.ts';
 import { toLessonView } from './lesson-view.ts';
@@ -22,6 +23,8 @@ export interface CalendarFeedSources extends TimetableSources {
 	readonly auth: Pick<AuthStore, 'findUserById'>;
 	/** 公開 URL の origin。授業の詳細画面の URL に使う */
 	readonly origin: string;
+	/** 同意を求めている利用規約の版。持ち主が同意するまで、購読は予定を返さない */
+	readonly termsVersion: string;
 }
 
 const httpsOnly = (url: string | null) => (url?.startsWith('https://') ? url : null);
@@ -31,12 +34,17 @@ export function loadCalendarFeed(
 	sources: CalendarFeedSources,
 	token: string,
 	now: Date,
-): { feed: CalendarFeed; stamp: Date } | null {
+): { feed: CalendarFeed; stamp: Date } | typeof TERMS_REQUIRED | null {
 	const owner = sources.feedTokens.findOwner('calendar', token);
 	if (!owner) return null;
 	sources.feedTokens.markUsed(owner.id, now);
+	const ownerUser = sources.auth.findUserById(owner.userId);
+	// 利用規約への同意を待っている間は、予定を返さない
+	if (!hasAcceptedTerms(ownerUser?.termsAcceptedVersion ?? null, sources.termsVersion)) {
+		return TERMS_REQUIRED;
+	}
 	// トークンの発行の時点で使えていたはずのアカウントなので、通常はあるが、念のため空文字列にしておく
-	const ownerEmail = sources.auth.findUserById(owner.userId)?.email ?? '';
+	const ownerEmail = ownerUser?.email ?? '';
 
 	const today = jstDateTime(now).date;
 	const timetable = buildUserTimetable(sources, owner.userId, {

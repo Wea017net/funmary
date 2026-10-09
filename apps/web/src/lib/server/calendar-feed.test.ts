@@ -17,6 +17,15 @@ import {
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { loadCalendarFeed, type CalendarFeedSources } from './calendar-feed.ts';
 
+const TERMS_VERSION = '2026-10-03';
+
+/** 同意済みの利用者の購読として読む。同意待ちの印が返ったら、テストの組み立てが違う */
+function loadAccepted(sources: CalendarFeedSources, token: string, now: Date) {
+	const loaded = loadCalendarFeed(sources, token, now);
+	if (loaded === 'terms-required') throw new Error('同意済みの利用者のはず');
+	return loaded;
+}
+
 let dir: string;
 let database: Database;
 
@@ -46,15 +55,18 @@ function sources(): CalendarFeedSources {
 		feedTokens: createFeedTokenStore(database),
 		userEvents: createUserEventStore(database),
 		origin: 'https://funmary.example.com',
+		termsVersion: TERMS_VERSION,
 	};
 }
 
 /** 後期の月曜 1 限の科目を履修した利用者を作り、カレンダーのトークンを発行する */
 function setup() {
-	const userId = createAuthStore(database).createUser(
+	const auth = createAuthStore(database);
+	const userId = auth.createUser(
 		{ googleSub: 'a', email: 'a@fun.ac.jp', name: null, role: 'user' },
 		NOW,
 	);
+	auth.acceptTerms(userId, TERMS_VERSION, NOW);
 	const subjectId = createSubjectStore(database).upsert(
 		{
 			academicYear: 2026,
@@ -83,7 +95,7 @@ function setup() {
 describe('loadCalendarFeed', () => {
 	it('トークンの持ち主の授業を、2 週間前から半年先まで、時刻と教員と URL を付けて返す', () => {
 		const { token } = setup();
-		const loaded = loadCalendarFeed(sources(), token, NOW);
+		const loaded = loadAccepted(sources(), token, NOW);
 		if (!loaded) throw new Error('見つかるはず');
 		const dates = loaded.feed.lessons.map((lesson) => lesson.date);
 		expect(dates[0]).toBe('2026-09-28');
@@ -116,7 +128,7 @@ describe('loadCalendarFeed', () => {
 		calendar.saveSubstituteDay({ date: '2026-10-14', weekday: 1 }, 'manual');
 		calendar.saveNoClassDay('2026-10-15', '大学祭', 'manual');
 
-		const loaded = loadCalendarFeed(sources(), token, NOW);
+		const loaded = loadAccepted(sources(), token, NOW);
 		expect(loaded?.feed.days).toEqual([
 			{ date: '2026-10-14', summary: '振替授業日 (月曜の授業を行う日)' },
 			{ date: '2026-10-15', summary: '全学の休講日 (大学祭)' },
@@ -125,9 +137,9 @@ describe('loadCalendarFeed', () => {
 
 	it('知らないトークンなら null を返し、使ったときは使った日時を残す', () => {
 		const { userId, token } = setup();
-		expect(loadCalendarFeed(sources(), 'unknown', NOW)).toBeNull();
+		expect(loadAccepted(sources(), 'unknown', NOW)).toBeNull();
 		expect(createFeedTokenStore(database).current(userId, 'calendar')?.lastUsedAt).toBeNull();
-		loadCalendarFeed(sources(), token, NOW);
+		loadAccepted(sources(), token, NOW);
 		expect(createFeedTokenStore(database).current(userId, 'calendar')?.lastUsedAt).toEqual(NOW);
 	});
 
@@ -137,7 +149,7 @@ describe('loadCalendarFeed', () => {
 		const subject = subjects.findBySyllabus(2026, '100001');
 		if (!subject) throw new Error('あるはず');
 		subjects.upsert({ ...subject, syllabusUrl: 'javascript:alert(1)' }, NOW);
-		expect(loadCalendarFeed(sources(), token, NOW)?.feed.lessons[0]?.syllabusUrl).toBeNull();
+		expect(loadAccepted(sources(), token, NOW)?.feed.lessons[0]?.syllabusUrl).toBeNull();
 	});
 
 	describe('利用者の予定', () => {
@@ -184,7 +196,7 @@ describe('loadCalendarFeed', () => {
 			);
 			events.create(other, input({ title: 'ほかの人の予定' }), NOW);
 
-			const loaded = loadCalendarFeed(sources(), token, NOW);
+			const loaded = loadAccepted(sources(), token, NOW);
 			const byId = new Map((loaded?.feed.events ?? []).map((event) => [event.id, event]));
 			expect(byId.size).toBe(3);
 			expect(byId.get(weekly)).toMatchObject({
@@ -212,7 +224,7 @@ describe('loadCalendarFeed', () => {
 				NOW,
 			);
 			events.subscribe({ id: userId, email: 'a@fun.ac.jp' }, shared, NOW);
-			const loaded = loadCalendarFeed(sources(), token, NOW);
+			const loaded = loadAccepted(sources(), token, NOW);
 			expect(loaded?.feed.events).toHaveLength(1);
 			expect(loaded?.feed.events?.[0]).toMatchObject({
 				id: shared,
@@ -220,7 +232,7 @@ describe('loadCalendarFeed', () => {
 				detailUrl: `https://funmary.example.com/app/events/shared/${shared}`,
 			});
 			events.update(shared, other, input({ title: '加える予定', visibility: 'private' }), NOW);
-			expect(loadCalendarFeed(sources(), token, NOW)?.feed.events).toEqual([]);
+			expect(loadAccepted(sources(), token, NOW)?.feed.events).toEqual([]);
 		});
 
 		it('期間の外の単発の予定は含めず、期間より前に始まった繰り返しは含める', () => {
@@ -233,8 +245,26 @@ describe('loadCalendarFeed', () => {
 				input({ startDate: '2025-01-06', endDate: '2025-01-06', rrule: 'FREQ=WEEKLY' }),
 				NOW,
 			);
-			const loaded = loadCalendarFeed(sources(), token, NOW);
+			const loaded = loadAccepted(sources(), token, NOW);
 			expect(loaded?.feed.events?.map((event) => event.id)).toEqual([running]);
 		});
+	});
+});
+
+describe('利用規約への同意', () => {
+	it('持ち主が同意するまで、購読は予定を返さない', () => {
+		const { userId, token } = setup();
+		const src = sources();
+		createAuthStore(database).acceptTerms(userId, '2026-09-01', NOW);
+
+		expect(loadCalendarFeed(src, token, NOW)).toBe('terms-required');
+	});
+
+	it('規約が新しい版になったら、また止まる', () => {
+		const { token } = setup();
+
+		expect(loadCalendarFeed({ ...sources(), termsVersion: '2026-11-01' }, token, NOW)).toBe(
+			'terms-required',
+		);
 	});
 });

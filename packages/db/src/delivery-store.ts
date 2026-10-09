@@ -72,7 +72,15 @@ export interface DeliveryStore {
 	/** 通知に対する送信待ちを、足りない分だけ作る。作った数を返す */
 	enqueueMissing(now: Date): number;
 	/** 今送る番の送信待ち。古い順 */
-	claimDue(now: Date, limit: number): PendingDelivery[];
+	/**
+	 * 送ってよい配信を、古い順に limit 件返す。
+	 * termsVersion を渡すと、その版の利用規約に同意した利用者の配信だけを返す (同意するまでは送らず、待たせておく)
+	 */
+	claimDue(
+		now: Date,
+		limit: number,
+		options?: { readonly termsVersion?: string },
+	): PendingDelivery[];
 	markSent(id: number, now: Date): void;
 	markRetry(id: number, plan: RetryPlan): void;
 	markFailed(id: number, now: Date, error: string): void;
@@ -119,7 +127,7 @@ export function createDeliveryStore(database: Database, secretBox: SecretBox): D
 				return created;
 			})();
 		},
-		claimDue(now, limit) {
+		claimDue(now, limit, options = {}) {
 			const rows = db
 				.select({
 					id: deliveries.id,
@@ -138,11 +146,15 @@ export function createDeliveryStore(database: Database, secretBox: SecretBox): D
 				.innerJoin(notifications, eq(notifications.id, deliveries.notificationId))
 				.innerJoin(channels, eq(channels.id, deliveries.channelId))
 				.leftJoin(discordLinks, eq(discordLinks.userId, channels.userId))
+				.innerJoin(users, eq(users.id, channels.userId))
 				.where(
 					and(
 						eq(deliveries.status, 'pending'),
 						eq(channels.status, 'active'),
 						or(isNull(deliveries.nextAttemptAt), lte(deliveries.nextAttemptAt, now)),
+						options.termsVersion === undefined
+							? undefined
+							: eq(users.termsAcceptedVersion, options.termsVersion),
 					),
 				)
 				.orderBy(deliveries.id)

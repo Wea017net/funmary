@@ -5,11 +5,19 @@ import {
 	getDataStatus,
 	getNextLesson,
 	listUserEventOccurrences,
+	termsRequiredMessage,
 	type DayNote,
 	type PublicEvent,
 	type TimetableLesson,
 } from '@funmary/api';
-import { addDays, findPeriod, DEFAULT_PERIODS, jstDateTime, startOfWeek } from '@funmary/core';
+import {
+	addDays,
+	findPeriod,
+	hasAcceptedTerms,
+	DEFAULT_PERIODS,
+	jstDateTime,
+	startOfWeek,
+} from '@funmary/core';
 import type { CalendarDate } from '@funmary/core';
 import { formatDate, formatDayNote, STATUS_LABELS } from '#lib/timetable-label.ts';
 import { plain } from './daily-digest.ts';
@@ -92,6 +100,10 @@ export function answerCommand(
 	const user = services.auth.findUserById(link.userId);
 	if (!user || user.status !== 'active')
 		return 'この Funmary のアカウントは、いまは利用できません。';
+	// 利用規約への同意を待っている間は、答えず、同意の画面を案内する
+	if (!hasAcceptedTerms(user.termsAcceptedVersion, services.termsVersion)) {
+		return termsRequiredMessage(`${services.origin}/consent`);
+	}
 
 	const today = jstDateTime(now).date;
 	const stale = getDataStatus(services, now).timetable.stale ? STALE_NOTICE : '';

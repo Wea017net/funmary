@@ -85,3 +85,18 @@ describe('GET /feed/<トークン>/{rss.xml,atom.xml,feed.json}', () => {
 		expect(statuses[60]).toBe(429);
 	});
 });
+
+describe('利用規約への同意を待っている持ち主の購読', () => {
+	it('403 で、同意の画面の URL を添えた説明を返し、キャッシュさせない', async () => {
+		const { api } = setup({
+			loadFeed: () => 'terms-required',
+			consentUrl: 'https://funmary.example.com/consent',
+		});
+
+		const res = await api.request(`/feed/${TOKEN}/rss.xml`);
+
+		expect(res.status).toBe(403);
+		expect(res.headers.get('Cache-Control')).toBe('no-store');
+		expect(await res.text()).toContain('https://funmary.example.com/consent');
+	});
+});

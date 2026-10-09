@@ -7,6 +7,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { dev } from '$app/env';
 import { createApi, SESSION_COOKIE_MAX_AGE_S, sessionCookieName } from '@funmary/api';
+import { hasAcceptedTerms } from '@funmary/core';
 import { createAuthService, createGoogleOidcClient, type AuthService } from '@funmary/auth';
 import {
 	checkHealth,
@@ -73,6 +74,8 @@ import {
 } from '#lib/server/discord-admin.ts';
 import { legacyAppPath } from '#lib/server/legacy-path.ts';
 import { findMigrationsFolder } from '#lib/server/migrations-path.ts';
+import { CURRENT_TERMS_VERSION } from '#lib/legal-versions.ts';
+import { consentPath, needsConsent } from '#lib/server/consent-gate.ts';
 import { isCsrfForbidden } from '#lib/server/csrf.ts';
 import { getServices, setServices } from '#lib/server/services.ts';
 import { dailyDigestDeps } from '#lib/server/daily-digest.ts';
@@ -216,6 +219,7 @@ export const init: ServerInit = () => {
 				origin: deliveryOrigin,
 				dryRun: result.config.notifyDryRun,
 				linkEnabled: linkingEnabled,
+				termsVersion: CURRENT_TERMS_VERSION,
 				log: logger,
 			}),
 		),
@@ -326,6 +330,7 @@ export const init: ServerInit = () => {
 		registration: result.config.registration,
 		estimateHolidays,
 		origin: publicOrigin,
+		termsVersion: CURRENT_TERMS_VERSION,
 		operator: result.config.operator ?? null,
 		brandDir: result.config.brandDir ?? null,
 		contactEmail: result.config.contactEmail ?? null,
@@ -340,6 +345,8 @@ export const init: ServerInit = () => {
 		legal: findLegalInfo(dirname(fileURLToPath(import.meta.url))),
 	};
 	setServices(services);
+	// 同意していない利用者のトークンには、公開 API と MCP が、同意の画面の URL を知らせて断る
+	const termsGate = { version: CURRENT_TERMS_VERSION, consentUrl: `${publicOrigin}/consent` };
 	const authService: AuthService = createAuthService({
 		oidc: createGoogleOidcClient({
 			clientId: result.config.google.clientId,
@@ -375,16 +382,19 @@ export const init: ServerInit = () => {
 		calendar: {
 			loadFeed: (token) => loadCalendarFeed(services, token, new Date()),
 			uidDomain: new URL(publicOrigin).hostname,
+			consentUrl: `${publicOrigin}/consent`,
 		},
 		feed: {
 			loadFeed: (token) => loadNotificationFeed(services, token, new Date()),
+			consentUrl: `${publicOrigin}/consent`,
 		},
-		v1: { ...services, users: services.auth },
+		v1: { ...services, users: services.auth, termsGate },
 		mcp: {
 			...services,
 			users: services.auth,
 			resourceMetadataUrl: `${publicOrigin}/.well-known/oauth-protected-resource/mcp`,
 			origin: publicOrigin,
+			termsGate,
 		},
 		oauth: { oauth: oauthStore, origin: publicOrigin },
 		// 公開鍵がなければ、Discord の署名を確かめられないので、受け口を開けない
@@ -439,6 +449,23 @@ export const handle: Handle = async ({ event, resolve }) => {
 				maxAge: SESSION_COOKIE_MAX_AGE_S,
 			});
 		}
+	}
+	// 利用規約への同意が済むまで、アプリの画面を止める。画面は同意の画面へ、フォームの送信などは 403 にする
+	if (
+		event.locals.user &&
+		needsConsent(path) &&
+		!hasAcceptedTerms(event.locals.user.termsAcceptedVersion, CURRENT_TERMS_VERSION)
+	) {
+		const isRead = event.request.method === 'GET' || event.request.method === 'HEAD';
+		return isRead
+			? new Response(null, {
+					status: 303,
+					headers: { Location: consentPath(event.url), 'Cache-Control': 'no-store' },
+				})
+			: new Response('利用規約とプライバシーポリシーへの同意が必要です', {
+					status: 403,
+					headers: { 'Cache-Control': 'no-store' },
+				});
 	}
 	const response =
 		api && API_PATHS.some((prefix) => path === prefix || path.startsWith(`${prefix}/`))

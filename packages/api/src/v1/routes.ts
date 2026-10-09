@@ -38,6 +38,7 @@ import {
 } from '../reads/public-data.ts';
 import { getSubjectDetail } from '../reads/subject-detail.ts';
 import type { TimetableSources } from '../reads/user-timetable.ts';
+import type { TermsGate } from '../terms-gate.ts';
 import { requireScope, v1Auth, type V1AuthVariables } from './auth.ts';
 
 /** 1 分に 60 回まで。トークンごとに数える */
@@ -62,6 +63,8 @@ export interface V1RoutesDeps
 		EventSources,
 		StatusSources,
 		SubjectSearchSources {
+	/** 利用規約の再同意を求めるとき。同意していない利用者のトークンは、403 を返す */
+	readonly termsGate?: TermsGate | undefined;
 	readonly subjects: Pick<SubjectStore, 'findById' | 'findBySyllabus' | 'list'>;
 	readonly accessGrants: Pick<AccessGrantStore, 'isGranted'>;
 	readonly classChanges: TimetableSources['classChanges'] & Pick<ClassChangeStore, 'listBySubject'>;
@@ -260,7 +263,7 @@ const AUTHED_PATHS = [
 
 export function createV1Routes(deps: V1RoutesDeps): Hono<{ Variables: V1AuthVariables }> {
 	const app = new Hono<{ Variables: V1AuthVariables }>();
-	const auth = v1Auth({ accessTokens: deps.accessTokens });
+	const auth = v1Auth({ accessTokens: deps.accessTokens, termsGate: deps.termsGate });
 	const limit = rateLimiter({
 		...RATE_LIMIT,
 		standardHeaders: 'draft-7',

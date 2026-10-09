@@ -68,3 +68,22 @@ describe('GET /cal/<トークン>.ics', () => {
 		expect(statuses[60]).toBe(429);
 	});
 });
+
+describe('利用規約への同意を待っている持ち主の購読', () => {
+	it('403 で、同意の画面の URL を添えた説明を返し、キャッシュさせない', async () => {
+		const api = createApi({
+			checkHealth: () => true,
+			calendar: {
+				loadFeed: () => 'terms-required',
+				uidDomain: 'funmary.example.com',
+				consentUrl: 'https://funmary.example.com/consent',
+			},
+		});
+
+		const res = await api.request(`/cal/${'a'.repeat(43)}.ics`);
+
+		expect(res.status).toBe(403);
+		expect(res.headers.get('Cache-Control')).toBe('no-store');
+		expect(await res.text()).toContain('https://funmary.example.com/consent');
+	});
+});

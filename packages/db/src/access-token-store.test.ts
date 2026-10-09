@@ -114,3 +114,16 @@ describe('個人用アクセストークン', () => {
 		expect(store.list(a.id, t0).map((row) => row.name)).toEqual(['A のもの']);
 	});
 });
+
+describe('トークンの持ち主の利用規約への同意', () => {
+	it('持ち主が同意した版を、findOwner が返す', () => {
+		const { auth, id } = addUser('a@fun.ac.jp');
+		const store = createAccessTokenStore(database);
+		const token = store.issue(id, { name: 'test', scopes: ['read:lessons'] }, expiresAt, t0);
+
+		expect(store.findOwner(token, t0)?.termsAcceptedVersion).toBeNull();
+
+		auth.acceptTerms(id, '2026-10-03', t0);
+		expect(store.findOwner(token, t0)?.termsAcceptedVersion).toBe('2026-10-03');
+	});
+});

@@ -3,7 +3,14 @@ import { describe, expect, it } from 'vitest';
 import { requireAdmin } from './admin.ts';
 
 const user = (role: 'user' | 'admin') =>
-	({ id: 'u1', email: 'u1@fun.ac.jp', name: null, role, status: 'active' }) as const;
+	({
+		id: 'u1',
+		email: 'u1@fun.ac.jp',
+		name: null,
+		role,
+		status: 'active',
+		termsAcceptedVersion: null,
+	}) as const;
 
 function thrown(fn: () => unknown): unknown {
 	try {

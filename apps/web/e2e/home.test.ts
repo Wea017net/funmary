@@ -16,7 +16,7 @@ test('ログインしていなければ、アプリの紹介と、はじめる�
 		8,
 	);
 	await expect(page.getByText('準備中:')).toBeVisible();
-	await expect(page.getByRole('link', { name: 'X (@funmary_app)' }).first()).toHaveAttribute(
+	await expect(page.getByRole('link', { name: 'Twitter (@funmary_app)' }).first()).toHaveAttribute(
 		'href',
 		'https://x.com/funmary_app',
 	);

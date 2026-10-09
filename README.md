@@ -11,7 +11,7 @@
 
 [![CI](https://github.com/funmary-app/funmary/actions/workflows/ci.yml/badge.svg)](https://github.com/funmary-app/funmary/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-BSD--3--Clause%20OR%20Apache--2.0-blue)](#ライセンス)
-[![X](https://img.shields.io/badge/X-@funmary__app-000000?logo=x&logoColor=white)](https://x.com/funmary_app)
+[![Twitter](https://img.shields.io/badge/Twitter-@funmary__app-1DA1F2?logo=twitter&logoColor=white)](https://x.com/funmary_app)
 [![note](https://img.shields.io/badge/note-funmary-41C9B4?logo=note&logoColor=white)](https://note.com/funmary)
 
 ![SvelteKit](https://img.shields.io/badge/SvelteKit-FF3E00?logo=svelte&logoColor=white)
@@ -52,7 +52,7 @@ Funmary (ファンマリー) は、公立はこだて未来大学の学生向け
 
 新しい機能や、開発の様子は、公式のアカウントで出しています。
 
-- X: [@funmary_app](https://x.com/funmary_app)
+- Twitter: [@funmary_app](https://x.com/funmary_app)
 - note: [funmary](https://note.com/funmary)
 
 ## 使っている技術
