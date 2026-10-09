@@ -51,7 +51,7 @@
 	<meta name="robots" content="noindex" />
 </svelte:head>
 
-<div class="page">
+<div class="page page-w-40">
 	<h1>ポータルの時間割から取り込む</h1>
 
 	<p class="note">
@@ -164,9 +164,6 @@
 </div>
 
 <style>
-	.page {
-		max-width: 40rem;
-	}
 	.note {
 		padding: 0.75rem 1rem;
 		border-radius: 0.5rem;

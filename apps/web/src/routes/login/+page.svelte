@@ -12,7 +12,7 @@
 	<meta name="robots" content="noindex" />
 </svelte:head>
 
-<div class="page">
+<div class="page page-w-40">
 	<h1>ログイン</h1>
 
 	<FormNotice error={message} />
@@ -26,9 +26,3 @@
 		</Button>
 	</p>
 </div>
-
-<style>
-	.page {
-		max-width: 40rem;
-	}
-</style>

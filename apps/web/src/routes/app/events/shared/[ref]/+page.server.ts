@@ -1,11 +1,12 @@
 // ほかの人の予定を見て、自分の時間割に加える、外す (Issue #145)。
 // ref は、限定公開の共有のリンクの値か、全体に公開された予定の番号。開けるかは、ストアが決める。持ち主の情報は出さない。
-import { error, fail, redirect, type Actions, type ServerLoad } from '@sveltejs/kit';
+import { error, fail, type Actions, type ServerLoad } from '@sveltejs/kit';
 import { summarizeEvent } from '#lib/server/event-summary.ts';
 import { getServices } from '#lib/server/services.ts';
+import { requireSignedIn } from '#lib/server/admin.ts';
 
 export const load: ServerLoad = ({ locals, params }) => {
-	if (!locals.user) redirect(303, '/login');
+	requireSignedIn(locals);
 	const shared = getServices().userEvents.findShared(params['ref'] ?? '', locals.user);
 	if (!shared) error(404, '予定が見つかりません');
 	return {
@@ -18,7 +19,7 @@ export const load: ServerLoad = ({ locals, params }) => {
 export const actions: Actions = {
 	/** 自分の時間割に加える。見られない予定は、加えられない */
 	subscribe: ({ locals, params }) => {
-		if (!locals.user) redirect(303, '/login');
+		requireSignedIn(locals);
 		const { userEvents } = getServices();
 		const shared = userEvents.findShared(params['ref'] ?? '', locals.user);
 		if (!shared) error(404, '予定が見つかりません');
@@ -27,7 +28,7 @@ export const actions: Actions = {
 		return { message: '自分の時間割に加えました。' };
 	},
 	unsubscribe: ({ locals, params }) => {
-		if (!locals.user) redirect(303, '/login');
+		requireSignedIn(locals);
 		const { userEvents } = getServices();
 		const shared = userEvents.findShared(params['ref'] ?? '', locals.user);
 		if (!shared) error(404, '予定が見つかりません');

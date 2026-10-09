@@ -49,7 +49,7 @@
 	<meta name="robots" content="noindex" />
 </svelte:head>
 
-<div class="page">
+<div class="page page-w-48">
 	<SettingsBreadcrumb current="招待コードの管理" />
 	<h1>招待コードの管理</h1>
 
@@ -177,10 +177,6 @@
 </div>
 
 <style>
-	.page {
-		max-width: 48rem;
-	}
-
 	section {
 		margin-top: 2rem;
 	}

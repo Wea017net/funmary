@@ -105,9 +105,6 @@
 </div>
 
 <style>
-	.page {
-		max-width: 44rem;
-	}
 	.share,
 	.invite,
 	.danger {

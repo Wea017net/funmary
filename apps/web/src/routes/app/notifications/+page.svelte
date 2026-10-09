@@ -41,7 +41,7 @@
 	<meta name="robots" content="noindex" />
 </svelte:head>
 
-<div class="page">
+<div class="page page-w-48">
 	<h1>通知</h1>
 	<p class="muted">
 		履修している科目の休講、補講、教室変更などが届きます。90 日より古い通知は、自動で消えます。
@@ -100,10 +100,6 @@
 </div>
 
 <style lang="scss">
-	.page {
-		max-width: 48rem;
-	}
-
 	.filters {
 		display: flex;
 		flex-wrap: wrap;

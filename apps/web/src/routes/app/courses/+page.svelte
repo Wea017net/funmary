@@ -94,7 +94,7 @@
 	<meta name="robots" content="noindex" />
 </svelte:head>
 
-<div class="page">
+<div class="page page-w-40">
 	<h1>科目</h1>
 
 	<FormNotice error={form?.error} message={form?.message} />
@@ -345,9 +345,6 @@
 </div>
 
 <style>
-	.page {
-		max-width: 40rem;
-	}
 	.tabs {
 		display: flex;
 		gap: 0.25rem;

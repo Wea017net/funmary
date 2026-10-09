@@ -10,6 +10,7 @@ import {
 import { fail, redirect, type Actions, type ServerLoad } from '@sveltejs/kit';
 import { ACCESS_TOKEN_SCOPE_OPTIONS } from '#lib/server/access-token-form.ts';
 import { getServices } from '#lib/server/services.ts';
+import { requireSignedIn } from '#lib/server/admin.ts';
 
 /**
  * クライアントへ戻す。戻り先は、クライアントが登録した URI と完全に一致したものだけ
@@ -56,7 +57,7 @@ export const load: ServerLoad = ({ locals, url, cookies }) => {
 
 export const actions: Actions = {
 	default: async ({ request, locals, url }) => {
-		if (!locals.user) redirect(303, '/login');
+		requireSignedIn(locals);
 		const { oauth } = getServices();
 		const parsed = parseAuthorizeRequest(url.searchParams, (id) => oauth.findClient(id));
 		if (parsed.kind === 'fatal') return fail(400, { error: parsed.message });

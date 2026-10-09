@@ -12,6 +12,7 @@ import { readSlotSharingMode } from '#lib/server/slot-permission.ts';
 import { alertSubjectDeleted, alertSubjectVisibilityChanged } from '#lib/server/subject-notify.ts';
 import { findSameName, parseUserSubjectForm } from '#lib/server/user-subject.ts';
 import { parseSubjectPath, subjectPathParams } from '#lib/subject-path.ts';
+import { requireSignedIn } from '#lib/server/admin.ts';
 
 /** 休講などの種類を、時間割の画面と同じ表示 (StatusBadge) にそろえる */
 const CHANGE_STATUS = {
@@ -43,7 +44,7 @@ function findSubject(
 }
 
 export const load: ServerLoad = ({ locals, params }) => {
-	if (!locals.user) redirect(303, '/login');
+	requireSignedIn(locals);
 	const { courses, personalSlots, settings, accessGrants } = getServices();
 	const { subject, changes } = findSubject(params, locals.user);
 	const canEdit = canEditSubject(subject, locals.user);
@@ -96,7 +97,7 @@ export const actions: Actions = {
 	 * 曜日と時限は、大学から自動では取れず、利用者どうしで登録して共有するため
 	 */
 	addSlot: async ({ request, locals, params }) => {
-		if (!locals.user) redirect(303, '/login');
+		requireSignedIn(locals);
 		const { subject } = findSubject(params, locals.user);
 		const parsed = parseSlotFields(await request.formData());
 		if (!parsed.ok) return fail(400, { error: parsed.error });
@@ -138,7 +139,7 @@ export const actions: Actions = {
 
 	/** 自分だけに使う曜日と時限を登録する。共有の登録の設定に関わらず、いつでも使える */
 	addPersonalSlot: async ({ request, locals, params }) => {
-		if (!locals.user) redirect(303, '/login');
+		requireSignedIn(locals);
 		const { subject } = findSubject(params, locals.user);
 		const parsed = parseSlotFields(await request.formData());
 		if (!parsed.ok) return fail(400, { error: parsed.error });
@@ -148,7 +149,7 @@ export const actions: Actions = {
 
 	/** 自分だけの曜日と時限を消す */
 	removePersonalSlot: async ({ request, locals, params }) => {
-		if (!locals.user) redirect(303, '/login');
+		requireSignedIn(locals);
 		const { subject } = findSubject(params, locals.user);
 		const form = await request.formData();
 		const weekday = Number(form.get('weekday'));
@@ -162,7 +163,7 @@ export const actions: Actions = {
 
 	/** シラバスにない授業の名前、学期、教員を直す (足した人と管理者だけ) */
 	updateSubject: async ({ request, locals, params }) => {
-		if (!locals.user) redirect(303, '/login');
+		requireSignedIn(locals);
 		const { subject } = findSubject(params, locals.user);
 		if (!canEditSubject(subject, locals.user)) {
 			return fail(403, { error: 'この科目は直せません。' });
@@ -190,7 +191,7 @@ export const actions: Actions = {
 	},
 	/** シラバスにない授業の公開範囲を変える (足した人と管理者だけ)。#215 */
 	setVisibility: async ({ request, locals, params }) => {
-		if (!locals.user) redirect(303, '/login');
+		requireSignedIn(locals);
 		const { subject } = findSubject(params, locals.user);
 		if (!canEditSubject(subject, locals.user)) {
 			return fail(403, { error: 'この科目の公開範囲は変えられません。' });
@@ -226,7 +227,7 @@ export const actions: Actions = {
 	 * そのメールアドレスの利用者がいるかどうかは確かめず、常に同じ案内を返す (存在を教えないため)
 	 */
 	grantAccess: async ({ request, locals, params }) => {
-		if (!locals.user) redirect(303, '/login');
+		requireSignedIn(locals);
 		const { subject } = findSubject(params, locals.user);
 		if (!canEditSubject(subject, locals.user)) {
 			return fail(403, { error: 'この科目には招待できません。' });
@@ -239,7 +240,7 @@ export const actions: Actions = {
 	},
 	/** 招待を外す */
 	revokeAccess: async ({ request, locals, params }) => {
-		if (!locals.user) redirect(303, '/login');
+		requireSignedIn(locals);
 		const { subject } = findSubject(params, locals.user);
 		if (!canEditSubject(subject, locals.user)) {
 			return fail(403, { error: 'この科目の招待は外せません。' });
@@ -251,7 +252,7 @@ export const actions: Actions = {
 	},
 	/** シラバスにない授業を消す。履修登録と時間割の枠も消える */
 	deleteSubject: async ({ request, locals, params }) => {
-		if (!locals.user) redirect(303, '/login');
+		requireSignedIn(locals);
 		const { subject } = findSubject(params, locals.user);
 		if (!canEditSubject(subject, locals.user)) {
 			return fail(403, { error: 'この科目は消せません。' });

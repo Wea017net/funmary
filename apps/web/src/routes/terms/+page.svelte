@@ -112,10 +112,6 @@
 </div>
 
 <style>
-	.page {
-		max-width: 44rem;
-	}
-
 	h2 {
 		margin-top: 2rem;
 	}

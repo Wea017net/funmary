@@ -24,6 +24,7 @@ import {
 } from '#lib/server/discord-join-role.ts';
 import { getServices } from '#lib/server/services.ts';
 import { SUPPORT_INVITES_KEY, publicInvite, readInvites } from '#lib/server/support-invites.ts';
+import { requireSignedIn } from '#lib/server/admin.ts';
 
 const isInitialDestination = (value: unknown): value is InitialDestination =>
 	value === 'thread' || value === 'dm';
@@ -80,7 +81,7 @@ async function applyKindSettings(
 }
 
 export const load: ServerLoad = async ({ locals, url }) => {
-	if (!locals.user) redirect(303, '/login');
+	requireSignedIn(locals);
 	const { discord, dailyDigest, settings, log } = getServices();
 	const { link } = discord;
 
@@ -157,7 +158,7 @@ export const load: ServerLoad = async ({ locals, url }) => {
 export const actions: Actions = {
 	/** Discord の認可の画面へ移る */
 	link: async ({ request, locals }) => {
-		if (!locals.user) redirect(303, '/login');
+		requireSignedIn(locals);
 		const { discord } = getServices();
 		const { link } = discord;
 		if (!link.configured || !link.enabled() || !link.oauth) {
@@ -175,7 +176,7 @@ export const actions: Actions = {
 	},
 	/** 予定のまとめ (#207) の設定を保存する */
 	digest: async ({ request, locals }) => {
-		if (!locals.user) redirect(303, '/login');
+		requireSignedIn(locals);
 		const { discord, dailyDigest } = getServices();
 		if (!discord.link.store.findByUser(locals.user.id))
 			return fail(400, { error: '連携していません。' });
@@ -186,7 +187,7 @@ export const actions: Actions = {
 	},
 	/** 届ける通知の種類を保存する (#163) */
 	kinds: async ({ request, locals }) => {
-		if (!locals.user) redirect(303, '/login');
+		requireSignedIn(locals);
 		const { channels, discord } = getServices();
 		if (!discord.link.store.findByUser(locals.user.id)) {
 			return fail(400, { error: '連携していません。' });
@@ -198,7 +199,7 @@ export const actions: Actions = {
 	},
 	/** 種類ごとに、送り先 (スレッド/DM/両方) とメンションを決める (#163) */
 	routing: async ({ request, locals }) => {
-		if (!locals.user) redirect(303, '/login');
+		requireSignedIn(locals);
 		const { discord } = getServices();
 		const current = discord.link.store.findByUser(locals.user.id);
 		if (!current) return fail(400, { error: '連携していません。' });
@@ -215,7 +216,7 @@ export const actions: Actions = {
 	},
 	/** すべての種類に、同じ送り先とメンションを、まとめて適用する */
 	routingAll: async ({ request, locals }) => {
-		if (!locals.user) redirect(303, '/login');
+		requireSignedIn(locals);
 		const { discord } = getServices();
 		const current = discord.link.store.findByUser(locals.user.id);
 		if (!current) return fail(400, { error: '連携していません。' });
@@ -232,7 +233,7 @@ export const actions: Actions = {
 	},
 	/** 連携を解除する。Discord に接続できなくても、必ず成功する */
 	unlink: ({ locals }) => {
-		if (!locals.user) redirect(303, '/login');
+		requireSignedIn(locals);
 		const { discord } = getServices();
 		const { link } = discord;
 		const removed = link.store.remove(locals.user.id);
@@ -245,7 +246,7 @@ export const actions: Actions = {
 	},
 	/** いまのスレッドをアーカイブする (消しはしない)。次に通知が届くと、自動でアーカイブが解ける */
 	archiveThread: async ({ locals }) => {
-		if (!locals.user) redirect(303, '/login');
+		requireSignedIn(locals);
 		const { discord } = getServices();
 		const current = discord.link.store.findByUser(locals.user.id);
 		if (!current) return fail(400, { error: '連携していません。' });
@@ -258,7 +259,7 @@ export const actions: Actions = {
 	},
 	/** いまのスレッドを完全に削除する。種類ごとの設定でスレッドを使っていれば、あらためて用意が要る */
 	deleteThread: async ({ locals }) => {
-		if (!locals.user) redirect(303, '/login');
+		requireSignedIn(locals);
 		const { discord } = getServices();
 		const current = discord.link.store.findByUser(locals.user.id);
 		if (!current) return fail(400, { error: '連携していません。' });
@@ -277,7 +278,7 @@ export const actions: Actions = {
 	},
 	/** いまのスレッドを削除して、新しいスレッドを作る */
 	recreateThread: async ({ locals }) => {
-		if (!locals.user) redirect(303, '/login');
+		requireSignedIn(locals);
 		const { discord } = getServices();
 		const { link } = discord;
 		const current = link.store.findByUser(locals.user.id);

@@ -1,6 +1,6 @@
 // 履修科目の登録。科目を探して登録し、曜日と時限が分からない科目には、利用者が手で枠を足す。
 // 枠は科目ごとに共有するので、既にある枠は上書きしない。教室が食い違えば、管理者に知らせる。
-import { fail, redirect, type Actions, type ServerLoad } from '@sveltejs/kit';
+import { fail, type Actions, type ServerLoad } from '@sveltejs/kit';
 import { isSubjectSearchable, jstDateTime, resolveAcademicTerms } from '@funmary/core';
 import { parseSlotForm, parseSubjectId } from '#lib/server/course-form.ts';
 import { getServices } from '#lib/server/services.ts';
@@ -10,9 +10,10 @@ import { alertSubjectPublished } from '#lib/server/subject-notify.ts';
 import { findSameName, parseUserSubjectForm } from '#lib/server/user-subject.ts';
 import { subjectPathParams } from '#lib/subject-path.ts';
 import { searchSubjects } from '#lib/subject-search.ts';
+import { requireSignedIn } from '#lib/server/admin.ts';
 
 export const load: ServerLoad = ({ locals, url }) => {
-	if (!locals.user) redirect(303, '/login');
+	requireSignedIn(locals);
 	const userId = locals.user.id;
 	const { courses, subjects, settings, personalSlots } = getServices();
 	const slotSharingMode = readSlotSharingMode(settings);
@@ -82,7 +83,7 @@ export const load: ServerLoad = ({ locals, url }) => {
 
 export const actions: Actions = {
 	register: async ({ request, locals }) => {
-		if (!locals.user) redirect(303, '/login');
+		requireSignedIn(locals);
 		const subjectId = parseSubjectId(await request.formData());
 		const { courses, subjects } = getServices();
 		const subject = subjectId === null ? null : subjects.findById(subjectId);
@@ -93,7 +94,7 @@ export const actions: Actions = {
 
 	/** シラバスにない授業を科目として足し、足した人の履修科目に登録する */
 	createSubject: async ({ request, locals }) => {
-		if (!locals.user) redirect(303, '/login');
+		requireSignedIn(locals);
 		const parsed = parseUserSubjectForm(await request.formData());
 		if (!parsed.ok) return fail(400, { error: parsed.error });
 		const { courses, subjects } = getServices();
@@ -129,7 +130,7 @@ export const actions: Actions = {
 	},
 
 	unregister: async ({ request, locals }) => {
-		if (!locals.user) redirect(303, '/login');
+		requireSignedIn(locals);
 		const subjectId = parseSubjectId(await request.formData());
 		const { courses, subjects } = getServices();
 		if (subjectId === null || !courses.unregister(locals.user.id, subjectId)) {
@@ -140,7 +141,7 @@ export const actions: Actions = {
 	},
 
 	addSlot: async ({ request, locals }) => {
-		if (!locals.user) redirect(303, '/login');
+		requireSignedIn(locals);
 		const parsed = parseSlotForm(await request.formData());
 		if (!parsed.ok) return fail(400, { error: parsed.error });
 		const services = getServices();
@@ -182,7 +183,7 @@ export const actions: Actions = {
 
 	/** 自分だけに使う曜日と時限を登録する。共有の登録の設定に関わらず、いつでも使える */
 	addPersonalSlot: async ({ request, locals }) => {
-		if (!locals.user) redirect(303, '/login');
+		requireSignedIn(locals);
 		const parsed = parseSlotForm(await request.formData());
 		if (!parsed.ok) return fail(400, { error: parsed.error });
 		const { subjectId, ...slot } = parsed.value;
@@ -192,7 +193,7 @@ export const actions: Actions = {
 
 	/** 自分だけの曜日と時限を消す */
 	removePersonalSlot: async ({ request, locals }) => {
-		if (!locals.user) redirect(303, '/login');
+		requireSignedIn(locals);
 		const form = await request.formData();
 		const subjectId = parseSubjectId(form);
 		const weekday = Number(form.get('weekday'));

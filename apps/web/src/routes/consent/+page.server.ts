@@ -9,9 +9,10 @@ import {
 } from '#lib/legal-versions.ts';
 import { safeNextPath } from '#lib/server/consent-gate.ts';
 import { getServices } from '#lib/server/services.ts';
+import { requireSignedIn } from '#lib/server/admin.ts';
 
 export const load: ServerLoad = ({ locals, url }) => {
-	if (!locals.user) redirect(303, '/login');
+	requireSignedIn(locals);
 	// 同意済みなら、この画面は要らない (同意のあとに戻ってきても、行き先へ進む)
 	if (hasAcceptedTerms(locals.user.termsAcceptedVersion, CURRENT_TERMS_VERSION)) {
 		redirect(303, safeNextPath(url.searchParams.get('next')));
@@ -27,7 +28,7 @@ export const load: ServerLoad = ({ locals, url }) => {
 
 export const actions: Actions = {
 	default: async ({ request, locals, url }) => {
-		if (!locals.user) redirect(303, '/login');
+		requireSignedIn(locals);
 		const form = await request.formData();
 		if (form.get('agree') !== 'on') {
 			return fail(400, { error: '同意する場合は、チェックを入れてください。' });

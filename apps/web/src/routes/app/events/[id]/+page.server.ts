@@ -6,6 +6,7 @@ import { echoFormValues, parseEventForm, toFormValues } from '#lib/event-form.ts
 import { formatEventTime } from '#lib/event-label.ts';
 import { getServices } from '#lib/server/services.ts';
 import { formatDate } from '#lib/timetable-label.ts';
+import { requireSignedIn } from '#lib/server/admin.ts';
 
 /** 「この日は除く」に出す、これからの回の数と、見る先の日数 */
 const CANDIDATES = 24;
@@ -16,7 +17,7 @@ const parseId = (value: string | undefined) =>
 const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
 export const load: ServerLoad = ({ locals, params, url }) => {
-	if (!locals.user) redirect(303, '/login');
+	requireSignedIn(locals);
 	const id = parseId(params['id']);
 	const event = id === null ? null : getServices().userEvents.get(id, locals.user.id);
 	if (!event) error(404, '予定が見つかりません');
@@ -52,7 +53,7 @@ export const load: ServerLoad = ({ locals, params, url }) => {
 export const actions: Actions = {
 	/** 名前付きの操作 (delete) があるので、保存も名前を付ける。標準の操作は、同じページに置けない */
 	save: async ({ request, locals, params }) => {
-		if (!locals.user) redirect(303, '/login');
+		requireSignedIn(locals);
 		const id = parseId(params['id']);
 		if (id === null) error(404, '予定が見つかりません');
 		const form = await request.formData();
@@ -70,7 +71,7 @@ export const actions: Actions = {
 	},
 	/** 共有のリンクを作り直す。前のリンクは使えなくなる */
 	rotate: ({ locals, params }) => {
-		if (!locals.user) redirect(303, '/login');
+		requireSignedIn(locals);
 		const id = parseId(params['id']);
 		if (id === null || !getServices().userEvents.rotateShareToken(id, locals.user.id)) {
 			error(404, '共有のリンクが見つかりません');
@@ -78,7 +79,7 @@ export const actions: Actions = {
 		return { message: '共有のリンクを作り直しました。前のリンクは、使えなくなりました。' };
 	},
 	delete: ({ locals, params }) => {
-		if (!locals.user) redirect(303, '/login');
+		requireSignedIn(locals);
 		const id = parseId(params['id']);
 		if (id === null || !getServices().userEvents.delete(id, locals.user.id)) {
 			error(404, '予定が見つかりません');
@@ -88,7 +89,7 @@ export const actions: Actions = {
 	},
 	/** メールアドレスで、非公開の予定を招待する (#215) */
 	grantAccess: async ({ request, locals, params }) => {
-		if (!locals.user) redirect(303, '/login');
+		requireSignedIn(locals);
 		const id = parseId(params['id']);
 		const services = getServices();
 		if (id === null || !services.userEvents.get(id, locals.user.id)) {
@@ -101,7 +102,7 @@ export const actions: Actions = {
 		return { message: `${email} を招待しました。` };
 	},
 	revokeAccess: async ({ request, locals, params }) => {
-		if (!locals.user) redirect(303, '/login');
+		requireSignedIn(locals);
 		const id = parseId(params['id']);
 		const services = getServices();
 		if (id === null || !services.userEvents.get(id, locals.user.id)) {

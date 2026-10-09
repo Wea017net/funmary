@@ -43,7 +43,7 @@
 	<meta name="robots" content="noindex" />
 </svelte:head>
 
-<div class="page">
+<div class="page page-w-48">
 	<SettingsBreadcrumb current="サポートサーバーの招待" />
 	<h1>サポートサーバーの招待</h1>
 	<p>
@@ -206,10 +206,6 @@
 {/snippet}
 
 <style lang="scss">
-	.page {
-		max-width: 48rem;
-	}
-
 	section {
 		margin-top: 2rem;
 	}

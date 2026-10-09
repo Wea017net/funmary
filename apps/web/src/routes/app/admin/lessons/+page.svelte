@@ -89,7 +89,7 @@
 	<meta name="robots" content="noindex" />
 </svelte:head>
 
-<div class="page">
+<div class="page page-w-48">
 	<SettingsBreadcrumb current="照合できなかった授業名" />
 	<h1>照合できなかった授業名</h1>
 
@@ -189,9 +189,6 @@
 </div>
 
 <style>
-	.page {
-		max-width: 48rem;
-	}
 	.lessons {
 		padding: 0;
 		list-style: none;
