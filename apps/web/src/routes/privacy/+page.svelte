@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { PRIVACY_UPDATED_AT } from '#lib/legal-versions.ts';
 	import SettingsBreadcrumb from '#lib/components/SettingsBreadcrumb.svelte';
 
 	let {
@@ -10,7 +11,7 @@
 		};
 	} = $props();
 
-	const LAST_UPDATED = '2026-10-03';
+	const LAST_UPDATED = PRIVACY_UPDATED_AT;
 </script>
 
 <svelte:head>

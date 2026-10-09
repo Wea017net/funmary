@@ -58,6 +58,7 @@ function setup(items: PendingDelivery[], options: SetupOptions = {}) {
 		origin: ORIGIN,
 		dryRun: options.dryRun ?? false,
 		linkEnabled: () => options.linkEnabled ?? true,
+		termsVersion: '2026-10-03',
 		log,
 		...(options.fetch && { fetch: options.fetch }),
 	});
@@ -119,6 +120,14 @@ describe('通知を送る定期処理の接続', () => {
 				.map((item) => item.id);
 		expect(ids({ linkEnabled: false })).toEqual([1]);
 		expect(ids({})).toEqual([1, 2]);
+	});
+
+	it('配信を取り出すときは、いまの版の利用規約に同意した利用者の分だけにする', () => {
+		const { deps, deliveries } = setup([]);
+
+		deps.claim(NOW, 10);
+
+		expect(deliveries.claimDue).toHaveBeenCalledWith(NOW, 10, { termsVersion: '2026-10-03' });
 	});
 
 	it('Webhook には埋め込みを POST する', async () => {

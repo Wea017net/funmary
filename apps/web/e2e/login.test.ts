@@ -5,7 +5,7 @@ import { mkdirSync } from 'node:fs';
 import { createServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { join } from 'node:path';
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import { createCourseStore, createSubjectStore, openDatabase, type Database } from '@funmary/db';
 import {
 	startMockOidcServer,
@@ -14,6 +14,18 @@ import {
 import { REPOSITORY_URL } from '../src/lib/repository.ts';
 import { E2E_DATA_DIR } from '../e2e-data-dir.ts';
 import { OIDC_PORT } from '../oidc-port.ts';
+
+/**
+ * ログインする。初めてのログインでは、利用規約への同意の画面が出るので、同意して先へ進む
+ * (ほとんどのテストは、同意済みの利用者として始めたいため)。同意の流れそのものは、専用のテストで確かめる
+ */
+async function signIn(page: Page) {
+	await page.goto('/auth/google');
+	if (new URL(page.url()).pathname !== '/consent') return;
+	await page.getByLabel('利用規約とプライバシーポリシーに同意します').check();
+	await page.getByRole('button', { name: '同意して続ける' }).click();
+	await expect(page).not.toHaveURL(/\/consent/);
+}
 
 // サーバーの状態 (次にログインする人) を共有するので、テストは 1 つずつ動かす
 test.describe.configure({ mode: 'serial' });
@@ -102,7 +114,7 @@ test.describe('ホーム画面に追加 (PWA)', () => {
 		const email = 'e2e-pwa@fun.ac.jp';
 		const login = async (page: import('@playwright/test').Page) => {
 			oidc.setIdentity({ sub: email, email, email_verified: true, hd: 'fun.ac.jp' });
-			await page.goto('/auth/google');
+			await signIn(page);
 			await expect(page).toHaveURL('/app');
 		};
 
@@ -141,6 +153,14 @@ test('大学のアカウントでログインでき、ログアウトできる',
 	});
 	await page.goto('/login');
 	await page.getByRole('link', { name: 'Google でログイン' }).click();
+
+	// 初めてのログインでは、利用規約への同意の画面が先に出る (同意の流れそのものは、専用のテストで確かめる。
+	// 手元で E2E を続けて動かすと、前の回で同意済みの利用者になるので、画面が出たときだけ同意する)
+	await page.waitForURL(/\/(app|consent)/);
+	if (new URL(page.url()).pathname === '/consent') {
+		await page.getByLabel('利用規約とプライバシーポリシーに同意します').check();
+		await page.getByRole('button', { name: '同意して続ける' }).click();
+	}
 
 	await expect(page).toHaveURL('/app');
 	// メールアドレスの @ より前は、押すまで出さない
@@ -181,9 +201,64 @@ test('大学のアカウントでログインでき、ログアウトできる',
 	expect((await page.context().cookies()).some((c) => c.name === 'funmary_session')).toBe(false);
 });
 
+test.describe('利用規約への同意', () => {
+	test('初めてのログインでは同意の画面が出て、同意するまでアプリを使えない。同意すると、行こうとした画面へ進む', async ({
+		page,
+	}) => {
+		const email = `e2e-consent-${Date.now()}@fun.ac.jp`;
+		oidc.setIdentity({ sub: email, email, email_verified: true, hd: 'fun.ac.jp' });
+		await page.goto('/auth/google');
+		await expect(page).toHaveURL('/consent?next=%2Fapp');
+		await expect(page.getByRole('heading', { level: 1, name: '利用規約への同意' })).toBeVisible();
+
+		// アプリの画面は、同意の画面に送り返される。行こうとした画面は覚えている
+		await page.goto('/app/week');
+		await expect(page).toHaveURL('/consent?next=%2Fapp%2Fweek');
+
+		// フォームの送信など、画面を経由しない操作も止まる
+		const post = await page.request.post('/app/settings/tokens?/issue', {
+			headers: { Origin: new URL(page.url()).origin },
+			form: { name: 'x', scope: 'read:lessons' },
+		});
+		expect(post.status()).toBe(403);
+
+		// 規約の本文は、同意の前でも読める
+		await page.goto('/terms');
+		await expect(page.getByRole('heading', { level: 1, name: '利用規約' })).toBeVisible();
+
+		await page.goto('/consent?next=%2Fapp%2Fweek');
+		await page.getByRole('button', { name: '同意して続ける' }).click();
+		// チェックを入れていないと、ブラウザが送らせない
+		await expect(page).toHaveURL('/consent?next=%2Fapp%2Fweek');
+		await page.getByLabel('利用規約とプライバシーポリシーに同意します').check();
+		await page.getByRole('button', { name: '同意して続ける' }).click();
+		await expect(page).toHaveURL('/app/week');
+
+		// 同意したあとは、同意の画面を開いても、アプリへ進む
+		await page.goto('/consent');
+		await expect(page).toHaveURL('/app');
+	});
+
+	test('同意せずにログアウトできる。外のサイトへ戻る指定は受け付けない', async ({ page }) => {
+		const email = `e2e-decline-${Date.now()}@fun.ac.jp`;
+		oidc.setIdentity({ sub: email, email, email_verified: true, hd: 'fun.ac.jp' });
+		await page.goto('/auth/google');
+		await expect(page).toHaveURL('/consent?next=%2Fapp');
+		await page.getByRole('button', { name: '同意せずにログアウト' }).click();
+		await expect(page).toHaveURL('/');
+		expect((await page.context().cookies()).some((c) => c.name === 'funmary_session')).toBe(false);
+
+		await page.goto('/auth/google');
+		await page.goto('/consent?next=https%3A%2F%2Fevil.example%2F');
+		await page.getByLabel('利用規約とプライバシーポリシーに同意します').check();
+		await page.getByRole('button', { name: '同意して続ける' }).click();
+		await expect(page).toHaveURL('/app');
+	});
+});
+
 test('大学のアカウントでなければ、ログインできず、理由が出る', async ({ page }) => {
 	oidc.setIdentity({ sub: 'e2e-outsider', email: 'someone@example.com', email_verified: true });
-	await page.goto('/auth/google');
+	await signIn(page);
 	await expect(page).toHaveURL(/\/login\?error=/);
 	await expect(page.getByRole('alert')).toContainText('大学');
 	expect((await page.context().cookies()).some((c) => c.name === 'funmary_session')).toBe(false);
@@ -197,7 +272,7 @@ test('署名の合わない ID トークンは、受け付けない', async ({ p
 		hd: 'fun.ac.jp',
 	});
 	oidc.tamper('wrong-key');
-	await page.goto('/auth/google');
+	await signIn(page);
 	await expect(page).toHaveURL('/login?error=invalid-callback');
 	await expect(page.getByRole('alert')).toBeVisible();
 	expect((await page.context().cookies()).some((c) => c.name === 'funmary_session')).toBe(false);
@@ -221,7 +296,7 @@ test.describe('ポータルの時間割の取り込み', () => {
 			email_verified: true,
 			hd: 'fun.ac.jp',
 		});
-		await page.goto('/auth/google');
+		await signIn(page);
 		await expect(page).toHaveURL('/app');
 	};
 
@@ -349,7 +424,7 @@ test.describe('履修科目の登録', () => {
 
 	const loginAs = async (page: import('@playwright/test').Page) => {
 		oidc.setIdentity({ sub, email: `${sub}@fun.ac.jp`, email_verified: true, hd: 'fun.ac.jp' });
-		await page.goto('/auth/google');
+		await signIn(page);
 		await expect(page).toHaveURL('/app');
 	};
 
@@ -451,7 +526,7 @@ test.describe('履修科目の登録', () => {
 		const other = await (await browser.newContext()).newPage();
 		const otherEmail = `e2e-other-${Date.now()}@fun.ac.jp`;
 		oidc.setIdentity({ sub: otherEmail, email: otherEmail, email_verified: true, hd: 'fun.ac.jp' });
-		await other.goto('/auth/google');
+		await signIn(other);
 		await other.goto(`/app/courses?q=${encodeURIComponent(name)}`);
 		await other.getByRole('link', { name }).click();
 		await expect(other.getByText('公開シラバスにない授業です。')).toBeVisible();
@@ -508,7 +583,7 @@ test.describe('履修科目の登録', () => {
 		const other = await (await browser.newContext()).newPage();
 		const otherEmail = `e2e-visibility-${Date.now()}@fun.ac.jp`;
 		oidc.setIdentity({ sub: otherEmail, email: otherEmail, email_verified: true, hd: 'fun.ac.jp' });
-		await other.goto('/auth/google');
+		await signIn(other);
 
 		// 既定 (全体公開) では、ほかの利用者も探して見つけられる
 		await other.goto(`/app/courses?q=${encodeURIComponent(name)}`);
@@ -546,7 +621,7 @@ test.describe('スマホの幅で、画面が横にはみ出さない', () => {
 	test('主な画面を、スマホの幅 (390px) で開いても、横スクロールが出ない', async ({ page }) => {
 		const email = `e2e-overflow-${Date.now()}@fun.ac.jp`;
 		oidc.setIdentity({ sub: email, email, email_verified: true, hd: 'fun.ac.jp' });
-		await page.goto('/auth/google');
+		await signIn(page);
 		await expect(page).toHaveURL('/app');
 		await page.setViewportSize({ width: 390, height: 844 });
 
@@ -588,7 +663,7 @@ test.describe('スマホの幅で、画面が横にはみ出さない', () => {
 			email_verified: true,
 			hd: 'fun.ac.jp',
 		});
-		await page.goto('/auth/google');
+		await signIn(page);
 		await expect(page).toHaveURL('/app');
 		await page.setViewportSize({ width: 390, height: 844 });
 
@@ -637,7 +712,7 @@ test.describe('管理画面', () => {
 
 	const loginAs = async (page: import('@playwright/test').Page, email: string) => {
 		oidc.setIdentity({ sub: email, email, email_verified: true, hd: 'fun.ac.jp' });
-		await page.goto('/auth/google');
+		await signIn(page);
 		await expect(page).toHaveURL('/app');
 	};
 
@@ -796,7 +871,7 @@ test.describe('管理画面', () => {
 test.describe('曜日と時限の確認', () => {
 	const loginAs = async (page: import('@playwright/test').Page, email: string) => {
 		oidc.setIdentity({ sub: email, email, email_verified: true, hd: 'fun.ac.jp' });
-		await page.goto('/auth/google');
+		await signIn(page);
 		await expect(page).toHaveURL('/app');
 	};
 
@@ -899,7 +974,7 @@ test.describe('今日と週の時間割', () => {
 
 	const loginAs = async (page: import('@playwright/test').Page) => {
 		oidc.setIdentity({ sub, email, email_verified: true, hd: 'fun.ac.jp' });
-		await page.goto('/auth/google');
+		await signIn(page);
 		await expect(page).toHaveURL('/app');
 	};
 
@@ -1207,14 +1282,14 @@ test.describe('学年暦の管理', () => {
 	const loginAsAdmin = async (page: import('@playwright/test').Page) => {
 		const email = 'e2e-admin@fun.ac.jp';
 		oidc.setIdentity({ sub: email, email, email_verified: true, hd: 'fun.ac.jp' });
-		await page.goto('/auth/google');
+		await signIn(page);
 		await expect(page).toHaveURL('/app');
 	};
 
 	test('管理者でなければ、学年暦の画面は見つからないことにする', async ({ page }) => {
 		const email = 'e2e-not-admin@fun.ac.jp';
 		oidc.setIdentity({ sub: email, email, email_verified: true, hd: 'fun.ac.jp' });
-		await page.goto('/auth/google');
+		await signIn(page);
 		const response = await page.goto('/app/admin/calendar');
 		expect(response?.status()).toBe(404);
 	});
@@ -1357,7 +1432,7 @@ test.describe('通知欄', () => {
 		page,
 	}) => {
 		oidc.setIdentity({ sub: email, email, email_verified: true, hd: 'fun.ac.jp' });
-		await page.goto('/auth/google');
+		await signIn(page);
 		await page.goto('/app');
 		await expect(page.getByRole('link', { name: '通知', exact: true }).first()).toBeVisible();
 
@@ -1383,7 +1458,7 @@ test.describe('通知欄', () => {
 		// 管理者が、休講などを通知欄に入れる定期処理を今すぐ動かす
 		const admin = 'e2e-admin@fun.ac.jp';
 		oidc.setIdentity({ sub: admin, email: admin, email_verified: true, hd: 'fun.ac.jp' });
-		await page.goto('/auth/google');
+		await signIn(page);
 		await page.goto('/app/admin/status');
 		await page
 			.getByRole('region', { name: '今すぐ動かす' })
@@ -1394,7 +1469,7 @@ test.describe('通知欄', () => {
 		await expect(page.getByRole('status').first()).toContainText('休講などの通知を');
 
 		oidc.setIdentity({ sub: email, email, email_verified: true, hd: 'fun.ac.jp' });
-		await page.goto('/auth/google');
+		await signIn(page);
 		await page.goto('/app');
 		await page.getByRole('link', { name: '通知 (未読 1 件)' }).first().click();
 		await expect(page.getByRole('heading', { level: 1, name: '通知' })).toBeVisible();
@@ -1436,7 +1511,7 @@ test.describe('サポートサーバーの招待', () => {
 	}) => {
 		const email = 'e2e-admin@fun.ac.jp';
 		oidc.setIdentity({ sub: email, email, email_verified: true, hd: 'fun.ac.jp' });
-		await page.goto('/auth/google');
+		await signIn(page);
 		await page.goto('/app/settings');
 		await page.getByRole('link', { name: 'サポートサーバーの招待' }).click();
 		// E2E では Bot を設定していない
@@ -1484,7 +1559,7 @@ test.describe('サポートサーバーの招待', () => {
 	test('管理者でなければ、見つからないことにする', async ({ page }) => {
 		const email = 'e2e-not-admin@fun.ac.jp';
 		oidc.setIdentity({ sub: email, email, email_verified: true, hd: 'fun.ac.jp' });
-		await page.goto('/auth/google');
+		await signIn(page);
 		const response = await page.goto('/app/admin/support-invites');
 		expect(response?.status()).toBe(404);
 	});
@@ -1523,7 +1598,7 @@ test.describe('取得元と実行履歴', () => {
 	test('管理者は、取得元の状態と実行履歴を見られる', async ({ page }) => {
 		const email = 'e2e-admin@fun.ac.jp';
 		oidc.setIdentity({ sub: email, email, email_verified: true, hd: 'fun.ac.jp' });
-		await page.goto('/auth/google');
+		await signIn(page);
 		await page.goto('/app/settings');
 		await page.getByRole('link', { name: '取得元と実行履歴' }).click();
 
@@ -1545,7 +1620,7 @@ test.describe('取得元と実行履歴', () => {
 	test('管理者は、定期処理を今すぐ動かせる。応答時間の分布も見られる', async ({ page }) => {
 		const email = 'e2e-admin@fun.ac.jp';
 		oidc.setIdentity({ sub: email, email, email_verified: true, hd: 'fun.ac.jp' });
-		await page.goto('/auth/google');
+		await signIn(page);
 		await page.goto('/app/admin/status');
 
 		// 外へ通信しない処理 (時間割の PDF の取り込みの案内) を動かす
@@ -1575,7 +1650,7 @@ test.describe('取得元と実行履歴', () => {
 	test('管理者でなければ、見つからないことにする', async ({ page }) => {
 		const email = 'e2e-not-admin@fun.ac.jp';
 		oidc.setIdentity({ sub: email, email, email_verified: true, hd: 'fun.ac.jp' });
-		await page.goto('/auth/google');
+		await signIn(page);
 		const response = await page.goto('/app/admin/status');
 		expect(response?.status()).toBe(404);
 	});
@@ -1584,7 +1659,7 @@ test.describe('取得元と実行履歴', () => {
 test.describe('招待コード', () => {
 	const loginAs = async (page: import('@playwright/test').Page, email: string) => {
 		oidc.setIdentity({ sub: email, email, email_verified: true, hd: 'fun.ac.jp' });
-		await page.goto('/auth/google');
+		await signIn(page);
 		await expect(page).toHaveURL('/app');
 	};
 	// E2E の DB は実行をまたいで残る。月の上限に届かないよう、実行ごとに別の人にする
@@ -1692,7 +1767,7 @@ test.describe('自分の予定', () => {
 	const other = `e2e-events-other-${Date.now()}@fun.ac.jp`;
 	const login = async (page: import('@playwright/test').Page, email: string) => {
 		oidc.setIdentity({ sub: email, email, email_verified: true, hd: 'fun.ac.jp' });
-		await page.goto('/auth/google');
+		await signIn(page);
 		await expect(page).toHaveURL('/app');
 	};
 
@@ -1927,7 +2002,7 @@ test.describe('スマホの上部バーと、フッターのリンク', () => {
 	const loginAs = async (page: import('@playwright/test').Page) => {
 		const email = `e2e-header-${Date.now()}@fun.ac.jp`;
 		oidc.setIdentity({ sub: email, email, email_verified: true, hd: 'fun.ac.jp' });
-		await page.goto('/auth/google');
+		await signIn(page);
 		await expect(page).toHaveURL('/app');
 	};
 
@@ -1977,7 +2052,7 @@ test.describe('カレンダーの購読', () => {
 		page,
 	}) => {
 		oidc.setIdentity({ sub: email, email, email_verified: true, hd: 'fun.ac.jp' });
-		await page.goto('/auth/google');
+		await signIn(page);
 		await page
 			.getByRole('navigation', { name: 'メニュー' })
 			.getByRole('link', { name: '設定', exact: true })
@@ -2036,7 +2111,7 @@ test.describe('お知らせのフィード', () => {
 		page,
 	}) => {
 		oidc.setIdentity({ sub: email, email, email_verified: true, hd: 'fun.ac.jp' });
-		await page.goto('/auth/google');
+		await signIn(page);
 		await page.goto('/app/settings/feed');
 
 		await page.getByRole('button', { name: '購読の URL を発行する' }).click();
@@ -2077,7 +2152,7 @@ test.describe('このアプリについて', () => {
 	const loginAs = async (page: import('@playwright/test').Page) => {
 		const email = `e2e-about-${Date.now()}@fun.ac.jp`;
 		oidc.setIdentity({ sub: email, email, email_verified: true, hd: 'fun.ac.jp' });
-		await page.goto('/auth/google');
+		await signIn(page);
 		await expect(page).toHaveURL('/app');
 	};
 
@@ -2215,7 +2290,7 @@ test.describe('Webhook', () => {
 		page,
 	}) => {
 		oidc.setIdentity({ sub: email, email, email_verified: true, hd: 'fun.ac.jp' });
-		await page.goto('/auth/google');
+		await signIn(page);
 		await page.goto('/app/settings');
 		await page.getByRole('link', { name: 'Webhook' }).first().click();
 		await expect(page.getByRole('heading', { level: 1, name: 'Webhook' })).toBeVisible();
@@ -2267,7 +2342,7 @@ test.describe('Webhook', () => {
 			email_verified: true,
 			hd: 'fun.ac.jp',
 		});
-		await page.goto('/auth/google');
+		await signIn(page);
 		await page.goto('/app/settings/webhooks');
 
 		await page.getByLabel('汎用の Webhook (自分で用意した URL)').check();
@@ -2299,7 +2374,7 @@ test.describe('Webhook', () => {
 	test('管理者が上限を 0 にすると、新しく登録できない。戻すと登録できる', async ({ page }) => {
 		const admin = 'e2e-admin@fun.ac.jp';
 		oidc.setIdentity({ sub: admin, email: admin, email_verified: true, hd: 'fun.ac.jp' });
-		await page.goto('/auth/google');
+		await signIn(page);
 		await page.goto('/app/admin/webhooks');
 		await page.getByLabel(/1 人あたりの上限/).fill('0');
 		await page.getByRole('button', { name: '保存する' }).click();
@@ -2323,7 +2398,7 @@ test.describe('公開 API と MCP', () => {
 	}) => {
 		const email = `e2e-tokens-${Date.now()}@fun.ac.jp`;
 		oidc.setIdentity({ sub: email, email, email_verified: true, hd: 'fun.ac.jp' });
-		await page.goto('/auth/google');
+		await signIn(page);
 		await page.goto('/app/settings');
 		await page.getByRole('link', { name: '公開 API と MCP' }).click();
 		await expect(page.getByRole('heading', { level: 1, name: '公開 API と MCP' })).toBeVisible();
@@ -2414,7 +2489,7 @@ test.describe('公開 API と MCP', () => {
 		oidc.setIdentity({ sub: email, email, email_verified: true, hd: 'fun.ac.jp' });
 		await page.goto(authorizeUrl);
 		await expect(page).toHaveURL('/login');
-		await page.goto('/auth/google');
+		await signIn(page);
 		await expect(page).toHaveURL(/\/oauth\/authorize\?/);
 		await expect(page.getByRole('heading', { level: 1, name: 'アクセスの許可' })).toBeVisible();
 		await expect(page.getByText('テスト用のクライアント')).toBeVisible();

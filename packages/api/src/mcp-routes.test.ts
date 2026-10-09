@@ -20,7 +20,7 @@ import {
 	type Database,
 } from '@funmary/db';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { buildMcpServer, createMcpRoutes } from './mcp-routes.ts';
+import { buildMcpServer, buildTermsRequiredMcpServer, createMcpRoutes } from './mcp-routes.ts';
 
 let dir: string;
 let database: Database;
@@ -192,5 +192,67 @@ describe('OAuth 向けの案内', () => {
 			'https://funmary.example.com/brand/icon.svg',
 			'https://funmary.example.com/brand/icon-dark.svg',
 		]);
+	});
+});
+
+describe('利用規約への同意を待っている利用者', () => {
+	it('データの道具は出さず、同意が要ることと URL を、道具の答えで知らせる', async () => {
+		const server = buildTermsRequiredMcpServer('https://funmary.example.com/consent');
+		const client = await connectedClient(server);
+
+		const { tools } = await client.listTools();
+		const result = await client.callTool({ name: 'terms_acceptance_required', arguments: {} });
+
+		expect(tools.map((tool) => tool.name)).toEqual(['terms_acceptance_required']);
+		expect(result.isError).toBe(true);
+		expect(JSON.stringify(result.content)).toContain('https://funmary.example.com/consent');
+		expect(client.getInstructions()).toContain('https://funmary.example.com/consent');
+	});
+
+	it('HTTP の口でも、持ち主が同意していなければ、データの道具の代わりにこの道具を出す', async () => {
+		const src = deps();
+		const userId = src.users.createUser(
+			{ googleSub: 'a', email: 'a@fun.ac.jp', name: null, role: 'user' },
+			NOW,
+		);
+		const token = src.accessTokens.issue(
+			userId,
+			{ name: 'test', scopes: ['read:lessons'] },
+			new Date(Date.now() + 24 * 60 * 60 * 1000),
+			NOW,
+		);
+		const app = createMcpRoutes({
+			...src,
+			termsGate: { version: '2026-10-03', consentUrl: 'https://funmary.example.com/consent' },
+		});
+		const call = (method: string) =>
+			app.request('/mcp', {
+				method: 'POST',
+				headers: {
+					Authorization: `Bearer ${token}`,
+					'Content-Type': 'application/json',
+					Accept: 'application/json, text/event-stream',
+				},
+				body: JSON.stringify({
+					jsonrpc: '2.0',
+					id: 1,
+					method,
+					params: {
+						protocolVersion: '2025-06-18',
+						capabilities: {},
+						clientInfo: { name: 't', version: '1' },
+					},
+				}),
+			});
+
+		const res = await call('initialize');
+
+		expect(res.status).toBe(200);
+		expect(await res.text()).toContain('https://funmary.example.com/consent');
+
+		// 同意すれば、ふつうの道具が出る
+		src.users.acceptTerms(userId, '2026-10-03', NOW);
+		const accepted = await call('initialize');
+		expect(await accepted.text()).not.toContain('https://funmary.example.com/consent');
 	});
 });

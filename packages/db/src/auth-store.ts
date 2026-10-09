@@ -5,7 +5,7 @@ import type { Permission } from '@funmary/core';
 import { and, desc, eq, gt, isNull, lt, sql } from 'drizzle-orm';
 import type { Database } from './database.ts';
 import { generateToken, hashToken } from './secrets.ts';
-import { inviteCodes, sessions, userPermissions, users } from './schema.ts';
+import { inviteCodes, sessions, termsAcceptances, userPermissions, users } from './schema.ts';
 
 /** セッションの有効期限。使うたびに延ばす */
 export const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
@@ -22,6 +22,8 @@ export interface AuthUser {
 	readonly name: string | null;
 	readonly role: UserRole;
 	readonly status: 'active' | 'suspended';
+	/** 同意した利用規約とプライバシーポリシーの版。一度も同意していなければ null */
+	readonly termsAcceptedVersion: string | null;
 }
 
 export interface NewUser {
@@ -57,6 +59,8 @@ export interface AuthStore {
 	/** 停止すると、その利用者のセッションもすべて消す */
 	setStatus(userId: string, status: 'active' | 'suspended'): void;
 	setRole(userId: string, role: UserRole): void;
+	/** 利用規約とプライバシーポリシーの、この版への同意を記録する (履歴にも残す)。同じ版を続けて記録しても 1 件 */
+	acceptTerms(userId: string, version: string, now: Date): void;
 
 	/** セッションを作り、Cookie に渡す ID を返す */
 	createSession(userId: string, now: Date): string;
@@ -123,6 +127,7 @@ const toUser = (row: UserRow): AuthUser => ({
 	name: row.name,
 	role: row.role,
 	status: row.status,
+	termsAcceptedVersion: row.termsAcceptedVersion,
 });
 
 /** 推測できない乱数の ID */
@@ -213,6 +218,18 @@ export function createAuthStore(database: Database): AuthStore {
 		},
 		setRole(userId, role) {
 			db.update(users).set({ role }).where(eq(users.id, userId)).run();
+		},
+		acceptTerms(userId, version, now) {
+			sqlite.transaction(() => {
+				db.update(users)
+					.set({ termsAcceptedVersion: version, termsAcceptedAt: now })
+					.where(eq(users.id, userId))
+					.run();
+				db.insert(termsAcceptances)
+					.values({ userId, version, acceptedAt: now })
+					.onConflictDoNothing()
+					.run();
+			})();
 		},
 		setStatus(userId, status) {
 			sqlite.transaction(() => {

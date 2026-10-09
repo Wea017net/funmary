@@ -23,6 +23,7 @@ const taro: AuthUser = {
 	name: null,
 	role: 'user',
 	status: 'active',
+	termsAcceptedVersion: null,
 };
 
 describe('権限の段階の指定', () => {

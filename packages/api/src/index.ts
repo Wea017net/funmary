@@ -1,5 +1,12 @@
 export { createApi, type ApiDeps } from './app.ts';
 export {
+	TERMS_NOT_ACCEPTED,
+	TERMS_REQUIRED,
+	termsRequiredBody,
+	termsRequiredMessage,
+	type TermsGate,
+} from './terms-gate.ts';
+export {
 	getDataStatus,
 	listUserEventOccurrences,
 	type DataStatus,

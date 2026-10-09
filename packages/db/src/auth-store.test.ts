@@ -37,6 +37,7 @@ describe('利用者', () => {
 			name: '山田 太郎',
 			role: 'user',
 			status: 'active',
+			termsAcceptedVersion: null,
 		});
 		expect(store.findUserById(id)?.email).toBe('taro@fun.ac.jp');
 		expect(store.findUserBySub('ない')).toBeNull();
@@ -296,5 +297,45 @@ describe('利用者の権限', () => {
 			{ email: 'hanako@fun.ac.jp', role: 'user', status: 'active', permissions: [] },
 			{ email: 'taro@fun.ac.jp', role: 'user', status: 'active', permissions: ['invite:create'] },
 		]);
+	});
+});
+
+describe('利用規約への同意', () => {
+	it('作ったばかりの利用者は、どの版にも同意していない', () => {
+		const store = createAuthStore(database);
+		const id = store.createUser(
+			{ googleSub: 'a', email: 'a@fun.ac.jp', name: null, role: 'user' },
+			T0,
+		);
+
+		expect(store.findUserById(id)?.termsAcceptedVersion).toBeNull();
+	});
+
+	it('同意すると、その版を覚え、セッションから引いた利用者にも出る', () => {
+		const store = createAuthStore(database);
+		const id = store.createUser(
+			{ googleSub: 'a', email: 'a@fun.ac.jp', name: null, role: 'user' },
+			T0,
+		);
+
+		store.acceptTerms(id, '2026-10-03', T0);
+
+		expect(store.findUserById(id)?.termsAcceptedVersion).toBe('2026-10-03');
+		const session = store.createSession(id, T0);
+		expect(store.resolveSession(session, T0)?.termsAcceptedVersion).toBe('2026-10-03');
+	});
+
+	it('新しい版に同意し直すと、新しい版になる。同じ版を続けて記録しても壊れない', () => {
+		const store = createAuthStore(database);
+		const id = store.createUser(
+			{ googleSub: 'a', email: 'a@fun.ac.jp', name: null, role: 'user' },
+			T0,
+		);
+
+		store.acceptTerms(id, '2026-10-03', T0);
+		store.acceptTerms(id, '2026-10-03', T0);
+		store.acceptTerms(id, '2026-11-01', T0);
+
+		expect(store.findUserById(id)?.termsAcceptedVersion).toBe('2026-11-01');
 	});
 });

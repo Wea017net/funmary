@@ -30,6 +30,8 @@ export interface NotificationDeliveryOptions {
 	readonly dryRun: boolean;
 	/** 管理者が Discord 連携を有効にしているか。無効の間は、連携の送り先に送らない */
 	readonly linkEnabled: () => boolean;
+	/** 同意を求めている利用規約の版。持ち主が同意するまで、その人の配信は送らない */
+	readonly termsVersion: string;
 	readonly log: Logger;
 	readonly fetch?: (url: string, init?: RequestInit) => Promise<Response>;
 }
@@ -71,20 +73,23 @@ export function deliverNotificationsDeps(
 		claim(now, limit) {
 			pending.clear();
 			const linkEnabled = options.linkEnabled();
-			return deliveries
-				.claimDue(now, limit)
-				.filter((delivery) => linkEnabled || delivery.channelKind !== 'discordLink')
-				.map((delivery): DeliveryItem => {
-					pending.set(delivery.id, delivery);
-					return {
-						id: delivery.id,
-						attempts: delivery.attempts,
-						channelId: delivery.channelId,
-						userId: delivery.userId,
-						channelKind: delivery.channelKind,
-						hasTarget: delivery.target !== null,
-					};
-				});
+			return (
+				deliveries
+					// 利用規約に同意していない利用者の配信は、同意するまで送らず、待たせておく
+					.claimDue(now, limit, { termsVersion: options.termsVersion })
+					.filter((delivery) => linkEnabled || delivery.channelKind !== 'discordLink')
+					.map((delivery): DeliveryItem => {
+						pending.set(delivery.id, delivery);
+						return {
+							id: delivery.id,
+							attempts: delivery.attempts,
+							channelId: delivery.channelId,
+							userId: delivery.userId,
+							channelKind: delivery.channelKind,
+							hasTarget: delivery.target !== null,
+						};
+					})
+			);
 		},
 		async send(item): Promise<DeliveryOutcome> {
 			const delivery = pending.get(item.id);

@@ -19,6 +19,8 @@ export interface AccessTokenOwner {
 	readonly id: number;
 	readonly userId: string;
 	readonly scopes: readonly AccessTokenScope[];
+	/** 持ち主が同意した利用規約とプライバシーポリシーの版。一度も同意していなければ null */
+	readonly termsAcceptedVersion: string | null;
 }
 
 export interface AccessTokenSummary {
@@ -68,7 +70,12 @@ export function createAccessTokenStore(database: Database): AccessTokenStore {
 		},
 		findOwner(token, now) {
 			const row = db
-				.select({ id: accessTokens.id, userId: accessTokens.userId, scopes: accessTokens.scopes })
+				.select({
+					id: accessTokens.id,
+					userId: accessTokens.userId,
+					scopes: accessTokens.scopes,
+					termsAcceptedVersion: users.termsAcceptedVersion,
+				})
 				.from(accessTokens)
 				.innerJoin(users, eq(users.id, accessTokens.userId))
 				.where(

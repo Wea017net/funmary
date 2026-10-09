@@ -1,6 +1,6 @@
 // /mcp の MCP サーバー。公開 API と同じ個人用のアクセストークンで認証し、
 // 同じ reads/ の関数を呼ぶので、REST と中身が食い違わない。道具はすべて読み取り専用 (readOnlyHint)。
-import { jstDateTime } from '@funmary/core';
+import { hasAcceptedTerms, jstDateTime } from '@funmary/core';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPTransport } from '@hono/mcp';
 import { Hono } from 'hono';
@@ -18,6 +18,7 @@ import { getDataStatus, listUserEventOccurrences } from './reads/public-events.t
 import { getSubjectSessions, searchSubjects } from './reads/public-subjects.ts';
 import { getSubjectDetail } from './reads/subject-detail.ts';
 import type { TimetableSources } from './reads/user-timetable.ts';
+import { termsRequiredMessage } from './terms-gate.ts';
 import type { V1RoutesDeps } from './v1/routes.ts';
 
 /** v1/routes.ts の V1RoutesDeps と同じ形。公開 API と MCP で、同じ依存の組み立てを使い回せるようにする */
@@ -246,6 +247,29 @@ export function buildMcpServer(
 	return server;
 }
 
+/**
+ * 利用規約への同意を待っている利用者に返す MCP サーバー。データの道具は 1 つも出さず、
+ * 同意が要る理由と、同意の画面の URL だけを、サーバーの説明と、唯一の道具の答えに載せる。
+ * HTTP のエラーにしないのは、MCP のクライアントが、接続の失敗としか表示しないことが多いため
+ */
+export function buildTermsRequiredMcpServer(consentUrl: string, origin?: string) {
+	const message = termsRequiredMessage(consentUrl);
+	const server = new McpServer(
+		{
+			name: 'funmary',
+			version: '1',
+			...(origin ? { icons: serverIcons(origin) } : {}),
+		},
+		{ instructions: message },
+	);
+	server.registerTool(
+		'terms_acceptance_required',
+		{ description: message, annotations: { readOnlyHint: true } },
+		() => ({ isError: true, content: [{ type: 'text' as const, text: message }] }),
+	);
+	return server;
+}
+
 export function createMcpRoutes(deps: McpRoutesDeps): Hono {
 	const app = new Hono();
 	const BEARER = /^Bearer\s+(\S+)$/;
@@ -264,7 +288,13 @@ export function createMcpRoutes(deps: McpRoutesDeps): Hono {
 			);
 		}
 		deps.accessTokens.markUsed(found.id, now);
-		const server = buildMcpServer(deps, { userId: found.userId, scopes: found.scopes });
+		const waitingForTerms =
+			deps.termsGate !== undefined &&
+			!hasAcceptedTerms(found.termsAcceptedVersion, deps.termsGate.version);
+		const server =
+			waitingForTerms && deps.termsGate
+				? buildTermsRequiredMcpServer(deps.termsGate.consentUrl, deps.origin)
+				: buildMcpServer(deps, { userId: found.userId, scopes: found.scopes });
 		const transport = new StreamableHTTPTransport();
 		await server.connect(transport);
 		return transport.handleRequest(c);

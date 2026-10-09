@@ -1,8 +1,10 @@
 // 通知のフィード (RSS、Atom、JSON Feed) に載せる項目。直近 30 日、最大 50 件。
 // RSS リーダーが取りに来るだけの口なので、送信の失敗が起きない。Discord やプッシュ通知が不調なときの受け皿にもなる
-import { listUserNotifications, type FeedInput, type FeedItem } from '@funmary/api';
+import { listUserNotifications, TERMS_REQUIRED, type FeedInput, type FeedItem } from '@funmary/api';
+import { hasAcceptedTerms } from '@funmary/core';
 import {
 	DEFAULT_CHANNEL_KINDS,
+	type AuthStore,
 	type FeedTokenStore,
 	type NotificationKind,
 	type NotificationStore,
@@ -15,6 +17,9 @@ const MAX_ITEMS = 50;
 
 export interface NotificationFeedSources {
 	readonly feedTokens: Pick<FeedTokenStore, 'findOwner' | 'markUsed'>;
+	readonly auth: Pick<AuthStore, 'findUserById'>;
+	/** 同意を求めている利用規約の版。持ち主が同意するまで、購読は通知を返さない */
+	readonly termsVersion: string;
 	readonly notifications: Pick<NotificationStore, 'list'>;
 	/** 公開 URL の origin。項目のリンクを絶対の URL にするため */
 	readonly origin: string;
@@ -38,10 +43,19 @@ export function loadNotificationFeed(
 	sources: NotificationFeedSources,
 	token: string,
 	now: Date,
-): FeedInput | null {
+): FeedInput | typeof TERMS_REQUIRED | null {
 	const owner = sources.feedTokens.findOwner('feed', token);
 	if (!owner) return null;
 	sources.feedTokens.markUsed(owner.id, now);
+	// 利用規約への同意を待っている間は、通知を返さない
+	if (
+		!hasAcceptedTerms(
+			sources.auth.findUserById(owner.userId)?.termsAcceptedVersion ?? null,
+			sources.termsVersion,
+		)
+	) {
+		return TERMS_REQUIRED;
+	}
 	const kinds = kindsOf(owner.options);
 	const since = new Date(now.getTime() - DAYS * 24 * 60 * 60 * 1000);
 	const items: FeedItem[] = listUserNotifications(sources, owner.userId, {

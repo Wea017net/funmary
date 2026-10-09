@@ -297,6 +297,35 @@ describe('送信待ち', () => {
 		});
 	});
 
+	it('利用規約に同意していない利用者の配信は、同意するまで返さず、待たせておく', () => {
+		const a = newUser('a');
+		const b = newUser('b');
+		for (const user of [a, b]) {
+			channels.addWebhook(
+				user,
+				{ kind: 'discord', url: URL_A + user, label: null, notificationKinds: null },
+				at('2026-09-30T00:00:00Z'),
+			);
+			notify(user, `k-${user}`);
+		}
+		const auth = createAuthStore(database);
+		auth.acceptTerms(b, '2026-10-03', at('2026-09-30T00:00:00Z'));
+		const now = at('2026-10-01T00:01:00Z');
+		deliveries.enqueueMissing(now);
+
+		const due = deliveries.claimDue(now, 10, { termsVersion: '2026-10-03' });
+
+		expect(due.map((delivery) => delivery.userId)).toEqual([b]);
+		// 版の指定がなければ、全員分を返す (これまでどおり)
+		expect(deliveries.claimDue(now, 10)).toHaveLength(2);
+
+		// 同意すれば、待っていた配信が返る。同意していない人の配信が先頭で詰まらない
+		auth.acceptTerms(a, '2026-10-03', at('2026-10-01T00:02:00Z'));
+		expect(deliveries.claimDue(now, 10, { termsVersion: '2026-10-03' })).toHaveLength(2);
+		// 規約が新しい版になれば、また止まる
+		expect(deliveries.claimDue(now, 10, { termsVersion: '2026-11-01' })).toHaveLength(0);
+	});
+
 	it('種類を決めていないチャネルには、休講、補講、教室変更、連携の不具合だけを送る', () => {
 		const a = newUser('a');
 		channels.addWebhook(

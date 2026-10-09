@@ -102,6 +102,7 @@ export {
 	type Permission,
 } from './invites.ts';
 export { canEditSubject, canViewSubject, isSubjectSearchable } from './subject-access.ts';
+export { currentTermsVersion, hasAcceptedTerms } from './terms-consent.ts';
 export {
 	DAILY_DIGEST_STEP_MINUTES,
 	DEFAULT_DAILY_DIGEST_SETTINGS,

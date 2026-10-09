@@ -4,6 +4,7 @@ import { buildUserTimetable, type DayNote, type TimetableLesson } from '@funmary
 import {
 	DEFAULT_PERIODS,
 	findPeriod,
+	hasAcceptedTerms,
 	type CalendarDate,
 	type DailyDigestTiming,
 } from '@funmary/core';
@@ -84,7 +85,16 @@ export function dailyDigestDeps(services: () => Services, bot: DiscordBot): Send
 	return {
 		listTargets: () => {
 			const current = services();
-			return current.discord.link.enabled() ? current.dailyDigest.listRecipients() : [];
+			if (!current.discord.link.enabled()) return [];
+			// 利用規約に同意していない人には、同意するまで送らない
+			return current.dailyDigest
+				.listRecipients()
+				.filter((recipient) =>
+					hasAcceptedTerms(
+						current.auth.findUserById(recipient.userId)?.termsAcceptedVersion ?? null,
+						current.termsVersion,
+					),
+				);
 		},
 		compose: (userId, date, timing) => {
 			const current = services();

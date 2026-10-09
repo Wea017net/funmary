@@ -32,12 +32,15 @@ afterEach(() => {
 });
 
 const NOW = new Date('2026-10-07T01:00:00Z');
+const TERMS_VERSION = '2026-10-03';
 
 function services(
 	options: {
 		enabled?: boolean;
 		linked?: { userId: string } | null;
 		status?: 'active' | 'suspended';
+		/** 利用者が同意した規約の版。省くと、いまの版に同意済み */
+		accepted?: string | null;
 		/** 取得に最後に成功した日時。省くと、直前に成功したことにする */
 		lastSuccessAt?: Date | null;
 	} = {},
@@ -49,8 +52,10 @@ function services(
 			? new Date(NOW.getTime() - 60 * 1000)
 			: options.lastSuccessAt;
 	sourceHealth.save('portal', { ...sourceHealth.load('portal'), lastSuccessAt });
+	const accepted = options.accepted === undefined ? TERMS_VERSION : options.accepted;
 	return {
 		origin: 'https://funmary.example.com',
+		termsVersion: TERMS_VERSION,
 		discord: {
 			link: {
 				enabled: () => enabled,
@@ -64,6 +69,7 @@ function services(
 				name: null,
 				role: 'user',
 				status,
+				termsAcceptedVersion: accepted,
 			}),
 		},
 		sourceHealth,
@@ -98,6 +104,29 @@ describe('answerCommand', () => {
 			NOW,
 		);
 		expect(text).toContain('利用できません');
+	});
+
+	it('利用規約に同意するまでは、どのコマンドにも答えず、同意の画面を案内する', () => {
+		for (const command of ['today', 'next', 'week', 'changes']) {
+			const text = answerCommand(
+				services({ linked: { userId: 'u1' }, accepted: null }),
+				command,
+				'discord-1',
+				NOW,
+			);
+			expect(text, command).toContain('同意するまで、すべての機能を停止しています');
+			expect(text, command).toContain('https://funmary.example.com/consent');
+		}
+	});
+
+	it('古い版にしか同意していなければ、同じく止める', () => {
+		const text = answerCommand(
+			services({ linked: { userId: 'u1' }, accepted: '2026-09-01' }),
+			'today',
+			'discord-1',
+			NOW,
+		);
+		expect(text).toContain('https://funmary.example.com/consent');
 	});
 
 	it('授業がない日の /today は、その旨を返す', () => {
