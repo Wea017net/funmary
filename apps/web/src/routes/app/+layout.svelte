@@ -14,7 +14,7 @@
 	import IconSettings from '~icons/material-symbols/settings-outline';
 	import IconWeek from '~icons/material-symbols/calendar-view-week-outline';
 
-	// スマホの上部バーは、下へのスクロールで隠し、上へのスクロールで出す (設計書、Issue #109)。ページの一番上では常に出す
+	// スマホの上部バーは、下へのスクロールで隠し、上へのスクロールで出す (Issue #109)。ページの一番上では常に出す
 	let headerHidden = $state(false);
 
 	$effect(() => {
@@ -46,7 +46,7 @@
 		children: Snippet;
 	} = $props();
 
-	// PC では左のメニュー、スマホでは下のタブに同じ項目を出す (設計書 12.4)。
+	// PC では左のメニュー、スマホでは下のタブに同じ項目を出す。
 	// 管理は設定の中にあるので、管理の画面を開いているときも設定を選んだ状態にする
 	const items = $derived([
 		{

@@ -1,4 +1,4 @@
-// 定期処理の組み立て (設計書 4.5、9 章)。サーバー (hooks.server.ts) と、管理用コマンドの job run が使う。
+// 定期処理の組み立て。サーバー (hooks.server.ts) と、管理用コマンドの job run が使う。
 // 管理用コマンドからも読み込むので、$lib を使わずに相対のパスで読み込む
 import {
 	createAcademicCalendarStore,
@@ -116,7 +116,7 @@ export function createJobDefinitions({ config, database, alert }: JobFactoryDeps
 			alert,
 		}),
 	);
-	// 履修している科目の休講などを、利用者の通知欄に入れる (設計書 14.1)
+	// 履修している科目の休講などを、利用者の通知欄に入れる
 	const notificationStore = createNotificationStore(database);
 	jobs.push(
 		createNotifyClassChangesJob({

@@ -82,7 +82,7 @@ time,
 	white-space: nowrap;
 }
 
-// SMUI のボタン。押せる部分は 48px 四方以上にする (設計書 12.4)。
+// SMUI のボタン。押せる部分は 48px 四方以上にする。
 // 既定の大文字への変換は、日本語の画面には合わないので外す
 .mdc-button {
 	height: 48px;

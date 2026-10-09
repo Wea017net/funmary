@@ -1,4 +1,4 @@
-// 管理用の Discord の Bot の設定 (設計書 14.9)。チャンネルとロールを、Bot が作ったものを使うか、既存のものに置き換えるかを決める。
+// 管理用の Discord の Bot の設定。チャンネルとロールを、Bot が作ったものを使うか、既存のものに置き換えるかを決める。
 // Discord に接続するのは、管理者がこの画面で押したときだけ。トークンは画面にも応答にも出さない。
 import { fail, type Actions, type ServerLoad } from '@sveltejs/kit';
 import { ADMIN_CHANNELS, DiscordApiError, ensureLayout, type AdminChannel } from '@funmary/notify';
@@ -38,7 +38,7 @@ export const load: ServerLoad = async ({ locals }) => {
 			configured: discord.link.configured,
 			enabled: discord.link.enabled(),
 		},
-		// 参加したときに付けるロール (設計書 14.9、#163)。独自に選んだロールの選択肢に使う
+		// 参加したときに付けるロール (#163)。独自に選んだロールの選択肢に使う
 		guildRoles: discord.bot ? await discord.bot.listRoles() : [],
 		joinRole: readDiscordJoinRole(settings.get(DISCORD_JOIN_ROLE_KEY)),
 		invites: readInvites(settings.get(SUPPORT_INVITES_KEY)),
@@ -140,7 +140,7 @@ export const actions: Actions = {
 				: '利用者の Discord 連携を無効にしました。',
 		};
 	},
-	/** 参加したときに付けるロールを保存する (設計書 14.9、#163) */
+	/** 参加したときに付けるロールを保存する (#163) */
 	joinRole: async ({ request, locals }) => {
 		requireAdmin(locals);
 		const { settings } = getServices();
