@@ -27,6 +27,7 @@ import {
 	createFeedTokenStore,
 	createHolidayStore,
 	createNotificationStore,
+	createOAuthStore,
 	createPersonalSlotStore,
 	createSlotSubmissionStore,
 	createSourceHealthStore,
@@ -72,6 +73,7 @@ import {
 } from '#lib/server/discord-admin.ts';
 import { legacyAppPath } from '#lib/server/legacy-path.ts';
 import { findMigrationsFolder } from '#lib/server/migrations-path.ts';
+import { isCsrfForbidden } from '#lib/server/csrf.ts';
 import { getServices, setServices } from '#lib/server/services.ts';
 import { dailyDigestDeps } from '#lib/server/daily-digest.ts';
 import { deliverNotificationsDeps, testMessage } from '#lib/server/notification-delivery.ts';
@@ -79,7 +81,20 @@ import { readWebhookLimit, WEBHOOKS_PER_USER_KEY } from '#lib/server/webhook-lim
 import { parseThemePreference, THEME_COOKIE } from '#lib/theme.ts';
 
 /** Hono に渡すパス。これ自身か、この下のパスが対象になる */
-const API_PATHS = ['/api', '/auth', '/cal', '/discord', '/feed', '/healthz', '/mcp', '/signup'];
+// 同意の画面 (/oauth/authorize) は SvelteKit の画面なので、/oauth の全体ではなく、口ごとに書く
+const API_PATHS = [
+	'/.well-known',
+	'/api',
+	'/auth',
+	'/cal',
+	'/discord',
+	'/feed',
+	'/healthz',
+	'/mcp',
+	'/oauth/register',
+	'/oauth/token',
+	'/signup',
+];
 
 /** ログイン用の Google の OAuth クライアントを、開発サーバーで試すときの公開 URL */
 const DEV_ORIGIN = 'http://localhost:5173';
@@ -244,6 +259,8 @@ export const init: ServerInit = () => {
 		: null;
 	const store = createAuthStore(database);
 	authStore = store;
+	const accessTokenStore = createAccessTokenStore(database);
+	const oauthStore = createOAuthStore(database, accessTokenStore);
 	const services = {
 		auth: store,
 		settings: settingsStore,
@@ -315,7 +332,8 @@ export const init: ServerInit = () => {
 		alertAdmin: (alert: Parameters<typeof alerter.send>[0]) => alerter.send(alert),
 		log: logger,
 		feedTokens: createFeedTokenStore(database),
-		accessTokens: createAccessTokenStore(database),
+		accessTokens: accessTokenStore,
+		oauth: oauthStore,
 		// リリースでは、tar.gz に同梱した build-info.json を、上の階層へたどって探す
 		build: findBuildInfo(dirname(fileURLToPath(import.meta.url))),
 		// ビルドでは、scripts/copy-legal.js が写した legal/ を、上の階層へたどって探す
@@ -362,7 +380,13 @@ export const init: ServerInit = () => {
 			loadFeed: (token) => loadNotificationFeed(services, token, new Date()),
 		},
 		v1: { ...services, users: services.auth },
-		mcp: { ...services, users: services.auth },
+		mcp: {
+			...services,
+			users: services.auth,
+			resourceMetadataUrl: `${publicOrigin}/.well-known/oauth-protected-resource/mcp`,
+			origin: publicOrigin,
+		},
+		oauth: { oauth: oauthStore, origin: publicOrigin },
 		// 公開鍵がなければ、Discord の署名を確かめられないので、受け口を開けない
 		...(result.config.discordPublicKey
 			? {
@@ -379,6 +403,21 @@ export const init: ServerInit = () => {
 
 export const handle: Handle = async ({ event, resolve }) => {
 	const path = event.url.pathname;
+	// 開発サーバーでは、組み込みの検査も行われていなかった
+	if (
+		!dev &&
+		isCsrfForbidden({
+			method: event.request.method,
+			path,
+			contentType: event.request.headers.get('content-type'),
+			origin: event.request.headers.get('origin'),
+			selfOrigin: publicOrigin,
+		})
+	) {
+		return new Response(`Cross-site ${event.request.method} form submissions are forbidden`, {
+			status: 403,
+		});
+	}
 	// /app に移す前の画面の URL は、移した先へ転送する (308 は、POST も POST のまま送り直させる)
 	const moved = legacyAppPath(path);
 	if (moved) {

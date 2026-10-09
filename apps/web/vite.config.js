@@ -26,6 +26,9 @@ export default defineConfig(({ command }) => ({
 			// 静的ファイルを gzip と Brotli で事前に圧縮しておく
 			adapter: adapter({ precompress: true }),
 
+			// 組み込みの Origin の検査は切り、hooks.server.ts で同じ検査を行う (OAuth のトークンの口だけ、Origin なしの form を通すため)
+			csrf: { trustedOrigins: ['*'] },
+
 			// .env はリポジトリのルートに置く。管理用コマンドと同じファイルを読む
 			env: { dir: '../..' },
 		}),

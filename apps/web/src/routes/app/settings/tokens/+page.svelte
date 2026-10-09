@@ -134,11 +134,18 @@
 				>Authorization: Bearer &lt;トークン&gt;</code
 			> を付けて呼んでください。
 		</p>
-		<p>
-			MCP (Model Context Protocol) に対応したエージェントは、次の URL
-			をヘッダ付きで登録してください。
-		</p>
+		<p>MCP (Model Context Protocol) のサーバーの URL は、次のとおりです。</p>
 		<code class="mcp-url">{data.mcpUrl}</code>
+		<h3>claude.ai などのコネクタ</h3>
+		<p>
+			トークンは要りません。コネクタの追加で、上の URL
+			を登録すると、この画面に戻って許可を求められます。許可したあとの接続は、上の一覧に「(OAuth)」付きの名前で出て、ここから取り消せます。
+		</p>
+		<h3>Claude Code など、ヘッダを付けられるもの</h3>
+		<p>
+			上で発行したトークンを、<code>Authorization: Bearer &lt;トークン&gt;</code>
+			のヘッダとして付けて登録してください。
+		</p>
 	</section>
 </div>
 
