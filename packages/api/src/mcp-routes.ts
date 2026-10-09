@@ -10,7 +10,12 @@ import { buildUserTimetable, type TimetableSources } from './reads/user-timetabl
 import type { V1RoutesDeps } from './v1/routes.ts';
 
 /** v1/routes.ts の V1RoutesDeps と同じ形。公開 API と MCP で、同じ依存の組み立てを使い回せるようにする */
-export type McpRoutesDeps = V1RoutesDeps;
+export interface McpRoutesDeps extends V1RoutesDeps {
+	/** 401 で知らせる、保護されたリソースの情報の URL。OAuth で認証するクライアントが、ここから認可サーバーを見つける */
+	readonly resourceMetadataUrl?: string;
+	/** 公開するオリジン。あれば、サーバーの情報にアイコン (/brand/ の画像) を載せる */
+	readonly origin?: string;
+}
 
 // MCP の structuredContent は、オブジェクト (record) でなければならない。配列はキーに包んで返す
 const jsonText = (value: object) => ({
@@ -18,12 +23,31 @@ const jsonText = (value: object) => ({
 	structuredContent: value as Record<string, unknown>,
 });
 
+/** クライアントが一覧に出すアイコン。ブラウザのタブと同じ画像で、ダークの画面向けのものも添える */
+function serverIcons(origin: string) {
+	const base = `${origin.replace(/\/$/, '')}/brand`;
+	return [
+		{ src: `${base}/icon-512.png`, mimeType: 'image/png', sizes: ['512x512'] },
+		{ src: `${base}/icon.svg`, mimeType: 'image/svg+xml', sizes: ['any'], theme: 'light' as const },
+		{
+			src: `${base}/icon-dark.svg`,
+			mimeType: 'image/svg+xml',
+			sizes: ['any'],
+			theme: 'dark' as const,
+		},
+	];
+}
+
 /** MCP サーバーを組み立てる。テストでは、SDK の in-memory の接続で道具を直接確かめるのに使う */
 export function buildMcpServer(
 	deps: McpRoutesDeps,
 	owner: { userId: string; scopes: readonly string[] },
 ) {
-	const server = new McpServer({ name: 'funmary', version: '1' });
+	const server = new McpServer({
+		name: 'funmary',
+		version: '1',
+		...(deps.origin ? { icons: serverIcons(deps.origin) } : {}),
+	});
 	const timetableSources: TimetableSources = deps;
 	const notificationsSources: NotificationsSources = deps;
 
@@ -115,6 +139,9 @@ export function createMcpRoutes(deps: McpRoutesDeps): Hono {
 		const now = new Date();
 		const found = token ? deps.accessTokens.findOwner(token, now) : null;
 		if (!found) {
+			if (deps.resourceMetadataUrl) {
+				c.header('WWW-Authenticate', `Bearer resource_metadata="${deps.resourceMetadataUrl}"`);
+			}
 			return c.json(
 				{ error: 'unauthorized', message: 'Authorization: Bearer <token> が要ります' },
 				401,

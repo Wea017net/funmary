@@ -470,6 +470,59 @@ export const accessTokens = sqliteTable(
 	(table) => [index('access_tokens_user').on(table.userId)],
 );
 
+/** MCP の認可で、動的に登録されたクライアント (Claude など)。公開クライアントなので、秘密は持たない */
+export const oauthClients = sqliteTable('oauth_clients', {
+	/** client_id。推測できない乱数 */
+	id: text('id').primaryKey(),
+	name: text('name').notNull(),
+	redirectUris: text('redirect_uris', { mode: 'json' }).notNull().$type<string[]>(),
+	createdAt: createdAt(),
+});
+
+/** 認可コード。1 回使うと消える。コードそのものでなく、ハッシュを保存する */
+export const oauthCodes = sqliteTable('oauth_codes', {
+	codeHash: text('code_hash').primaryKey(),
+	clientId: text('client_id')
+		.notNull()
+		.references(() => oauthClients.id, { onDelete: 'cascade' }),
+	userId: text('user_id')
+		.notNull()
+		.references(() => users.id, { onDelete: 'cascade' }),
+	redirectUri: text('redirect_uri').notNull(),
+	/** PKCE の code_challenge (S256) */
+	codeChallenge: text('code_challenge').notNull(),
+	scopes: text('scopes', { mode: 'json' }).notNull().$type<string[]>(),
+	expiresAt: integer('expires_at', { mode: 'timestamp_ms' }).notNull(),
+	createdAt: createdAt(),
+});
+
+/** リフレッシュトークン。使うたびに新しいものに替え、同じ系列 (familyId) でまとめて無効にできる */
+export const oauthRefreshTokens = sqliteTable(
+	'oauth_refresh_tokens',
+	{
+		id: integer('id').primaryKey({ autoIncrement: true }),
+		tokenHash: text('token_hash').notNull().unique(),
+		familyId: text('family_id').notNull(),
+		clientId: text('client_id')
+			.notNull()
+			.references(() => oauthClients.id, { onDelete: 'cascade' }),
+		userId: text('user_id')
+			.notNull()
+			.references(() => users.id, { onDelete: 'cascade' }),
+		scopes: text('scopes', { mode: 'json' }).notNull().$type<string[]>(),
+		/** 一緒に発行したアクセストークン。設定の画面で無効にされたら、このリフレッシュも使えなくする */
+		accessTokenId: integer('access_token_id').references(() => accessTokens.id, {
+			onDelete: 'set null',
+		}),
+		expiresAt: integer('expires_at', { mode: 'timestamp_ms' }).notNull(),
+		createdAt: createdAt(),
+		/** 新しいものに替えた日時。これが入ったトークンがまた来たら、盗まれたとみなす */
+		usedAt: integer('used_at', { mode: 'timestamp_ms' }),
+		revokedAt: integer('revoked_at', { mode: 'timestamp_ms' }),
+	},
+	(table) => [index('oauth_refresh_tokens_family').on(table.familyId)],
+);
+
 export const shares = sqliteTable(
 	'shares',
 	{

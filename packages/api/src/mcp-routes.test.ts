@@ -18,7 +18,7 @@ import {
 	type Database,
 } from '@funmary/db';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { buildMcpServer } from './mcp-routes.ts';
+import { buildMcpServer, createMcpRoutes } from './mcp-routes.ts';
 
 let dir: string;
 let database: Database;
@@ -123,5 +123,37 @@ describe('buildMcpServer', () => {
 		const client = await connectedClient(server);
 		const result = await client.callTool({ name: 'list_notifications', arguments: {} });
 		expect(result.structuredContent).toMatchObject({ notifications: [{ title: '休講' }] });
+	});
+});
+
+describe('OAuth 向けの案内', () => {
+	it('トークンなしの 401 に、保護されたリソースの情報の URL を載せる', async () => {
+		const app = createMcpRoutes({
+			...deps(),
+			resourceMetadataUrl: 'https://funmary.example.com/.well-known/oauth-protected-resource/mcp',
+		});
+
+		const res = await app.request('/mcp', { method: 'POST' });
+
+		expect(res.status).toBe(401);
+		expect(res.headers.get('WWW-Authenticate')).toBe(
+			'Bearer resource_metadata="https://funmary.example.com/.well-known/oauth-protected-resource/mcp"',
+		);
+	});
+
+	it('オリジンを渡すと、サーバーの情報に、アイコンの絶対 URL を載せる', async () => {
+		const server = buildMcpServer(
+			{ ...deps(), origin: 'https://funmary.example.com/' },
+			{ userId: 'u1', scopes: [] },
+		);
+		const client = await connectedClient(server);
+
+		const icons = client.getServerVersion()?.icons ?? [];
+
+		expect(icons.map((icon) => icon.src)).toEqual([
+			'https://funmary.example.com/brand/icon-512.png',
+			'https://funmary.example.com/brand/icon.svg',
+			'https://funmary.example.com/brand/icon-dark.svg',
+		]);
 	});
 });

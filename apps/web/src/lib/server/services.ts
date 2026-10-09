@@ -15,6 +15,7 @@ import type {
 	FeedTokenStore,
 	HolidayStore,
 	NotificationStore,
+	OAuthStore,
 	PersonalSlotStore,
 	SecretBox,
 	SettingsStore,
@@ -121,6 +122,8 @@ export interface Services {
 	readonly feedTokens: FeedTokenStore;
 	/** 公開 API と MCP サーバー向けの個人用アクセストークン */
 	readonly accessTokens: AccessTokenStore;
+	/** MCP の認可 (OAuth 2.1)。同意の画面が、クライアントの確認と認可コードの発行に使う */
+	readonly oauth: OAuthStore;
 	/** 新規登録の方式。紹介の画面の案内に使う */
 	readonly registration: 'invite' | 'open' | 'closed';
 	/** 公開 URL の origin (ブックマークレットの戻り先に使う) */
