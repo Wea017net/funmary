@@ -9,6 +9,7 @@ import {
 	type DiscordInteractionsDeps,
 } from './discord/interactions.ts';
 import { createMcpRoutes, type McpRoutesDeps } from './mcp-routes.ts';
+import { createOAuthRoutes, type OAuthRoutesDeps } from './oauth-routes.ts';
 import { createOpenApiRoutes } from './v1/openapi.ts';
 import { createV1Routes, type V1RoutesDeps } from './v1/routes.ts';
 
@@ -25,6 +26,8 @@ export interface ApiDeps {
 	readonly v1?: V1RoutesDeps;
 	/** MCP サーバー (/mcp)。ないときは、その口を開けない */
 	readonly mcp?: McpRoutesDeps;
+	/** MCP の認可 (OAuth 2.1)。ないときは、その口を開けない */
+	readonly oauth?: OAuthRoutesDeps;
 	/** Discord のスラッシュコマンドの受け口。ないときは、その口を開けない */
 	readonly discordInteractions?: DiscordInteractionsDeps;
 	/** DB に読み書きできるか。例外を投げたときも、読み書きできないとみなす */
@@ -47,6 +50,7 @@ export function createApi(deps: ApiDeps): Hono {
 		app.route('/', createOpenApiRoutes(v1));
 	}
 	if (deps.mcp) app.route('/', createMcpRoutes(deps.mcp));
+	if (deps.oauth) app.route('/', createOAuthRoutes(deps.oauth));
 	if (deps.discordInteractions) {
 		app.route('/', createDiscordInteractionRoutes(deps.discordInteractions));
 	}
