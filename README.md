@@ -1,48 +1,80 @@
-<p align="center">
+<div align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/assets/logo-dark.svg" />
     <img src="docs/assets/logo-light.svg" alt="Funmary" width="360" />
   </picture>
-</p>
+</div>
+
+<div align="center">
 
 # Funmary
+
+</div>
+
+[![CI](https://github.com/funmary-app/funmary/actions/workflows/ci.yml/badge.svg)](https://github.com/funmary-app/funmary/actions/workflows/ci.yml)
+[![License](https://img.shields.io/badge/license-BSD--3--Clause%20OR%20Apache--2.0-blue)](#ライセンス)
+[![X](https://img.shields.io/badge/X-@funmary__app-000000?logo=x&logoColor=white)](https://x.com/funmary_app)
+[![note](https://img.shields.io/badge/note-funmary-41C9B4?logo=note&logoColor=white)](https://note.com/funmary)
+
+![SvelteKit](https://img.shields.io/badge/SvelteKit-FF3E00?logo=svelte&logoColor=white)
+![Svelte](https://img.shields.io/badge/Svelte_5-FF3E00?logo=svelte&logoColor=white)
+![Hono](https://img.shields.io/badge/Hono-E36002?logo=hono&logoColor=white)
+![SQLite](https://img.shields.io/badge/SQLite-003B57?logo=sqlite&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)
+![Node.js](https://img.shields.io/badge/Node.js_24-5FA04E?logo=nodedotjs&logoColor=white)
+![pnpm](https://img.shields.io/badge/pnpm-F69220?logo=pnpm&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-646CFF?logo=vite&logoColor=white)
+![Vitest](https://img.shields.io/badge/Vitest-6E9F18?logo=vitest&logoColor=white)
+![Playwright](https://img.shields.io/badge/Playwright-2EAD33?logo=playwright&logoColor=white)
+
+---
 
 Funmary (ファンマリー) は、公立はこだて未来大学の学生向けの便利な総合 Web アプリです。
 
 > [!IMPORTANT]
 > Funmary は大学とは関係のない非公式のアプリです。大学への問い合わせには使わないでください。
 
-## できること (予定)
+## できること
 
-Funmary は開発を始めたばかりで、まだ使える機能はありません。最初に作るのは次の機能です。
+学生ポータルの休講、補講、教室変更を、自分の時間割にまとめて出し、いつものカレンダーや Discord に届けます。利用は招待制です。
 
-- 休講、補講、教室変更を反映した個人の時間割
+- 休講、補講、教室変更、祝日、振替授業日を反映した、今日と 1 週間の時間割
+- 授業の詳細 (曜日と時限、教室、教員、公開シラバスの内容、休講などの履歴)
+- 履修科目の登録。学生ポータルの時間割からの取り込みと、科目を探しての登録ができます
 - 授業の予定を Google カレンダーや iPhone のカレンダーに自動で届ける購読 URL (ICS)
-- 授業の詳細 (曜日と時限、教室、教員、シラバスの内容、休講の履歴)
-- 休講などの知らせを、アプリ内の通知欄、Discord、RSS などのフィードで受け取る機能
+- 休講などの知らせを、アプリ内の通知欄、Discord (サーバー、ダイレクトメッセージ、Webhook)、利用者が用意した Webhook、RSS、Atom、JSON Feed で受け取る機能
+- 自分の AI エージェントやスクリプトから時間割と休講を読める、公開 API (OpenAPI) と MCP サーバー。Discord のスラッシュコマンド (`/today`、`/week`、`/changes`) でも答えます
 - 大学の Google アカウントでのログインと、招待コードによる新規登録
 
-そのあとに、ブラウザのプッシュ通知、授業前のリマインダー、欠席の記録、時間割の共有などを足していきます。
+これから、ブラウザのプッシュ通知、授業前のリマインダー、欠席の記録、時間割の共有などを足していきます。
+
+## お知らせ
+
+新しい機能や、開発の様子は、公式のアカウントで出しています。
+
+- X: [@funmary_app](https://x.com/funmary_app)
+- note: [funmary](https://note.com/funmary)
 
 ## 使っている技術
 
-| 分野           | 使うもの                      |
-| -------------- | ----------------------------- |
-| 画面           | SvelteKit、Svelte 5           |
-| API            | Hono (SvelteKit の中で動かす) |
-| データ         | SQLite                        |
-| 実行環境       | Node.js 24 系 (LTS)           |
-| パッケージ管理 | pnpm workspace                |
-| 検査           | TypeScript、ESLint、Prettier  |
-| テスト         | Vitest、Playwright            |
+| 分野           | 使うもの                                    |
+| -------------- | ------------------------------------------- |
+| 画面           | SvelteKit、Svelte 5、SMUI (Material Design) |
+| API            | Hono (SvelteKit の中で動かす)、OpenAPI、MCP |
+| データ         | SQLite (better-sqlite3、Drizzle ORM)        |
+| 検証           | Valibot                                     |
+| 定期処理       | croner (同じプロセスの中で動かす)           |
+| 実行環境       | Node.js 24 系 (LTS)                         |
+| パッケージ管理 | pnpm workspace                              |
+| 検査           | TypeScript、ESLint、Prettier、commitlint    |
+| テスト         | Vitest、Playwright                          |
+| 依存の更新     | Renovate                                    |
 
-サーバーは VPS 1 台で、Node.js のプロセス 1 つと SQLite のファイル 1 つだけで動かします。
+サーバーは VPS 1 台で、Node.js のプロセス 1 つと SQLite のファイル 1 つだけで動かします。設計の考え方と、その理由は [docs/design/](docs/design/README.md) にまとめています。
 
 ## セルフホストする
 
 自分の VPS で Funmary を動かす手順は [docs/self-hosting.md](docs/self-hosting.md) にあります。
-
-設計の考え方と、その理由は [docs/design/](docs/design/README.md) にまとめています。
 
 ## 開発に参加する
 
@@ -57,14 +89,21 @@ Funmary は開発を始めたばかりで、まだ使える機能はありませ
 ```
 funmary/
 ├── apps/
-│   └── web/          # SvelteKit の画面
+│   └── web/          # SvelteKit の画面。本番の入口と、管理用コマンドもここ
 ├── packages/
-│   └── core/         # I/O を持たない処理 (時間割の展開、祝日と学期の判定など)
+│   ├── core/         # I/O を持たない処理 (時間割の展開、祝日と学期の判定など)
+│   ├── db/           # スキーマ、マイグレーション、クエリ
+│   ├── auth/         # Google ログイン、セッション、招待コード
+│   ├── api/          # Hono のアプリ (/api、/cal、/feed、/mcp など)
+│   ├── sources/      # 学生ポータル、公開シラバス、学年暦、祝日の取得と解析
+│   ├── notify/       # Discord と Webhook への通知
+│   ├── jobs/         # 定期処理
+│   └── log/          # ログ
+├── deploy/           # systemd の unit、nginx の設定、更新スクリプト
+├── docs/             # 設計書、セルフホストの手順
 ├── scripts/          # ビルドや検査の補助
 └── .agents/skills/   # AI エージェント向けのスキル
 ```
-
-`packages/` には、今後 `db`、`auth`、`api`、`sources`、`notify`、`jobs` を足していきます。
 
 ## 著者
 
