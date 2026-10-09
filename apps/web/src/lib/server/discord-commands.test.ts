@@ -3,11 +3,14 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
 	createAcademicCalendarStore,
+	createAuthStore,
 	createClassChangeStore,
 	createCourseStore,
 	createHolidayStore,
 	createPersonalSlotStore,
+	createSourceHealthStore,
 	createSubjectStore,
+	createUserEventStore,
 	openDatabase,
 	type Database,
 } from '@funmary/db';
@@ -35,9 +38,17 @@ function services(
 		enabled?: boolean;
 		linked?: { userId: string } | null;
 		status?: 'active' | 'suspended';
+		/** 取得に最後に成功した日時。省くと、直前に成功したことにする */
+		lastSuccessAt?: Date | null;
 	} = {},
 ): Services {
 	const { enabled = true, linked = null, status = 'active' } = options;
+	const sourceHealth = createSourceHealthStore(database);
+	const lastSuccessAt =
+		options.lastSuccessAt === undefined
+			? new Date(NOW.getTime() - 60 * 1000)
+			: options.lastSuccessAt;
+	sourceHealth.save('portal', { ...sourceHealth.load('portal'), lastSuccessAt });
 	return {
 		origin: 'https://funmary.example.com',
 		discord: {
@@ -55,6 +66,8 @@ function services(
 				status,
 			}),
 		},
+		sourceHealth,
+		userEvents: createUserEventStore(database),
 		courses: createCourseStore(database),
 		personalSlots: createPersonalSlotStore(database),
 		subjects: createSubjectStore(database),
@@ -95,6 +108,48 @@ describe('answerCommand', () => {
 	it('これから 14 日に休講などがなければ、/changes はその旨を返す', () => {
 		const text = answerCommand(services({ linked: { userId: 'u1' } }), 'changes', 'discord-1', NOW);
 		expect(text).toBe('これから 14 日の休講、補講、教室変更はありません。');
+	});
+
+	it('データが古いときは、答えの終わりに注意を添える', () => {
+		const text = answerCommand(
+			services({ linked: { userId: 'u1' }, lastSuccessAt: null }),
+			'today',
+			'discord-1',
+			NOW,
+		);
+		expect(text).toContain('今日は、授業も休みの知らせもありません。');
+		expect(text).toContain('しばらく更新されていません');
+	});
+
+	it('今日の予定を、/today に出す', () => {
+		const ownerId = createAuthStore(database).createUser(
+			{ googleSub: 'owner', email: 'a@fun.ac.jp', name: null, role: 'user' },
+			NOW,
+		);
+		createUserEventStore(database).create(
+			ownerId,
+			{
+				title: '架空のサークル',
+				location: '架空の部室',
+				notes: null,
+				startDate: '2026-10-07',
+				endDate: '2026-10-07',
+				time: { kind: 'time', start: '18:00', end: '19:30' },
+				rrule: null,
+				excludedDates: [],
+				visibility: 'private',
+			},
+			NOW,
+		);
+
+		const text = answerCommand(
+			services({ linked: { userId: ownerId } }),
+			'today',
+			'discord-1',
+			NOW,
+		);
+
+		expect(text).toContain('18:00-19:30 架空のサークル (架空の部室) [予定]');
 	});
 
 	it('授業がなければ、/next はその旨を返す', () => {

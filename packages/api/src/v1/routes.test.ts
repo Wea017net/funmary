@@ -10,6 +10,8 @@ import {
 	createCourseStore,
 	createHolidayStore,
 	createNotificationStore,
+	createSourceHealthStore,
+	createUserEventStore,
 	createPersonalSlotStore,
 	createSubjectStore,
 	openDatabase,
@@ -43,6 +45,8 @@ function deps() {
 		holidays: createHolidayStore(database),
 		estimateHolidays: () => [],
 		notifications: createNotificationStore(database),
+		userEvents: createUserEventStore(database),
+		sourceHealth: createSourceHealthStore(database),
 		accessGrants: createAccessGrantStore(database),
 		accessTokens: createAccessTokenStore(database),
 		users: createAuthStore(database),
@@ -162,6 +166,73 @@ describe('createV1Routes', () => {
 			expect((await get('/api/v1/academic-calendar?year=abc')).status).toBe(400);
 		});
 
+		it('GET /api/v1/events は、自分の予定を日付の範囲で返す', async () => {
+			const { src, userId, get } = lessonsApp();
+			src.userEvents.create(
+				userId,
+				{
+					title: '架空のサークル',
+					location: null,
+					notes: null,
+					startDate: '2026-10-05',
+					endDate: '2026-10-05',
+					time: { kind: 'allDay' },
+					rrule: null,
+					excludedDates: [],
+					visibility: 'private',
+				},
+				NOW,
+			);
+
+			const res = await get('/api/v1/events?start=2026-10-01&end=2026-10-07');
+
+			expect(res.status).toBe(200);
+			expect(await res.json()).toMatchObject([
+				{ title: '架空のサークル', allDay: true, added: false },
+			]);
+		});
+
+		it('GET /api/v1/status は、データの新しさを返す', async () => {
+			const { get } = lessonsApp();
+
+			const res = await get('/api/v1/status');
+
+			expect(await res.json()).toEqual({ timetable: { lastSuccessAt: null, stale: true } });
+		});
+
+		it('GET /api/v1/subjects は、科目を探す。GET .../sessions は、見つからなければ 404', async () => {
+			const { src, get } = lessonsApp();
+			src.subjects.upsert(
+				{
+					academicYear: 2026,
+					syllabusId: '100001',
+					name: '架空の代数',
+					teacher: null,
+					credits: 2,
+					term: 'fall',
+					attributes: {},
+					syllabus: {},
+					syllabusUrl: null,
+				},
+				NOW,
+			);
+
+			const found = await get('/api/v1/subjects?year=2026&q=代数');
+			const sessions = await get('/api/v1/subjects/2026/100001/sessions');
+			const missing = await get('/api/v1/subjects/2026/none/sessions');
+
+			expect(await found.json()).toMatchObject({
+				subjects: [{ syllabusId: '100001', name: '架空の代数' }],
+				truncated: false,
+			});
+			expect(sessions.status).toBe(200);
+			expect(await sessions.json()).toMatchObject({
+				subject: { syllabusId: '100001' },
+				sessions: [],
+			});
+			expect(missing.status).toBe(404);
+		});
+
 		it('範囲が足りないトークンでは、どれも 403', async () => {
 			const src = deps();
 			const userId = newUser(src, 'b');
@@ -178,6 +249,10 @@ describe('createV1Routes', () => {
 				'/api/v1/lessons/next',
 				'/api/v1/courses',
 				'/api/v1/academic-calendar',
+				'/api/v1/events?start=2026-10-01&end=2026-10-07',
+				'/api/v1/status',
+				'/api/v1/subjects',
+				'/api/v1/subjects/2026/100001/sessions',
 			]) {
 				const res = await app.request(path, { headers: { Authorization: `Bearer ${token}` } });
 				expect(res.status, path).toBe(403);

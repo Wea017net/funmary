@@ -74,18 +74,22 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 `/api/` の下には、画面が使う内部の API (未読数など) もあります。内部の API はログインの Cookie で認証し、形は予告なく変えます。公開 API は `/api/v1/` の下に分け、アクセストークンで認証し、形を保ちます。形を壊す変更は `/api/v2/` を作って行い、`v1` はしばらく残します。
 
-| メソッドとパス                             | 返すもの                                                 |
-| ------------------------------------------ | -------------------------------------------------------- |
-| `GET /api/v1/me`                           | トークンの持ち主の表示名と、許されている範囲 (scope)     |
-| `GET /api/v1/lessons`                      | 日付または期間の授業。休講、補講、教室変更を反映したもの |
-| `GET /api/v1/lessons/next`                 | 次の授業 (授業中ならその授業)                            |
-| `GET /api/v1/timetable`                    | 授業 (時刻つき) と、振替授業日、全学の休講日、祝日       |
-| `GET /api/v1/periods`                      | 時限ごとの開始と終了の時刻                               |
-| `GET /api/v1/courses`                      | 履修登録した科目と、その曜日と時限                       |
-| `GET /api/v1/academic-calendar`            | 年度の学期の期間と、祝日、全学の休講日、振替授業日       |
-| `GET /api/v1/changes`                      | 休講、補講、教室変更の一覧                               |
-| `GET /api/v1/subjects/{year}/{syllabusId}` | 授業の詳細 (公開シラバスの内容、教員、教室、休講の履歴)  |
-| `GET /api/v1/notifications`                | 通知欄                                                   |
+| メソッドとパス                                      | 返すもの                                                 |
+| --------------------------------------------------- | -------------------------------------------------------- |
+| `GET /api/v1/me`                                    | トークンの持ち主の表示名と、許されている範囲 (scope)     |
+| `GET /api/v1/lessons`                               | 日付または期間の授業。休講、補講、教室変更を反映したもの |
+| `GET /api/v1/lessons/next`                          | 次の授業 (授業中ならその授業)                            |
+| `GET /api/v1/timetable`                             | 授業 (時刻つき) と、振替授業日、全学の休講日、祝日       |
+| `GET /api/v1/periods`                               | 時限ごとの開始と終了の時刻                               |
+| `GET /api/v1/courses`                               | 履修登録した科目と、その曜日と時限                       |
+| `GET /api/v1/academic-calendar`                     | 年度の学期の期間と、祝日、全学の休講日、振替授業日       |
+| `GET /api/v1/events`                                | 自分の予定と、時間割に加えた予定                         |
+| `GET /api/v1/status`                                | 休講などのデータが新しいか                               |
+| `GET /api/v1/subjects`                              | 科目の検索 (公開の科目だけ)                              |
+| `GET /api/v1/subjects/{year}/{syllabusId}/sessions` | 科目の全授業日                                           |
+| `GET /api/v1/changes`                               | 休講、補講、教室変更の一覧                               |
+| `GET /api/v1/subjects/{year}/{syllabusId}`          | 授業の詳細 (公開シラバスの内容、教員、教室、休講の履歴)  |
+| `GET /api/v1/notifications`                         | 通知欄                                                   |
 
 ### OpenAPI と Swagger UI
 
@@ -100,6 +104,10 @@ export const handle: Handle = async ({ event, resolve }) => {
 | ----------------------- | ---------------------------------------------------------------------- |
 | `get_lessons`           | 日付か期間の授業 (時刻つき) と、振替授業日などを返す。日付を省くと今日 |
 | `get_next_lesson`       | 今の時刻から見た、次の授業                                             |
+| `list_events`           | 自分の予定と、時間割に加えた予定                                       |
+| `get_data_status`       | 休講などのデータが新しいか                                             |
+| `search_subjects`       | 科目の検索 (公開の科目だけ)                                            |
+| `get_subject_sessions`  | 科目の全授業日                                                         |
 | `get_periods`           | 時限ごとの開始と終了の時刻                                             |
 | `list_courses`          | 履修登録した科目と、その曜日と時限                                     |
 | `get_academic_calendar` | 年度の学期の期間と、祝日、全学の休講日、振替授業日                     |
