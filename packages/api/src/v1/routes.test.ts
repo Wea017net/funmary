@@ -1,56 +1,16 @@
-import { mkdtempSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import {
-	createAcademicCalendarStore,
-	createAccessGrantStore,
-	createAccessTokenStore,
-	createAuthStore,
-	createClassChangeStore,
-	createCourseStore,
-	createHolidayStore,
-	createNotificationStore,
-	createSourceHealthStore,
-	createUserEventStore,
-	createPersonalSlotStore,
-	createSubjectStore,
-	openDatabase,
-	type Database,
-} from '@funmary/db';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { type Database } from '@funmary/db';
+import { describe, expect, it } from 'vitest';
 import { createV1Routes } from './routes.ts';
+import { useTestDatabase } from '@funmary/db/testing';
+import { createTestApiDeps } from '../testing.ts';
 
-let dir: string;
 let database: Database;
-
-beforeEach(() => {
-	dir = mkdtempSync(join(tmpdir(), 'funmary-v1-routes-'));
-	database = openDatabase(join(dir, 'funmary.db'), { backupDir: join(dir, 'backups') });
-});
-
-afterEach(() => {
-	database.close();
-	rmSync(dir, { recursive: true, force: true });
-});
+useTestDatabase('funmary-v1-routes-', (db) => (database = db));
 
 const NOW = new Date('2026-10-07T00:00:00Z');
 
 function deps() {
-	return {
-		courses: createCourseStore(database),
-		personalSlots: createPersonalSlotStore(database),
-		subjects: createSubjectStore(database),
-		classChanges: createClassChangeStore(database),
-		academicCalendar: createAcademicCalendarStore(database),
-		holidays: createHolidayStore(database),
-		estimateHolidays: () => [],
-		notifications: createNotificationStore(database),
-		userEvents: createUserEventStore(database),
-		sourceHealth: createSourceHealthStore(database),
-		accessGrants: createAccessGrantStore(database),
-		accessTokens: createAccessTokenStore(database),
-		users: createAuthStore(database),
-	};
+	return createTestApiDeps(database);
 }
 
 function newUser(src: ReturnType<typeof deps>, sub: string) {

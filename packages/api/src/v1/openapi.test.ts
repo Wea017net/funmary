@@ -1,56 +1,16 @@
-import { mkdtempSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import {
-	createAcademicCalendarStore,
-	createAccessGrantStore,
-	createAccessTokenStore,
-	createAuthStore,
-	createClassChangeStore,
-	createCourseStore,
-	createHolidayStore,
-	createNotificationStore,
-	createSourceHealthStore,
-	createUserEventStore,
-	createPersonalSlotStore,
-	createSubjectStore,
-	openDatabase,
-	type Database,
-} from '@funmary/db';
+import { type Database } from '@funmary/db';
 import { Hono } from 'hono';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { createOpenApiRoutes } from './openapi.ts';
 import { createV1Routes } from './routes.ts';
+import { useTestDatabase } from '@funmary/db/testing';
+import { createTestApiDeps } from '../testing.ts';
 
-let dir: string;
 let database: Database;
-
-beforeEach(() => {
-	dir = mkdtempSync(join(tmpdir(), 'funmary-openapi-routes-'));
-	database = openDatabase(join(dir, 'funmary.db'), { backupDir: join(dir, 'backups') });
-});
-
-afterEach(() => {
-	database.close();
-	rmSync(dir, { recursive: true, force: true });
-});
+useTestDatabase('funmary-openapi-routes-', (db) => (database = db));
 
 function app() {
-	const deps = {
-		courses: createCourseStore(database),
-		personalSlots: createPersonalSlotStore(database),
-		subjects: createSubjectStore(database),
-		classChanges: createClassChangeStore(database),
-		academicCalendar: createAcademicCalendarStore(database),
-		holidays: createHolidayStore(database),
-		estimateHolidays: () => [],
-		notifications: createNotificationStore(database),
-		userEvents: createUserEventStore(database),
-		sourceHealth: createSourceHealthStore(database),
-		accessGrants: createAccessGrantStore(database),
-		accessTokens: createAccessTokenStore(database),
-		users: createAuthStore(database),
-	};
+	const deps = createTestApiDeps(database);
 	const v1 = createV1Routes(deps);
 	const root = new Hono();
 	root.route('/', v1);

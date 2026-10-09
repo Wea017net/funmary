@@ -1,22 +1,10 @@
-import { mkdtempSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { openDatabase, type Database } from './database.ts';
+import { describe, expect, it } from 'vitest';
+import type { Database } from './database.ts';
 import { createHolidayStore } from './holiday-store.ts';
+import { useTestDatabase } from './testing.ts';
 
-let dir: string;
 let database: Database;
-
-beforeEach(() => {
-	dir = mkdtempSync(join(tmpdir(), 'funmary-holidays-'));
-	database = openDatabase(join(dir, 'funmary.db'), { backupDir: join(dir, 'backups') });
-});
-
-afterEach(() => {
-	database.close();
-	rmSync(dir, { recursive: true, force: true });
-});
+useTestDatabase('funmary-holidays-', (db) => (database = db));
 
 describe('createHolidayStore', () => {
 	it('何も保存していなければ、空で返す', () => {

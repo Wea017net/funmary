@@ -9,7 +9,6 @@ const TIMESTAMP_TOLERANCE_S = 5 * 60;
 const ED25519_SPKI_PREFIX = Buffer.from('302a300506032b6570032100', 'hex');
 
 export const INTERACTION_PING = 1;
-export const INTERACTION_APPLICATION_COMMAND = 2;
 const RESPONSE_PONG = 1;
 const RESPONSE_CHANNEL_MESSAGE = 4;
 /** ephemeral: 呼んだ本人にだけ見える */

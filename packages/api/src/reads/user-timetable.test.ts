@@ -1,6 +1,3 @@
-import { mkdtempSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import { detectChanges } from '@funmary/core';
 import {
 	createAcademicCalendarStore,
@@ -10,24 +7,14 @@ import {
 	createHolidayStore,
 	createPersonalSlotStore,
 	createSubjectStore,
-	openDatabase,
 	type Database,
 } from '@funmary/db';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { buildUserTimetable, type TimetableSources } from './user-timetable.ts';
+import { useTestDatabase } from '@funmary/db/testing';
 
-let dir: string;
 let database: Database;
-
-beforeEach(() => {
-	dir = mkdtempSync(join(tmpdir(), 'funmary-user-timetable-'));
-	database = openDatabase(join(dir, 'funmary.db'), { backupDir: join(dir, 'backups') });
-});
-
-afterEach(() => {
-	database.close();
-	rmSync(dir, { recursive: true, force: true });
-});
+useTestDatabase('funmary-user-timetable-', (db) => (database = db));
 
 const NOW = new Date('2026-09-27T00:00:00Z');
 
