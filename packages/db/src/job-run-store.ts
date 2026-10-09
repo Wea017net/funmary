@@ -1,4 +1,4 @@
-// 定期処理の実行記録 (job_runs)。@funmary/jobs の JobRunStore を DB で実装する (設計書 11 章)。
+// 定期処理の実行記録 (job_runs)。@funmary/jobs の JobRunStore を DB で実装する。
 import { and, desc, eq, lt, ne } from 'drizzle-orm';
 import type { Database } from './database.ts';
 import { jobRuns } from './schema.ts';

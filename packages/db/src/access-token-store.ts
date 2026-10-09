@@ -1,11 +1,11 @@
-// 公開 API と MCP サーバー向けの個人用アクセストークン (設計書 3.3)。feed-token-store.ts と違い、
+// 公開 API と MCP サーバー向けの個人用アクセストークン。feed-token-store.ts と違い、
 // 1 人が複数のトークンを同時に持てる。発行したときに 1 回だけ返し、DB には SHA-256 だけを保存する。
 import { and, eq, gt, isNull, lt, or } from 'drizzle-orm';
 import type { Database } from './database.ts';
 import { accessTokens, users } from './schema.ts';
 import { generateToken, hashToken } from './secrets.ts';
 
-/** GitHub の secret scanning などで、誤って公開されたトークンに気づきやすくする (設計書 3.3) */
+/** GitHub の secret scanning などで、誤って公開されたトークンに気づきやすくする */
 const TOKEN_PREFIX = 'fmy_';
 
 /** 発行できる範囲 */

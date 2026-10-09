@@ -1,4 +1,4 @@
-// 送信待ち (配信、設計書 14.1)。通知欄の通知を、利用者のチャネルごとに 1 件ずつ作り、送れたか、いつ再送するかを持つ。
+// 送信待ち (配信)。通知欄の通知を、利用者のチャネルごとに 1 件ずつ作り、送れたか、いつ再送するかを持つ。
 // 同じ通知と同じチャネルの組は 1 行だけなので、二重に作っても二重には届かない
 import { and, desc, eq, inArray, isNull, lte, or } from 'drizzle-orm';
 import { DEFAULT_CHANNEL_KINDS } from './channel-store.ts';
@@ -13,7 +13,7 @@ const ENQUEUE_WINDOW_MS = 24 * 60 * 60 * 1000;
 /** 続けて失敗した数を数える最大の件数 */
 const STREAK_LOOKBACK = 20;
 
-/** Discord 連携の送り先。both なら 2 件になる (設計書 14.9、#163) */
+/** Discord 連携の送り先。both なら 2 件になる (#163) */
 export interface LinkDestination {
 	readonly channelId: string;
 	/** メンションする相手の Discord のユーザー ID。しなければ null */

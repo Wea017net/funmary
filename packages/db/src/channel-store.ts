@@ -1,4 +1,4 @@
-// 利用者が登録した通知の送り先 (チャネル、設計書 14.3、14.3.1)。Webhook の URL (と、汎用の Webhook の署名の鍵) は
+// 利用者が登録した通知の送り先 (チャネル)。Webhook の URL (と、汎用の Webhook の署名の鍵) は
 // 暗号化して保存し、読み出すときだけ復号する。Discord 連携 (Bot が送る) の送り先は、連携のたびに利用者へ作って、
 // 解除したら消す (discordLink)
 import { and, count, eq, inArray, notInArray } from 'drizzle-orm';
@@ -7,7 +7,7 @@ import type { NotificationKind } from './notification-store.ts';
 import { channels, deliveries, discordLinks } from './schema.ts';
 import type { SecretBox } from './secrets.ts';
 
-/** 送る種類を決めていないチャネルに送る通知の種類 (設計書 14.7)。休講など、連携の不具合 */
+/** 送る種類を決めていないチャネルに送る通知の種類。休講など、連携の不具合 */
 export const DEFAULT_CHANNEL_KINDS: readonly NotificationKind[] = [
 	'cancellation',
 	'makeup',
@@ -17,7 +17,7 @@ export const DEFAULT_CHANNEL_KINDS: readonly NotificationKind[] = [
 
 export type ChannelStatus = 'active' | 'disabled';
 
-/** discord は Discord の Webhook、generic は利用者が自分で用意した Webhook (設計書 14.3.1) */
+/** discord は Discord の Webhook、generic は利用者が自分で用意した Webhook */
 export type WebhookKind = 'discord' | 'generic';
 const WEBHOOK_KINDS: readonly WebhookKind[] = ['discord', 'generic'];
 
@@ -65,7 +65,7 @@ export interface ChannelStore {
 	/** discord と generic を合わせて、古い順 */
 	listWebhooks(userId: string): StoredWebhook[];
 	findWebhook(userId: string, id: number): StoredWebhook | null;
-	/** 止められたものを含めた、discord と generic を合わせた登録済みの数 (設計書 14.3.1) */
+	/** 止められたものを含めた、discord と generic を合わせた登録済みの数 */
 	countWebhooks(userId: string): number;
 	/** その人の Webhook なら更新して返す。ほかの人のものや、無いものは null */
 	updateWebhook(userId: string, id: number, changes: WebhookChanges): StoredWebhook | null;
@@ -74,7 +74,7 @@ export interface ChannelStore {
 	disable(channelId: number, reason: string): void;
 	/** 連携した人には Discord 連携の送り先を作り、連携を解除した人の分は消す */
 	syncLinkChannels(now: Date): void;
-	/** 利用者の Discord 連携の送り先 (設計書 14.9、#163)。連携していなければ null */
+	/** 利用者の Discord 連携の送り先 (#163)。連携していなければ null */
 	discordLinkChannel(userId: string): DiscordLinkChannel | null;
 	/** 届ける通知の種類を変える。連携していなければ false */
 	updateDiscordLinkKinds(userId: string, kinds: readonly NotificationKind[] | null): boolean;

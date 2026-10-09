@@ -1,4 +1,4 @@
-// 内閣府の祝日の CSV を取り込む定期処理 (設計書 9 章、10 章)。週に 1 回取得し、内容が変わったときだけ入れ替える。
+// 内閣府の祝日の CSV を取り込む定期処理。週に 1 回取得し、内容が変わったときだけ入れ替える。
 // 取得に失敗しても、保存された祝日 (最初は同梱の CSV) と、その先の年の推定で動き続ける。
 import { createHash } from 'node:crypto';
 import { isSourceDisabled, shouldAttempt, type SourceHealth } from '@funmary/core';

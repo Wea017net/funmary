@@ -1,4 +1,4 @@
-// DB のバックアップと復元 (設計書 20.7)。funmary-admin の backup と restore が使う。
+// DB のバックアップと復元。funmary-admin の backup と restore が使う。
 import { copyFileSync, existsSync, mkdirSync, readdirSync, renameSync, rmSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import BetterSqlite3 from 'better-sqlite3';

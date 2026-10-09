@@ -1,4 +1,4 @@
-// ICS とフィードの URL のトークン (設計書 13 章、17 章)。利用者ごと、種類ごとに有効なものは 1 つだけにする。
+// ICS とフィードの URL のトークン。利用者ごと、種類ごとに有効なものは 1 つだけにする。
 // トークンは発行したときに 1 回だけ返し、DB には SHA-256 だけを保存する。
 import { and, eq, isNull, lt, or } from 'drizzle-orm';
 import type { Database } from './database.ts';

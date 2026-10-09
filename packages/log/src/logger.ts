@@ -1,4 +1,4 @@
-// consola を包んだロガー (設計書 4.6)。
+// consola を包んだロガー。
 // 手元の開発 (端末) では consola の標準の表示を使い、本番では 1 行 1 件の素の文字列か JSON にする。
 // どちらも、出力の前に redact で秘密の値を伏せる。
 import { createConsola, type ConsolaInstance, type ConsolaReporter } from 'consola';
