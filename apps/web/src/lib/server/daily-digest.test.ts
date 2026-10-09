@@ -12,6 +12,7 @@ const lesson = (overrides: Partial<TimetableLesson>): TimetableLesson => ({
 	room: '363',
 	roomIsTentative: false,
 	status: 'normal',
+	change: null,
 	...overrides,
 });
 

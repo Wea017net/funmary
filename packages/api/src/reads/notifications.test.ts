@@ -83,3 +83,18 @@ describe('listUserNotifications', () => {
 		expect(listUserNotifications({ notifications }, a, { limit: 2 })).toHaveLength(2);
 	});
 });
+
+describe('afterId', () => {
+	it('指定した ID より新しい通知だけを返す (差分の取得)', () => {
+		const rows = [
+			{ id: 3, kind: 'notice', createdAt: new Date('2026-10-03T00:00:00Z') },
+			{ id: 2, kind: 'notice', createdAt: new Date('2026-10-02T00:00:00Z') },
+			{ id: 1, kind: 'notice', createdAt: new Date('2026-10-01T00:00:00Z') },
+		];
+		const sources = { notifications: { list: () => rows as never } };
+
+		const result = listUserNotifications(sources, 'u1', { afterId: 1 });
+
+		expect(result.map((row) => row.id)).toEqual([3, 2]);
+	});
+});

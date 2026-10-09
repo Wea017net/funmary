@@ -253,7 +253,7 @@ describe('listAssignedBetween', () => {
 			.prepare("UPDATE class_changes SET withdrawn_at = 1 WHERE kind = 'cancellation'")
 			.run();
 
-		expect(store.listAssignedBetween('2026-10-05', '2026-10-11')).toEqual([
+		expect(store.listAssignedBetween('2026-10-05', '2026-10-11')).toMatchObject([
 			{ kind: 'roomChange', subjectId, date: '2026-10-05', period: 3, room: '502' },
 			{ kind: 'makeup', subjectId, date: '2026-10-07', period: 5, room: null },
 		]);

@@ -7,6 +7,7 @@ import {
 	addDays,
 	findNextLesson,
 	findPeriod,
+	isoWeekday,
 	jstDateTime,
 	resolveAcademicTerms,
 	resolveHolidays,
@@ -80,6 +81,59 @@ export function getPublicTimetable(
 		days: [...timetable.notes]
 			.map(([date, note]) => toPublicDay(date, note))
 			.sort((a, b) => a.date.localeCompare(b.date)),
+		usesEstimatedTerms: timetable.usesEstimatedTerms,
+	};
+}
+
+export interface WeekGrid {
+	readonly weekStart: CalendarDate;
+	/** 時限ごとの時刻 */
+	readonly periods: readonly Period[];
+	/** 月曜から日曜の 7 日。cells は、時限の順 (授業のない時限も入り、lessons が空になる) */
+	readonly days: readonly {
+		readonly date: CalendarDate;
+		/** 1 (月) から 7 (日) */
+		readonly weekday: number;
+		/** 振替授業日、全学の休講日、祝日 */
+		readonly note: PublicDay | null;
+		readonly cells: readonly {
+			readonly period: number;
+			readonly lessons: readonly PublicLesson[];
+		}[];
+	}[];
+	readonly usesEstimatedTerms: boolean;
+}
+
+/** date を含む週 (月曜から日曜) の、曜日と時限の格子。画面の週の時間割と同じ並びで、整形が要らない */
+export function getWeekGrid(
+	sources: TimetableSources,
+	userId: string,
+	date: CalendarDate,
+): WeekGrid {
+	// 月曜から日曜 (ISO の週)。画面の週の時間割は日曜始まりだが、機械向けには、ふつうの週にする
+	const weekStart = addDays(date, -(isoWeekday(date) - 1));
+	const timetable = getPublicTimetable(sources, userId, {
+		start: weekStart,
+		end: addDays(weekStart, 6),
+	});
+	const periods = listPeriods();
+	return {
+		weekStart,
+		periods,
+		days: Array.from({ length: 7 }, (_, index) => {
+			const day = addDays(weekStart, index);
+			return {
+				date: day,
+				weekday: index + 1,
+				note: timetable.days.find((entry) => entry.date === day) ?? null,
+				cells: periods.map(({ number }) => ({
+					period: number,
+					lessons: timetable.lessons.filter(
+						(lesson) => lesson.date === day && lesson.period === number,
+					),
+				})),
+			};
+		}),
 		usesEstimatedTerms: timetable.usesEstimatedTerms,
 	};
 }
