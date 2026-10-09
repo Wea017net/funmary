@@ -2277,6 +2277,15 @@ test.describe('Webhook', () => {
 
 		const item = page.getByRole('listitem').filter({ hasText: '自作のスクリプト' });
 		await expect(item).toContainText('汎用');
+
+		// 確認でキャンセルすると、鍵は作り直さない
+		page.once('dialog', (dialog) => dialog.dismiss());
+		await item.getByRole('button', { name: '署名の鍵を作り直す' }).click();
+		await page.waitForLoadState('networkidle');
+		await expect(page.getByText('作り直しました', { exact: false })).toHaveCount(0);
+		await expect(page.locator('.key-box code').first()).toHaveText(firstKey ?? '');
+
+		page.once('dialog', (dialog) => dialog.accept());
 		await item.getByRole('button', { name: '署名の鍵を作り直す' }).click();
 		await expect(page.getByText('作り直しました', { exact: false })).toBeVisible();
 		const secondKey = await page.locator('.key-box code').first().textContent();
@@ -2336,6 +2345,16 @@ test.describe('公開 API と MCP', () => {
 
 		const noToken = await request.get('/api/v1/lessons?start=2026-10-01&end=2026-10-07');
 		expect(noToken.status()).toBe(401);
+
+		// 確認でキャンセルすると、トークンは無効にならない
+		page.once('dialog', (dialog) => dialog.dismiss());
+		await item.getByRole('button', { name: '無効にする' }).click();
+		await page.reload();
+		await expect(item).toHaveCount(1);
+		const afterDismiss = await request.get('/api/v1/lessons?start=2026-10-01&end=2026-10-07', {
+			headers: { Authorization: `Bearer ${token}` },
+		});
+		expect(afterDismiss.status()).toBe(200);
 
 		page.once('dialog', (dialog) => dialog.accept());
 		await item.getByRole('button', { name: '無効にする' }).click();
