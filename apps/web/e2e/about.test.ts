@@ -134,3 +134,44 @@ test.describe('このアプリについて', () => {
 		await expect(page.getByText('いまは Discord 連携を使えません。')).toBeVisible();
 	});
 });
+
+test.describe('アカウントの管理', () => {
+	test('データを書き出せ、メールアドレスを確かめて退会できる。退会のあとは、同じアカウントで登録し直せる', async ({
+		page,
+	}) => {
+		const email = `e2e-leave-${Date.now()}@fun.ac.jp`;
+		await signInAs(page, email);
+		await page.goto('/app/settings');
+		await page.getByRole('link', { name: /データの書き出しと退会/ }).click();
+
+		const download = page.waitForEvent('download');
+		await page.getByRole('link', { name: 'JSON をダウンロード' }).click();
+		const file = await download;
+		expect(file.suggestedFilename()).toMatch(/^funmary-data-\d{4}-\d{2}-\d{2}\.json$/);
+
+		// メールアドレスが違えば、消さない
+		await page.getByLabel(/確かめのため/).fill('someone@fun.ac.jp');
+		page.once('dialog', (dialog) => dialog.accept());
+		await page.getByRole('button', { name: '退会する' }).click();
+		await expect(page.getByRole('alert')).toContainText('一致しません');
+
+		// キャンセルすれば、消さない
+		await page.getByLabel(/確かめのため/).fill(email);
+		page.once('dialog', (dialog) => dialog.dismiss());
+		await page.getByRole('button', { name: '退会する' }).click();
+		await page.goto('/app');
+		await expect(page).toHaveURL('/app');
+
+		await page.goto('/app/settings/account');
+		await page.getByLabel(/確かめのため/).fill(email);
+		page.once('dialog', (dialog) => dialog.accept());
+		await page.getByRole('button', { name: '退会する' }).click();
+		await expect(page).toHaveURL('/');
+		await page.goto('/app');
+		await expect(page).toHaveURL('/login');
+
+		// 同じアカウントで、初めてのログインとして登録し直せる (規約への同意からやり直す)
+		await page.goto('/auth/google');
+		await expect(page).toHaveURL(/\/consent/);
+	});
+});

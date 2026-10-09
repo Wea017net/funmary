@@ -6,7 +6,7 @@ import { currentTermsVersion } from '@funmary/core';
 export const TERMS_UPDATED_AT = '2026-10-03';
 
 /** プライバシーポリシーの最終更新日 (YYYY-MM-DD) */
-export const PRIVACY_UPDATED_AT = '2026-10-03';
+export const PRIVACY_UPDATED_AT = '2026-10-09';
 
 /** 同意を求める版。2 つの最終更新日のうち、新しいほう */
 export const CURRENT_TERMS_VERSION = currentTermsVersion(TERMS_UPDATED_AT, PRIVACY_UPDATED_AT);
