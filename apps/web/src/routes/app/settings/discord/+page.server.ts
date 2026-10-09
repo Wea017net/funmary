@@ -1,4 +1,4 @@
-// 利用者の Discord 連携の設定 (設計書 14.9、#163)。連携する、解除する、認可コードを受け取って完成させる。
+// 利用者の Discord 連携の設定 (#163)。連携する、解除する、認可コードを受け取って完成させる。
 import { fail, redirect, type Actions, type ServerLoad } from '@sveltejs/kit';
 import {
 	DEFAULT_CHANNEL_KINDS,
@@ -133,7 +133,7 @@ export const load: ServerLoad = async ({ locals, url }) => {
 			? { hasThread: current.threadChannelId !== null, hasDm: current.dmChannelId !== null }
 			: null,
 		digest: current ? dailyDigest.get(locals.user.id) : null,
-		// 届ける通知の種類 (設計書 14.7、#163)。連携していなければ null
+		// 届ける通知の種類 (#163)。連携していなければ null
 		kinds: current
 			? [
 					...(channels.discordLinkChannel(locals.user.id)?.notificationKinds ??
@@ -141,7 +141,7 @@ export const load: ServerLoad = async ({ locals, url }) => {
 				]
 			: null,
 		kindOptions: CHANNEL_KIND_OPTIONS,
-		// 種類ごとの送り先とメンション (設計書 14.9、#163)。連携していなければ null
+		// 種類ごとの送り先とメンション (#163)。連携していなければ null
 		routing: current
 			? CHANNEL_KIND_OPTIONS.map((option) => ({
 					kind: option.kind,
@@ -184,7 +184,7 @@ export const actions: Actions = {
 		dailyDigest.save(locals.user.id, parsed.settings, new Date());
 		return { message: '予定のまとめの設定を保存しました。' };
 	},
-	/** 届ける通知の種類を保存する (設計書 14.7、#163) */
+	/** 届ける通知の種類を保存する (#163) */
 	kinds: async ({ request, locals }) => {
 		if (!locals.user) redirect(303, '/login');
 		const { channels, discord } = getServices();
@@ -196,7 +196,7 @@ export const actions: Actions = {
 		channels.updateDiscordLinkKinds(locals.user.id, kinds);
 		return { message: '届ける通知の種類を保存しました。' };
 	},
-	/** 種類ごとに、送り先 (スレッド/DM/両方) とメンションを決める (設計書 14.9、#163) */
+	/** 種類ごとに、送り先 (スレッド/DM/両方) とメンションを決める (#163) */
 	routing: async ({ request, locals }) => {
 		if (!locals.user) redirect(303, '/login');
 		const { discord } = getServices();
@@ -230,7 +230,7 @@ export const actions: Actions = {
 		if (!result.ok) return fail(502, { error: result.error });
 		return { message: 'すべての種類に、まとめて適用しました。' };
 	},
-	/** 連携を解除する。Discord に接続できなくても、必ず成功する (設計書 14.9) */
+	/** 連携を解除する。Discord に接続できなくても、必ず成功する */
 	unlink: ({ locals }) => {
 		if (!locals.user) redirect(303, '/login');
 		const { discord } = getServices();

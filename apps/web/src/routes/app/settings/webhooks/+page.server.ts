@@ -1,4 +1,4 @@
-// 通知の送り先に使う Webhook の設定 (設計書 14.3、14.3.1)。Discord の Webhook と、利用者が自分で用意した
+// 通知の送り先に使う Webhook の設定。Discord の Webhook と、利用者が自分で用意した
 // 汎用の Webhook の両方を扱う。登録、更新、テスト送信、有効と無効の切り替え、削除、署名の鍵の再発行。
 // URL (と署名の鍵) は暗号化して保存し、画面には末尾を伏せて出す。テスト送信は、先に連続で送らないよう、利用者ごとに間をあける
 import { fail, redirect, type Actions, type ServerLoad } from '@sveltejs/kit';
@@ -81,7 +81,7 @@ export const actions: Actions = {
 		}
 		const wait = claimSend(locals.user.id, Date.now());
 		if (wait !== null) return fail(429, { error: waitMessage(wait) });
-		// 汎用の Webhook は、登録の前に署名の鍵を作り、テスト送信にもその鍵を使う (設計書 14.3.1)
+		// 汎用の Webhook は、登録の前に署名の鍵を作り、テスト送信にもその鍵を使う
 		const signingKey = parsed.kind === 'generic' ? generateSigningKey() : null;
 		const problem = failureMessage(await webhooks.sendTest({ url: parsed.url, signingKey }));
 		if (problem) return fail(400, { error: problem });

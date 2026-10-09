@@ -20,17 +20,17 @@ export default defineConfig(({ command }) => ({
 	}),
 	plugins: [
 		sveltekit({
-			// <style lang="scss"> を Sass として変換する (設計書 5.2)
+			// <style lang="scss"> を Sass として変換する
 			preprocess: vitePreprocess(),
 
-			// 静的ファイルを gzip と Brotli で事前に圧縮しておく (設計書 4.2)
+			// 静的ファイルを gzip と Brotli で事前に圧縮しておく
 			adapter: adapter({ precompress: true }),
 
-			// .env はリポジトリのルートに置く (設計書 19.3)。管理用コマンドと同じファイルを読む
+			// .env はリポジトリのルートに置く。管理用コマンドと同じファイルを読む
 			env: { dir: '../..' },
 		}),
 
-		// 使ったアイコンだけを、ビルド時に SVG の Svelte コンポーネントにして埋め込む (設計書 5.2)
+		// 使ったアイコンだけを、ビルド時に SVG の Svelte コンポーネントにして埋め込む
 		Icons({ compiler: 'svelte' }),
 	],
 	css: {

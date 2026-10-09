@@ -1,4 +1,4 @@
-// ログインとログアウトの口 (設計書 8 章)。Google との通信と DB は @funmary/auth が受け持ち、ここでは、
+// ログインとログアウトの口。Google との通信と DB は @funmary/auth が受け持ち、ここでは、
 // Cookie の読み書きと、リダイレクトだけを行う。
 import { openFlow, sealFlow, type AuthService, type DenyReason } from '@funmary/auth';
 import { Hono, type Context } from 'hono';
@@ -14,7 +14,7 @@ export interface AuthRoutesDeps {
 	readonly flowKey: Buffer;
 	/** 公開 URL の origin。https なら、Cookie に Secure を付ける。ログアウトの送り元の確認にも使う */
 	readonly origin: string;
-	/** 新しい利用者が登録したときに呼ぶ (設計書 14.9)。メールアドレスなど、個人情報は渡さない */
+	/** 新しい利用者が登録したときに呼ぶ。メールアドレスなど、個人情報は渡さない */
 	readonly onNewUser?: () => void;
 }
 

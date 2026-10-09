@@ -1,4 +1,4 @@
-// 通知のフィード (RSS、Atom、JSON Feed) の設定 (設計書 14.5)。購読の URL を発行、再発行、無効にする。
+// 通知のフィード (RSS、Atom、JSON Feed) の設定。購読の URL を発行、再発行、無効にする。
 // URL のトークンは DB にハッシュだけを保存するので、URL は発行の直後に 1 回だけ出す
 import { fail, redirect, type Actions, type ServerLoad } from '@sveltejs/kit';
 import { DEFAULT_CHANNEL_KINDS, type NotificationKind } from '@funmary/db';

@@ -350,7 +350,7 @@
 		opacity: 0;
 		pointer-events: none;
 	}
-	/* 1 日ずつ見るときは、表を横に送る (設計書 12.4) */
+	/* 1 日ずつ見るときは、表を横に送る */
 	@mixin one-day {
 		scroll-snap-type: x mandatory;
 		table {

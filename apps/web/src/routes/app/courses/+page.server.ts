@@ -1,4 +1,4 @@
-// 履修科目の登録 (設計書 12.1)。科目を探して登録し、曜日と時限が分からない科目には、利用者が手で枠を足す。
+// 履修科目の登録。科目を探して登録し、曜日と時限が分からない科目には、利用者が手で枠を足す。
 // 枠は科目ごとに共有するので、既にある枠は上書きしない。教室が食い違えば、管理者に知らせる。
 import { fail, redirect, type Actions, type ServerLoad } from '@sveltejs/kit';
 import { isSubjectSearchable, jstDateTime, resolveAcademicTerms } from '@funmary/core';

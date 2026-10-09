@@ -1,4 +1,4 @@
-// 公開 API と MCP サーバー向けの個人用アクセストークン (設計書 3.3)。発行、一覧、無効化。
+// 公開 API と MCP サーバー向けの個人用アクセストークン。発行、一覧、無効化。
 // トークンは発行したときに 1 回だけ見せ、DB にはハッシュだけを保存する。
 import { fail, redirect, type Actions, type ServerLoad } from '@sveltejs/kit';
 import {
