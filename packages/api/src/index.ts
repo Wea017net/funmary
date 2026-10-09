@@ -1,5 +1,20 @@
 export { createApi, type ApiDeps } from './app.ts';
 export {
+	currentAcademicYear,
+	getAcademicCalendar,
+	getNextLesson,
+	getPublicTimetable,
+	listPeriods,
+	listUserCourses,
+	LESSON_STATUSES,
+	type PublicAcademicCalendar,
+	type PublicCourse,
+	type PublicDay,
+	type PublicLesson,
+	type PublicNextLesson,
+	type PublicTimetable,
+} from './reads/public-data.ts';
+export {
 	RETURN_COOKIE_MAX_AGE_S,
 	SESSION_COOKIE_MAX_AGE_S,
 	createAuthRoutes,

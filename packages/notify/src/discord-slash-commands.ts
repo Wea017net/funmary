@@ -10,6 +10,10 @@ export const SLASH_COMMANDS = [
 		description: '今日の授業と予定を、本人にだけ見せます',
 	},
 	{
+		name: 'next',
+		description: '次の授業の時刻と教室を、本人にだけ見せます',
+	},
+	{
 		name: 'week',
 		description: '今週の時間割を、本人にだけ見せます',
 	},

@@ -39,7 +39,7 @@ Funmary (ファンマリー。FUN + summary) は、公立はこだて未来大�
 | 通知のフィード               | 通知欄の中身を RSS、Atom、JSON Feed で配信する                                                                                                           |
 | 公開 API と MCP              | 自分の時間割と休講を、AI エージェントや自作のスクリプトから読む ([2.3](02-architecture.md#23-ai-エージェントと外部のプログラム向けの口-公開-api-と-mcp)) |
 | 汎用の Webhook               | 通知を、利用者が用意した URL にも送る                                                                                                                    |
-| Discord のスラッシュコマンド | `/today`、`/week`、`/changes` で、呼んだ人の授業と休講を答える                                                                                           |
+| Discord のスラッシュコマンド | `/today`、`/next`、`/week`、`/changes` で、呼んだ人の授業と休講を答える                                                                                  |
 
 ### 予定の機能
 

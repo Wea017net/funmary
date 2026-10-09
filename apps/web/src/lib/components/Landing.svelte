@@ -59,7 +59,7 @@
 		{
 			icon: IconAi,
 			title: '自分の AI や、スクリプトからも使える',
-			text: '公開 API と MCP サーバーで、自分の時間割と休講を、AI エージェントやスクリプトから読めます。Discord では、/today、/week、/changes で答えます。',
+			text: '公開 API と MCP サーバーで、自分の時間割と休講を、AI エージェントやスクリプトから読めます。Discord では、/today、/next、/week、/changes で答えます。',
 		},
 	];
 </script>
