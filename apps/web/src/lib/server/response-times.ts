@@ -4,7 +4,7 @@
 export const RESPONSE_TIME_BUCKETS = [10, 25, 50, 100, 250, 500, 1000, 2500] as const;
 
 /** 目標の応答時間 (ms) */
-export const RESPONSE_TIME_TARGET_MS = 100;
+const RESPONSE_TIME_TARGET_MS = 100;
 
 const HOUR_MS = 60 * 60 * 1000;
 const WINDOW_HOURS = 24;

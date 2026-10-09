@@ -68,6 +68,17 @@ time,
 	font-variant-numeric: tabular-nums;
 }
 
+// ページの本文の幅。ふつうは 44rem で、広い表や狭いフォームだけ page-w-<rem> で変える
+.page {
+	max-width: 44rem;
+}
+
+@each $width in (36, 40, 48, 56, 64, 72) {
+	.page.page-w-#{$width} {
+		max-width: #{$width}rem;
+	}
+}
+
 .muted {
 	color: var(--fm-text-muted);
 	font-size: 0.875rem;
