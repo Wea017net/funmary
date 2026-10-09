@@ -8,6 +8,16 @@ export {
 	type AccessTokenSummary,
 } from './access-token-store.ts';
 export {
+	createOAuthStore,
+	MAX_OAUTH_CLIENTS,
+	OAUTH_ACCESS_TOKEN_LIFETIME_MS,
+	type ConsumedCode,
+	type IssuedTokens,
+	type OAuthClient,
+	type OAuthStore,
+	type RefreshResult,
+} from './oauth-store.ts';
+export {
 	createAuditLogStore,
 	type AuditAction,
 	type AuditLogEntry,
