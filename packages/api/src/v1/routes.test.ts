@@ -96,6 +96,95 @@ describe('createV1Routes', () => {
 		expect(await res.json()).toEqual([]);
 	});
 
+	describe('授業のほかの情報', () => {
+		const lessonsApp = () => {
+			const src = deps();
+			const userId = newUser(src, 'a');
+			const token = src.accessTokens.issue(
+				userId,
+				{ name: 'test', scopes: ['read:lessons'] },
+				new Date(NOW.getTime() + 90 * 24 * 60 * 60 * 1000),
+				NOW,
+			);
+			const app = createV1Routes(src);
+			const get = (path: string) =>
+				app.request(path, { headers: { Authorization: `Bearer ${token}` } });
+			return { src, userId, get };
+		};
+
+		it('GET /api/v1/timetable は、授業と days を返す', async () => {
+			const { src, get } = lessonsApp();
+			src.academicCalendar.saveSubstituteDay({ date: '2026-10-16', weekday: 1 }, 'manual');
+
+			const res = await get('/api/v1/timetable?start=2026-10-12&end=2026-10-18');
+
+			expect(res.status).toBe(200);
+			expect(await res.json()).toMatchObject({
+				lessons: [],
+				days: [{ date: '2026-10-16', kind: 'substitute', weekday: 1 }],
+			});
+		});
+
+		it('GET /api/v1/periods は、時限の時刻を返す', async () => {
+			const { get } = lessonsApp();
+
+			const res = await get('/api/v1/periods');
+
+			expect(res.status).toBe(200);
+			const periods = (await res.json()) as { number: number; start: string }[];
+			expect(periods[0]).toEqual({ number: 1, start: '09:00', end: '10:30' });
+		});
+
+		it('GET /api/v1/lessons/next は、授業がなければ next が null', async () => {
+			const { get } = lessonsApp();
+
+			const res = await get('/api/v1/lessons/next');
+
+			expect(res.status).toBe(200);
+			expect(await res.json()).toEqual({ next: null });
+		});
+
+		it('GET /api/v1/courses は、履修登録がなければ空', async () => {
+			const { get } = lessonsApp();
+
+			const res = await get('/api/v1/courses');
+
+			expect(await res.json()).toEqual([]);
+		});
+
+		it('GET /api/v1/academic-calendar は、年度を指定できる', async () => {
+			const { get } = lessonsApp();
+
+			const res = await get('/api/v1/academic-calendar?year=2026');
+
+			expect(res.status).toBe(200);
+			expect(await res.json()).toMatchObject({ academicYear: 2026 });
+			expect((await get('/api/v1/academic-calendar?year=abc')).status).toBe(400);
+		});
+
+		it('範囲が足りないトークンでは、どれも 403', async () => {
+			const src = deps();
+			const userId = newUser(src, 'b');
+			const token = src.accessTokens.issue(
+				userId,
+				{ name: 'test', scopes: ['read:notifications'] },
+				new Date(NOW.getTime() + 90 * 24 * 60 * 60 * 1000),
+				NOW,
+			);
+			const app = createV1Routes(src);
+			for (const path of [
+				'/api/v1/timetable?start=2026-10-01&end=2026-10-07',
+				'/api/v1/periods',
+				'/api/v1/lessons/next',
+				'/api/v1/courses',
+				'/api/v1/academic-calendar',
+			]) {
+				const res = await app.request(path, { headers: { Authorization: `Bearer ${token}` } });
+				expect(res.status, path).toBe(403);
+			}
+		});
+	});
+
 	it('GET /api/v1/me は、トークンの持ち主の情報を返す', async () => {
 		const src = deps();
 		const userId = newUser(src, 'a');

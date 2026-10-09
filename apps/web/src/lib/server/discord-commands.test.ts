@@ -97,6 +97,11 @@ describe('answerCommand', () => {
 		expect(text).toBe('これから 14 日の休講、補講、教室変更はありません。');
 	});
 
+	it('授業がなければ、/next はその旨を返す', () => {
+		const text = answerCommand(services({ linked: { userId: 'u1' } }), 'next', 'discord-1', NOW);
+		expect(text).toBe('これから 14 日の間に、授業の予定はありません。');
+	});
+
 	it('知らないコマンドには、対応していないと返す', () => {
 		const text = answerCommand(services({ linked: { userId: 'u1' } }), 'unknown', 'discord-1', NOW);
 		expect(text).toBe('そのコマンドには対応していません。');

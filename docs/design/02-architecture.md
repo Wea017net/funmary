@@ -78,6 +78,11 @@ export const handle: Handle = async ({ event, resolve }) => {
 | ------------------------------------------ | -------------------------------------------------------- |
 | `GET /api/v1/me`                           | トークンの持ち主の表示名と、許されている範囲 (scope)     |
 | `GET /api/v1/lessons`                      | 日付または期間の授業。休講、補講、教室変更を反映したもの |
+| `GET /api/v1/lessons/next`                 | 次の授業 (授業中ならその授業)                            |
+| `GET /api/v1/timetable`                    | 授業 (時刻つき) と、振替授業日、全学の休講日、祝日       |
+| `GET /api/v1/periods`                      | 時限ごとの開始と終了の時刻                               |
+| `GET /api/v1/courses`                      | 履修登録した科目と、その曜日と時限                       |
+| `GET /api/v1/academic-calendar`            | 年度の学期の期間と、祝日、全学の休講日、振替授業日       |
 | `GET /api/v1/changes`                      | 休講、補講、教室変更の一覧                               |
 | `GET /api/v1/subjects/{year}/{syllabusId}` | 授業の詳細 (公開シラバスの内容、教員、教室、休講の履歴)  |
 | `GET /api/v1/notifications`                | 通知欄                                                   |
@@ -91,12 +96,16 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 ### MCP の道具
 
-| 道具                 | 内容                                               |
-| -------------------- | -------------------------------------------------- |
-| `get_lessons`        | 日付か期間を受け取り、授業を返す。日付を省くと今日 |
-| `list_changes`       | 休講、補講、教室変更の一覧                         |
-| `get_subject`        | 授業の詳細                                         |
-| `list_notifications` | 通知欄                                             |
+| 道具                    | 内容                                                                   |
+| ----------------------- | ---------------------------------------------------------------------- |
+| `get_lessons`           | 日付か期間の授業 (時刻つき) と、振替授業日などを返す。日付を省くと今日 |
+| `get_next_lesson`       | 今の時刻から見た、次の授業                                             |
+| `get_periods`           | 時限ごとの開始と終了の時刻                                             |
+| `list_courses`          | 履修登録した科目と、その曜日と時限                                     |
+| `get_academic_calendar` | 年度の学期の期間と、祝日、全学の休講日、振替授業日                     |
+| `list_changes`          | 休講、補講、教室変更の一覧                                             |
+| `get_subject`           | 授業の詳細                                                             |
+| `list_notifications`    | 通知欄                                                                 |
 
 - 道具はすべて読み取り専用の印 (`readOnlyHint`) を付けます。エージェントが確認なしに呼んでも、何も変わりません
 - 結果は、機械が読める形 (`structuredContent`) と、人が読める短い文の両方で返します
