@@ -9,6 +9,7 @@ import type {
 	NotificationStore,
 	SubjectStore,
 } from '@funmary/db';
+import { jstDateTime } from '@funmary/core';
 import { Hono } from 'hono';
 import { describeRoute, resolver, validator } from 'hono-openapi';
 import { rateLimiter } from 'hono-rate-limiter';
@@ -29,6 +30,7 @@ import {
 	currentAcademicYear,
 	getAcademicCalendar,
 	getNextLesson,
+	getWeekGrid,
 	getPublicTimetable,
 	LESSON_STATUSES,
 	listPeriods,
@@ -75,6 +77,8 @@ export interface V1RoutesDeps
 
 const DateParam = v.pipe(v.string(), v.isoDate());
 
+const WeekQuery = v.object({ date: v.optional(DateParam) });
+
 const RangeQuery = v.object({
 	start: DateParam,
 	end: DateParam,
@@ -84,6 +88,8 @@ const NotificationsQuery = v.object({
 	/** カンマ区切り。省けばすべての種類 */
 	kinds: v.optional(v.string()),
 	since: v.optional(DateParam),
+	/** 前回読んだ最大の ID。これより新しいものだけを返すので、差分の取得に使える */
+	afterId: v.optional(v.pipe(v.string(), v.transform(Number), v.integer(), v.minValue(0))),
 	limit: v.optional(
 		v.pipe(v.string(), v.transform(Number), v.integer(), v.minValue(1), v.maxValue(200)),
 	),
@@ -110,6 +116,19 @@ const LessonSchema = v.object({
 	roomIsTentative: v.pipe(
 		v.boolean(),
 		v.description('補講の教室が分からず、ふだんの教室を仮に出しているとき true'),
+	),
+	change: v.pipe(
+		v.nullable(
+			v.object({
+				comment: v.nullable(v.string()),
+				fromRoom: v.pipe(v.nullable(v.string()), v.description('教室変更の移動元の教室')),
+				makeupPlan: v.pipe(
+					v.nullable(v.picklist(['planned', 'none', 'undecided'])),
+					v.description('休講コメントにある補講の予定 (あり、なし、未定)'),
+				),
+			}),
+		),
+		v.description('休講、補講、教室変更の詳細。変更がなければ null'),
 	),
 	status: v.pipe(
 		v.picklist(LESSON_STATUSES),
@@ -248,6 +267,7 @@ const AUTHED_PATHS = [
 	'/api/v1/lessons',
 	'/api/v1/lessons/next',
 	'/api/v1/timetable',
+	'/api/v1/timetable/week',
 	'/api/v1/periods',
 	'/api/v1/courses',
 	'/api/v1/academic-calendar',
@@ -335,6 +355,22 @@ export function createV1Routes(deps: V1RoutesDeps): Hono<{ Variables: V1AuthVari
 		(c) => {
 			const { start, end } = c.req.valid('query');
 			return c.json(getPublicTimetable(deps, c.get('tokenOwner').userId, { start, end }));
+		},
+	);
+
+	app.get(
+		'/api/v1/timetable/week',
+		requireScope('read:lessons'),
+		describeRoute({
+			description:
+				'date (省けば今日) を含む週 (月曜から日曜) の、曜日と時限の格子。画面の週の時間割と同じ並びで、クライアントでの整形が要らない。授業のない時限も cells に入る (lessons が空)',
+		}),
+		validator('query', WeekQuery),
+		(c) => {
+			const { date } = c.req.valid('query');
+			return c.json(
+				getWeekGrid(deps, c.get('tokenOwner').userId, date ?? jstDateTime(new Date()).date),
+			);
 		},
 	);
 
@@ -546,7 +582,7 @@ export function createV1Routes(deps: V1RoutesDeps): Hono<{ Variables: V1AuthVari
 		}),
 		validator('query', NotificationsQuery),
 		(c) => {
-			const { kinds, since, limit } = c.req.valid('query');
+			const { kinds, since, afterId, limit } = c.req.valid('query');
 			const { userId } = c.get('tokenOwner');
 			const list = listUserNotifications(deps, userId, {
 				...(kinds
@@ -558,6 +594,7 @@ export function createV1Routes(deps: V1RoutesDeps): Hono<{ Variables: V1AuthVari
 						}
 					: {}),
 				...(since ? { since: new Date(since) } : {}),
+				...(afterId === undefined ? {} : { afterId }),
 				...(limit === undefined ? {} : { limit }),
 			});
 			return c.json(list);

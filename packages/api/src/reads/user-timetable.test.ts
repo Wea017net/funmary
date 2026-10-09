@@ -119,6 +119,7 @@ describe('buildUserTimetable', () => {
 				room: '363',
 				roomIsTentative: false,
 				status: 'cancelled',
+				change: { comment: null, fromRoom: null, makeupPlan: null },
 			},
 			{
 				date: '2026-10-14',
@@ -130,6 +131,7 @@ describe('buildUserTimetable', () => {
 				room: '484',
 				roomIsTentative: false,
 				status: 'normal',
+				change: null,
 			},
 		]);
 		expect([...timetable.notes]).toEqual([

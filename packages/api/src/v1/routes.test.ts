@@ -89,6 +89,18 @@ describe('createV1Routes', () => {
 			});
 		});
 
+		it('GET /api/v1/timetable/week は、月曜から日曜の格子を返す。日付が不正なら 400', async () => {
+			const { get } = lessonsApp();
+
+			const res = await get('/api/v1/timetable/week?date=2026-10-07');
+
+			expect(res.status).toBe(200);
+			const grid = (await res.json()) as { weekStart: string; days: unknown[] };
+			expect(grid.weekStart).toBe('2026-10-05');
+			expect(grid.days).toHaveLength(7);
+			expect((await get('/api/v1/timetable/week?date=abc')).status).toBe(400);
+		});
+
 		it('GET /api/v1/periods は、時限の時刻を返す', async () => {
 			const { get } = lessonsApp();
 

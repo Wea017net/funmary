@@ -22,6 +22,7 @@ export {
 	currentAcademicYear,
 	getAcademicCalendar,
 	getNextLesson,
+	getWeekGrid,
 	getPublicTimetable,
 	listPeriods,
 	listUserCourses,
@@ -32,6 +33,7 @@ export {
 	type PublicLesson,
 	type PublicNextLesson,
 	type PublicTimetable,
+	type WeekGrid,
 } from './reads/public-data.ts';
 export {
 	RETURN_COOKIE_MAX_AGE_S,

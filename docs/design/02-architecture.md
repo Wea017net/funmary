@@ -80,6 +80,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 | `GET /api/v1/lessons`                               | 日付または期間の授業。休講、補講、教室変更を反映したもの |
 | `GET /api/v1/lessons/next`                          | 次の授業 (授業中ならその授業)                            |
 | `GET /api/v1/timetable`                             | 授業 (時刻つき) と、振替授業日、全学の休講日、祝日       |
+| `GET /api/v1/timetable/week`                        | 週の曜日と時限の格子                                     |
 | `GET /api/v1/periods`                               | 時限ごとの開始と終了の時刻                               |
 | `GET /api/v1/courses`                               | 履修登録した科目と、その曜日と時限                       |
 | `GET /api/v1/academic-calendar`                     | 年度の学期の期間と、祝日、全学の休講日、振替授業日       |
@@ -108,6 +109,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 | `get_data_status`       | 休講などのデータが新しいか                                             |
 | `search_subjects`       | 科目の検索 (公開の科目だけ)                                            |
 | `get_subject_sessions`  | 科目の全授業日                                                         |
+| `get_week`              | 週の曜日と時限の格子                                                   |
 | `get_periods`           | 時限ごとの開始と終了の時刻                                             |
 | `list_courses`          | 履修登録した科目と、その曜日と時限                                     |
 | `get_academic_calendar` | 年度の学期の期間と、祝日、全学の休講日、振替授業日                     |

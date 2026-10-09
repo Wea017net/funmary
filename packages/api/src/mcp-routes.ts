@@ -11,6 +11,7 @@ import {
 	getAcademicCalendar,
 	getNextLesson,
 	getPublicTimetable,
+	getWeekGrid,
 	listPeriods,
 	listUserCourses,
 } from './reads/public-data.ts';
@@ -81,6 +82,17 @@ export function buildMcpServer(
 					}),
 				);
 			},
+		);
+		server.registerTool(
+			'get_week',
+			{
+				description:
+					'date (YYYY-MM-DD、日本時間。省くと今日) を含む週 (月曜から日曜) の、曜日と時限の格子。授業のない時限も cells に入る (lessons が空)。振替授業日などは note に入る',
+				inputSchema: { date: z.string().optional() },
+				annotations: { readOnlyHint: true },
+			},
+			({ date }) =>
+				jsonText(getWeekGrid(timetableSources, owner.userId, date ?? jstDateTime(new Date()).date)),
 		);
 		server.registerTool(
 			'get_next_lesson',
@@ -229,17 +241,17 @@ export function buildMcpServer(
 		server.registerTool(
 			'list_notifications',
 			{
-				description: '通知欄 (休講、補講、教室変更などの知らせ) を返す',
-				inputSchema: { limit: z.number().optional() },
+				description:
+					'通知欄 (休講、補講、教室変更などの知らせ) を、新しい順に返す。前回読んだ最大の id を afterId に渡すと、それより新しいものだけを返すので、定期的な確認に使える',
+				inputSchema: { limit: z.number().optional(), afterId: z.number().optional() },
 				annotations: { readOnlyHint: true },
 			},
-			({ limit }) =>
+			({ limit, afterId }) =>
 				jsonText({
-					notifications: listUserNotifications(
-						notificationsSources,
-						owner.userId,
-						limit === undefined ? {} : { limit },
-					),
+					notifications: listUserNotifications(notificationsSources, owner.userId, {
+						...(limit === undefined ? {} : { limit }),
+						...(afterId === undefined ? {} : { afterId }),
+					}),
 				}),
 		);
 	}
