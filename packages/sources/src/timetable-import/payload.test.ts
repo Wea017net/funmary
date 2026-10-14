@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
 	decodeImportFragment,
 	encodeImportPayload,
-	normalizeHopeCourseUrl,
+	hopeCourseLink,
 	parseImportPayload,
 	roomFromLabel,
 } from './payload.ts';
@@ -38,7 +38,7 @@ describe('parseImportPayload', () => {
 				room: '494C&D',
 				teachers: ['架空　花子', '架空　次郎'],
 				name: '架空の科目B1-J',
-				hopeUrl: 'https://hope.fun.ac.jp/course/view.php?idnumber=126100200001',
+				hopeUrl: 'https://hope.fun.ac.jp/2026/course/view.php?idnumber=126100200001',
 			},
 		]);
 	});
@@ -70,13 +70,29 @@ describe('parseImportPayload', () => {
 		expect(result.cells[0]?.room).toBeNull();
 	});
 
-	it('HOPE の URL から、年度のパスを取り除く', () => {
-		expect(normalizeHopeCourseUrl('https://hope.fun.ac.jp/2026/course/view.php?idnumber=1')).toBe(
-			'https://hope.fun.ac.jp/course/view.php?idnumber=1',
-		);
-		expect(normalizeHopeCourseUrl('https://hope.fun.ac.jp/course/view.php?id=2')).toBe(
-			'https://hope.fun.ac.jp/course/view.php?id=2',
-		);
+	describe('HOPE のコースのリンク', () => {
+		it('ポータルが返す idnumber の URL は、今の HOPE では開けないので、科目名の検索にする', () => {
+			const search =
+				'https://hope.fun.ac.jp/course/search.php?search=%E6%83%85%E5%A0%B1%E6%95%B0%E5%AD%A61-IJKL';
+			expect(
+				hopeCourseLink(
+					'https://hope.fun.ac.jp/2026/course/view.php?idnumber=126104403002',
+					'情報数学1-IJKL',
+				),
+			).toBe(search);
+			expect(
+				hopeCourseLink(
+					'https://hope.fun.ac.jp/course/view.php?idnumber=126104403002',
+					'情報数学1-IJKL',
+				),
+			).toBe(search);
+		});
+
+		it('id の URL (利用者が直したもの) は、そのまま使う', () => {
+			expect(
+				hopeCourseLink('https://hope.fun.ac.jp/course/view.php?id=2655', '情報数学1-IJKL'),
+			).toBe('https://hope.fun.ac.jp/course/view.php?id=2655');
+		});
 	});
 
 	it('HOPE の URL は、hope.fun.ac.jp の https のものだけを残し、ほかは捨てる (コマは残す)', () => {

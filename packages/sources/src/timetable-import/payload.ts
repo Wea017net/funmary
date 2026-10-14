@@ -76,11 +76,14 @@ const PayloadSchema = v.object({
 const HOPE_URL = /^https:\/\/hope\.fun\.ac\.jp\/[^\s]*$/;
 
 /**
- * HOPE のコースの URL から、年度のパス (`/2026/course/...`) を取り除く。
- * ポータルが返す古い形の URL は、今の HOPE では Not Found になる。
+ * 科目の画面に出す HOPE のリンク。
+ * ポータルが返す `idnumber` の URL は、今の HOPE では開けない (HOPE の URL は、数値の `id` で指す)。
+ * `id` は公開されていないので、科目名での検索にする。検索では、新しい年度が先に並ぶ。
+ * `id` の URL は、利用者が直したものなので、そのまま使う
  */
-export function normalizeHopeCourseUrl(url: string): string {
-	return url.replace(/^(https:\/\/hope\.fun\.ac\.jp)\/\d{4}\/(course\/)/, '$1/$2');
+export function hopeCourseLink(url: string, subjectName: string): string {
+	if (!url.includes('idnumber=')) return url;
+	return `https://hope.fun.ac.jp/course/search.php?search=${encodeURIComponent(subjectName)}`;
 }
 
 export function parseImportPayload(input: unknown): ImportPayloadResult {
@@ -116,7 +119,7 @@ export function parseImportPayload(input: unknown): ImportPayloadResult {
 				.filter((name) => name !== '')
 				.slice(0, 10),
 			name: clean(c.n, 200),
-			hopeUrl: HOPE_URL.test(hopeUrl) ? normalizeHopeCourseUrl(hopeUrl) : null,
+			hopeUrl: HOPE_URL.test(hopeUrl) ? hopeUrl : null,
 		});
 	}
 	return { kind: 'ok', cells, rejected };
