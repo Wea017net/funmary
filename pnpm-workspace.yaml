@@ -43,3 +43,4 @@ allowBuilds:
 
 minimumReleaseAgeExclude:
   - '@modelcontextprotocol/sdk@1.32.0'
+  - hono-feed@1.2.0
