@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
 	decodeImportFragment,
 	encodeImportPayload,
+	normalizeHopeCourseUrl,
 	parseImportPayload,
 	roomFromLabel,
 } from './payload.ts';
@@ -37,7 +38,7 @@ describe('parseImportPayload', () => {
 				room: '494C&D',
 				teachers: ['架空　花子', '架空　次郎'],
 				name: '架空の科目B1-J',
-				hopeUrl: 'https://hope.fun.ac.jp/2026/course/view.php?idnumber=126100200001',
+				hopeUrl: 'https://hope.fun.ac.jp/course/view.php?idnumber=126100200001',
 			},
 		]);
 	});
@@ -67,6 +68,15 @@ describe('parseImportPayload', () => {
 		const result = parseImportPayload(payload([cell({ r: '', x: '集中講義' })]));
 		if (result.kind !== 'ok') throw new Error('読めるはず');
 		expect(result.cells[0]?.room).toBeNull();
+	});
+
+	it('HOPE の URL から、年度のパスを取り除く', () => {
+		expect(normalizeHopeCourseUrl('https://hope.fun.ac.jp/2026/course/view.php?idnumber=1')).toBe(
+			'https://hope.fun.ac.jp/course/view.php?idnumber=1',
+		);
+		expect(normalizeHopeCourseUrl('https://hope.fun.ac.jp/course/view.php?id=2')).toBe(
+			'https://hope.fun.ac.jp/course/view.php?id=2',
+		);
 	});
 
 	it('HOPE の URL は、hope.fun.ac.jp の https のものだけを残し、ほかは捨てる (コマは残す)', () => {

@@ -3,6 +3,7 @@
 import { error, fail, redirect, type Actions, type ServerLoad } from '@sveltejs/kit';
 import { getSubjectDetail, type SubjectDetail } from '@funmary/api';
 import { canEditSubject } from '@funmary/core';
+import { normalizeHopeCourseUrl } from '@funmary/sources';
 import type { SubjectVisibility } from '@funmary/db';
 import { describeClassChange } from '#lib/class-change-label.ts';
 import { parseSlotFields } from '#lib/server/course-form.ts';
@@ -24,6 +25,9 @@ const CHANGE_STATUS = {
 
 /** 画面に出すリンクは https のものだけにする (javascript: などを href に入れないため) */
 const httpsOnly = (url: string | null) => (url?.startsWith('https://') ? url : null);
+
+/** 登録済みの古い形の URL も、表示のときに今の形へ直す */
+const normalizeOrNull = (url: string | null) => (url ? normalizeHopeCourseUrl(url) : null);
 
 const VISIBILITIES: readonly SubjectVisibility[] = ['public', 'link', 'private'];
 
@@ -82,7 +86,7 @@ export const load: ServerLoad = ({ locals, params }) => {
 		personalSlots: personalSlots.listForSubject(locals.user.id, subject.id),
 		slotSharingMode: readSlotSharingMode(settings),
 		registered: registration !== undefined,
-		hopeCourseUrl: httpsOnly(registration?.hopeCourseUrl ?? null),
+		hopeCourseUrl: normalizeOrNull(httpsOnly(registration?.hopeCourseUrl ?? null)),
 		changes: changes.map((change, index) => ({
 			// 照合の結果、同じ日と時限に別の授業名の行が重なりうるので、並びの番号も入れる
 			key: `${change.kind}-${change.date}-${change.period}-${index}`,

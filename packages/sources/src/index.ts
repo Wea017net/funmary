@@ -81,6 +81,7 @@ export {
 export {
 	decodeImportFragment,
 	encodeImportPayload,
+	normalizeHopeCourseUrl,
 	parseImportPayload,
 	roomFromLabel,
 	type ImportPayloadResult,

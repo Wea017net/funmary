@@ -75,6 +75,14 @@ const PayloadSchema = v.object({
 
 const HOPE_URL = /^https:\/\/hope\.fun\.ac\.jp\/[^\s]*$/;
 
+/**
+ * HOPE のコースの URL から、年度のパス (`/2026/course/...`) を取り除く。
+ * ポータルが返す古い形の URL は、今の HOPE では Not Found になる。
+ */
+export function normalizeHopeCourseUrl(url: string): string {
+	return url.replace(/^(https:\/\/hope\.fun\.ac\.jp)\/\d{4}\/(course\/)/, '$1/$2');
+}
+
 export function parseImportPayload(input: unknown): ImportPayloadResult {
 	const parsed = v.safeParse(PayloadSchema, input);
 	if (!parsed.success) return { kind: 'invalid', reason: '内容の形が違います' };
@@ -108,7 +116,7 @@ export function parseImportPayload(input: unknown): ImportPayloadResult {
 				.filter((name) => name !== '')
 				.slice(0, 10),
 			name: clean(c.n, 200),
-			hopeUrl: HOPE_URL.test(hopeUrl) ? hopeUrl : null,
+			hopeUrl: HOPE_URL.test(hopeUrl) ? normalizeHopeCourseUrl(hopeUrl) : null,
 		});
 	}
 	return { kind: 'ok', cells, rejected };
