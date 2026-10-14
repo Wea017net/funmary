@@ -6,7 +6,13 @@ import { createMiddleware } from 'hono/factory';
 import { termsRequiredBody, type TermsGate } from '../terms-gate.ts';
 
 export interface V1AuthVariables {
-	readonly tokenOwner: { readonly userId: string; readonly scopes: readonly AccessTokenScope[] };
+	readonly tokenOwner: {
+		readonly userId: string;
+		readonly scopes: readonly AccessTokenScope[];
+		/** 書き込みの履歴に残す、どのトークンからかの印 */
+		readonly tokenId: number;
+		readonly tokenName: string;
+	};
 }
 
 export interface V1AuthDeps {
@@ -40,7 +46,12 @@ export function v1Auth(deps: V1AuthDeps) {
 			return c.json(termsRequiredBody(deps.termsGate), 403);
 		}
 		deps.accessTokens.markUsed(owner.id, now);
-		c.set('tokenOwner', { userId: owner.userId, scopes: owner.scopes });
+		c.set('tokenOwner', {
+			userId: owner.userId,
+			scopes: owner.scopes,
+			tokenId: owner.id,
+			tokenName: owner.name,
+		});
 		await next();
 	});
 }

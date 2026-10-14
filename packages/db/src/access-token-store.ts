@@ -22,6 +22,8 @@ const MARK_USED_INTERVAL_MS = 60 * 60 * 1000;
 export interface AccessTokenOwner {
 	readonly id: number;
 	readonly userId: string;
+	/** トークンの名前 (書き込みの履歴に残す) */
+	readonly name: string;
 	readonly scopes: readonly AccessTokenScope[];
 	/** 持ち主が同意した利用規約とプライバシーポリシーの版。一度も同意していなければ null */
 	readonly termsAcceptedVersion: string | null;
@@ -77,6 +79,7 @@ export function createAccessTokenStore(database: Database): AccessTokenStore {
 				.select({
 					id: accessTokens.id,
 					userId: accessTokens.userId,
+					name: accessTokens.name,
 					scopes: accessTokens.scopes,
 					termsAcceptedVersion: users.termsAcceptedVersion,
 				})

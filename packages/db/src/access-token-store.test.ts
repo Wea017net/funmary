@@ -30,7 +30,11 @@ describe('個人用アクセストークン', () => {
 			t0,
 		);
 		expect(token).toMatch(/^fmy_[\w-]{43}$/);
-		expect(store.findOwner(token, t0)).toMatchObject({ userId: id, scopes: ['read:lessons'] });
+		expect(store.findOwner(token, t0)).toMatchObject({
+			userId: id,
+			scopes: ['read:lessons'],
+			name: '手元のスクリプト',
+		});
 
 		const rows = database.db.select().from(accessTokens).all();
 		expect(rows.map((row) => row.tokenHash)).not.toContain(token);
