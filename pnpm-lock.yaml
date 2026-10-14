@@ -414,8 +414,8 @@ importers:
         specifier: 'catalog:'
         version: 4.13.12
       hono-feed:
-        specifier: ^1.1.0
-        version: 1.1.0(hono@4.13.12)
+        specifier: ^1.2.0
+        version: 1.2.0(hono@4.13.12)
       hono-openapi:
         specifier: ^1.3.3
         version: 1.3.3(@valibot/to-json-schema@1.8.0(valibot@1.5.0(typescript@6.0.3)))(hono@4.13.12)(valibot@1.5.0(typescript@6.0.3))(zod-to-json-schema@3.25.2(zod@4.6.5))(zod@4.6.5)
@@ -2948,8 +2948,8 @@ packages:
   hastscript@9.0.1:
     resolution: {integrity: sha512-g7df9rMFX/SPi34tyGCyUBREQoKkapwdY/T04Qn9TDWfHhAYt4/I0gMVirzK5wEzeUqIjEB+LXC/ypb7Aqno5w==}
 
-  hono-feed@1.1.0:
-    resolution: {integrity: sha512-tEMf+fW6ZOMa8DW5qyltJlKtOYP8krNrnrKG8R0pdmw1XSxkKkX8HddRBSReOsGQAFS/STEyc0pNktoS5nO+cw==}
+  hono-feed@1.2.0:
+    resolution: {integrity: sha512-xDd16mfxxcNitLKPAPW8NTAyOXum4kFiIphscjQPIuEyIiqWGOnbZNC5bsaOmdC7IBXz7PE1B2/FDQOZlz+dsQ==}
     engines: {node: '>=20'}
     peerDependencies:
       hono: '>=4.0.0'
@@ -6005,7 +6005,7 @@ snapshots:
       property-information: 7.2.0
       space-separated-tokens: 2.0.2
 
-  hono-feed@1.1.0(hono@4.13.12):
+  hono-feed@1.2.0(hono@4.13.12):
     dependencies:
       hono: 4.13.12
 
