@@ -133,6 +133,12 @@
       "skillPath": "skills/engineering/tdd/SKILL.md",
       "computedHash": "e753a5da75292bbe59d302d89566bc2c53d0e73944da2f0e944a7578883c07d0"
     },
+    "testing-anti-patterns": {
+      "source": "bobmatnyc/claude-mpm-skills",
+      "sourceType": "github",
+      "skillPath": "universal/testing/testing-anti-patterns/SKILL.md",
+      "computedHash": "cef05129ee3cb3159716880f50b634cbcdcf1dff922985b1b575c18150c61a10"
+    },
     "token-saver-claude-code": {
       "source": "otnc/skills_ai-agent-saving-tech",
       "sourceType": "github",
