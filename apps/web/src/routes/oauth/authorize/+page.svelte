@@ -11,7 +11,7 @@
 			clientName?: string;
 			redirectHost?: string;
 			email?: string;
-			scopes?: readonly { scope: string; label: string }[];
+			scopes?: readonly { scope: string; label: string; write: boolean }[];
 		};
 		form: { error?: string } | null;
 	} = $props();
@@ -30,14 +30,22 @@
 	{:else}
 		<FormNotice error={form?.error ?? null} />
 		<p>
-			<strong>{data.clientName}</strong> が、<strong>{data.email}</strong> の Funmary のデータを読むことを求めています。許可しても、データを書き換えることはできません。
+			<strong>{data.clientName}</strong> が、<strong>{data.email}</strong> の Funmary のデータへのアクセスを求めています。
 		</p>
+		{#if data.scopes?.some((option) => option.write)}
+			<p class="warning">
+				書き込みの範囲も求めています。許可すると、あなたの予定を足す、直す、消す、通知を既読にすることができます。必要なものだけに、チェックを入れてください
+				(書き込みは、初めはオフです)。
+			</p>
+		{:else}
+			<p>許可しても、データを書き換えることはできません。</p>
+		{/if}
 		<form method="POST">
 			<fieldset>
-				<legend>読ませる範囲</legend>
+				<legend>許可する範囲</legend>
 				{#each data.scopes ?? [] as option (option.scope)}
 					<label class="scope">
-						<input type="checkbox" name="scope" value={option.scope} checked />
+						<input type="checkbox" name="scope" value={option.scope} checked={!option.write} />
 						{option.label}
 					</label>
 				{/each}
@@ -64,6 +72,13 @@
 		padding: 1rem;
 		border: 1px solid var(--fm-divider);
 		border-radius: 0.5rem;
+	}
+
+	.warning {
+		padding: 0.75rem 1rem;
+		border: 1px solid var(--fm-accent, currentcolor);
+		border-radius: 0.5rem;
+		font-weight: 700;
 	}
 
 	.scope {

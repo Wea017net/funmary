@@ -32,7 +32,7 @@ export function parseAccessTokenIssue(
 		return { ok: false, error: `名前は ${MAX_NAME} 文字までにしてください。` };
 	}
 	const scopes = readScopes(form);
-	if (!scopes) return { ok: false, error: '読める範囲を、1 つ以上選んでください。' };
+	if (!scopes) return { ok: false, error: '許可する範囲を、1 つ以上選んでください。' };
 	const daysRaw = form.get('expiresInDays');
 	const days = typeof daysRaw === 'string' ? Number(daysRaw) : NaN;
 	if (!Number.isInteger(days) || days < 1 || days > MAX_EXPIRES_DAYS) {
@@ -53,8 +53,17 @@ export const ACCESS_TOKEN_EXPIRES_OPTIONS = [
 	{ days: MAX_EXPIRES_DAYS, label: '1 年' },
 ] as const;
 
-export const ACCESS_TOKEN_SCOPE_OPTIONS: readonly { scope: AccessTokenScope; label: string }[] = [
-	{ scope: 'read:lessons', label: '今日や週の授業' },
-	{ scope: 'read:changes', label: '休講、補講、教室変更' },
-	{ scope: 'read:notifications', label: '通知欄' },
+export interface AccessTokenScopeOption {
+	readonly scope: AccessTokenScope;
+	readonly label: string;
+	/** 書き込める範囲。選ぶ画面では、読み取りと分けて出し、既定ではオフにする */
+	readonly write: boolean;
+}
+
+export const ACCESS_TOKEN_SCOPE_OPTIONS: readonly AccessTokenScopeOption[] = [
+	{ scope: 'read:lessons', label: '今日や週の授業、予定を読む', write: false },
+	{ scope: 'read:changes', label: '休講、補講、教室変更を読む', write: false },
+	{ scope: 'read:notifications', label: '通知欄を読む', write: false },
+	{ scope: 'write:events', label: '予定を足す、直す、消す', write: true },
+	{ scope: 'write:notifications', label: '通知を既読にする', write: true },
 ];

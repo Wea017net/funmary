@@ -37,12 +37,18 @@ describe('v1Auth', () => {
 		const app = appWith({
 			id: 1,
 			userId: 'u1',
+			name: 'test',
 			scopes: ['read:lessons'],
 			termsAcceptedVersion: null,
 		});
 		const res = await app.request('/lessons', { headers: { Authorization: 'Bearer fmy_x' } });
 		expect(res.status).toBe(200);
-		expect(await res.json()).toEqual({ userId: 'u1', scopes: ['read:lessons'] });
+		expect(await res.json()).toEqual({
+			userId: 'u1',
+			scopes: ['read:lessons'],
+			tokenId: 1,
+			tokenName: 'test',
+		});
 	});
 });
 
@@ -51,6 +57,7 @@ describe('requireScope', () => {
 		const app = appWith({
 			id: 1,
 			userId: 'u1',
+			name: 'test',
 			scopes: ['read:changes'],
 			termsAcceptedVersion: null,
 		});
@@ -67,6 +74,7 @@ describe('利用規約への再同意', () => {
 	const owner = (termsAcceptedVersion: string | null): AccessTokenOwner => ({
 		id: 1,
 		userId: 'u1',
+		name: 'test',
 		scopes: ['read:lessons'],
 		termsAcceptedVersion,
 	});

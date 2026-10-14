@@ -67,7 +67,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 - どちらも Hono の上に置き、SvelteKit のフックから渡すパスに `/mcp` を足しています
 - 読み取りの処理 (今日の授業、週の時間割、休講などの一覧、授業の詳細、通知欄) は 1 か所にまとめ、画面、公開 API、MCP から同じ関数を呼びます。口ごとに結果が食い違わないようにするためです
-- 最初は**読み取りだけ**にしています。書き込み (欠席の記録、既読にするなど) は、読み取りを使ってもらってから、必要なものだけを足します
+- 読み取りが中心です。書き込みは、書き込みの範囲を許可したトークンにだけ、自分の予定の追加、変更、削除と、通知の既読を許します ([書き込み](#書き込み))。授業や科目など、共有のデータには書き込めません
 - 画面や API と同じく、DB に保存済みのデータだけを返します。エージェントが何度問い合わせても、学生ポータルなど大学のサービスへの接続は増えません ([3.5](03-quality.md#35-壊れにくさとフォールバック))
 
 ### 公開 API と、内部の API を分ける
@@ -85,12 +85,18 @@ export const handle: Handle = async ({ event, resolve }) => {
 | `GET /api/v1/courses`                               | 履修登録した科目と、その曜日と時限                       |
 | `GET /api/v1/academic-calendar`                     | 年度の学期の期間と、祝日、全学の休講日、振替授業日       |
 | `GET /api/v1/events`                                | 自分の予定と、時間割に加えた予定                         |
+| `GET /api/v1/events/{id}`                           | 自分の予定を 1 件 (足すときと同じ形)                     |
+| `POST /api/v1/events`                               | 自分の予定を足す (`write:events`)                        |
+| `PUT /api/v1/events/{id}`                           | 自分の予定を置き換える (`write:events`)                  |
+| `DELETE /api/v1/events/{id}`                        | 自分の予定を消す (`write:events`)                        |
 | `GET /api/v1/status`                                | 休講などのデータが新しいか                               |
 | `GET /api/v1/subjects`                              | 科目の検索 (公開の科目だけ)                              |
 | `GET /api/v1/subjects/{year}/{syllabusId}/sessions` | 科目の全授業日                                           |
 | `GET /api/v1/changes`                               | 休講、補講、教室変更の一覧                               |
 | `GET /api/v1/subjects/{year}/{syllabusId}`          | 授業の詳細 (公開シラバスの内容、教員、教室、休講の履歴)  |
 | `GET /api/v1/notifications`                         | 通知欄                                                   |
+| `POST /api/v1/notifications/{id}/read`              | 通知を 1 件、既読にする (`write:notifications`)          |
+| `POST /api/v1/notifications/read`                   | 未読をすべて既読にする (`write:notifications`)           |
 
 ### OpenAPI と Swagger UI
 
@@ -101,23 +107,30 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 ### MCP の道具
 
-| 道具                    | 内容                                                                   |
-| ----------------------- | ---------------------------------------------------------------------- |
-| `get_lessons`           | 日付か期間の授業 (時刻つき) と、振替授業日などを返す。日付を省くと今日 |
-| `get_next_lesson`       | 今の時刻から見た、次の授業                                             |
-| `list_events`           | 自分の予定と、時間割に加えた予定                                       |
-| `get_data_status`       | 休講などのデータが新しいか                                             |
-| `search_subjects`       | 科目の検索 (公開の科目だけ)                                            |
-| `get_subject_sessions`  | 科目の全授業日                                                         |
-| `get_week`              | 週の曜日と時限の格子                                                   |
-| `get_periods`           | 時限ごとの開始と終了の時刻                                             |
-| `list_courses`          | 履修登録した科目と、その曜日と時限                                     |
-| `get_academic_calendar` | 年度の学期の期間と、祝日、全学の休講日、振替授業日                     |
-| `list_changes`          | 休講、補講、教室変更の一覧                                             |
-| `get_subject`           | 授業の詳細                                                             |
-| `list_notifications`    | 通知欄                                                                 |
+| 道具                          | 内容                                                                   |
+| ----------------------------- | ---------------------------------------------------------------------- |
+| `get_lessons`                 | 日付か期間の授業 (時刻つき) と、振替授業日などを返す。日付を省くと今日 |
+| `get_next_lesson`             | 今の時刻から見た、次の授業                                             |
+| `list_events`                 | 自分の予定と、時間割に加えた予定                                       |
+| `get_data_status`             | 休講などのデータが新しいか                                             |
+| `search_subjects`             | 科目の検索 (公開の科目だけ)                                            |
+| `get_subject_sessions`        | 科目の全授業日                                                         |
+| `get_week`                    | 週の曜日と時限の格子                                                   |
+| `get_periods`                 | 時限ごとの開始と終了の時刻                                             |
+| `list_courses`                | 履修登録した科目と、その曜日と時限                                     |
+| `get_academic_calendar`       | 年度の学期の期間と、祝日、全学の休講日、振替授業日                     |
+| `list_changes`                | 休講、補講、教室変更の一覧                                             |
+| `get_subject`                 | 授業の詳細                                                             |
+| `list_notifications`          | 通知欄                                                                 |
+| `get_event`                   | 自分の予定を 1 件 (`update_event` に送り直せる形)                      |
+| `create_event`                | 自分の予定を足す (`write:events`)                                      |
+| `update_event`                | 自分の予定を置き換える (`write:events`)                                |
+| `delete_event`                | 自分の予定を消す (`write:events`)                                      |
+| `mark_notification_read`      | 通知を 1 件、既読にする (`write:notifications`)                        |
+| `mark_all_notifications_read` | 未読をすべて既読にする (`write:notifications`)                         |
 
-- 道具はすべて読み取り専用の印 (`readOnlyHint`) を付けます。エージェントが確認なしに呼んでも、何も変わりません
+- 読み取りの道具には、読み取り専用の印 (`readOnlyHint`) を付けます。エージェントが確認なしに呼んでも、何も変わりません
+- 書き込みの道具には、`readOnlyHint: false` を付けます。クライアントは、実行の前に利用者へ承認を求められます。置き換え (`update_event`) と削除 (`delete_event`) には、壊す操作の印 (`destructiveHint: true`) も付けます
 - 結果は、機械が読める形 (`structuredContent`) と、人が読める短い文の両方で返します
 - 公式の SDK (`@modelcontextprotocol/sdk`) と `@hono/mcp` を使います。SDK は道具の引数の型に zod を使うので、MCP の部分だけ zod が入ります。ほかの部分は Valibot のままにして、zod を持ち込みません
 
@@ -136,15 +149,28 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 個人用のアクセストークンで認証します。設定画面で発行し、`Authorization: Bearer <トークン>` で送ります。
 
-- 名前 (どこで使うか)、範囲 (scope)、有効期限を付けて発行します。範囲は `read:lessons`、`read:changes`、`read:notifications` に分けています
+- 名前 (どこで使うか)、範囲 (scope)、有効期限を付けて発行します。読み取りの範囲は `read:lessons`、`read:changes`、`read:notifications`、書き込みの範囲は `write:events`、`write:notifications` に分けています
 - トークンは発行したときに 1 回だけ見せ、DB にはハッシュだけを保存します。最後に使った日時を記録し、設定画面の一覧からいつでも無効にできます
 - 見分けやすいように先頭に `fmy_` を付けます。GitHub の secret scanning などで、誤って公開されたトークンに気づきやすくするためです
 - Web 版の Claude や ChatGPT のコネクタは、OAuth での認可を前提にしています。この対応は、利用者が増えてから考えます
 
+### 書き込み
+
+AI エージェントが誤って、または乗っ取られて、利用者のデータを壊す事故を抑えるため、書き込みは読み取りと分けて、小さく始めています。
+
+- **範囲を分けます**。書き込みの範囲 (`write:events`、`write:notifications`) を持たないトークンは、書き込めません。範囲が指定されなかったときの既定は、読み取りの範囲だけです。同意の画面と発行の画面では、書き込みの範囲を、読み取りと分けて出し、初めはオフにします
+- **自分のデータだけ**です。自分の予定と、自分の通知だけを書き換えます。ほかの人の予定は、見つからない (404) ことにします。授業、科目、管理の操作には書き込めません
+- **公開範囲は変えられません**。足す予定は常に非公開で、置き換えても公開範囲は変わりません。誤って予定が公開される事故を防ぐためです
+- **画面と同じ検査を通します**。予定の入力は、画面のフォームと同じ検査 (`@funmary/core` の `parseEventFields`) を通ります。名前の長さ、時刻の順、繰り返しの形などが、口ごとに食い違いません。直し方が分かる文を返します
+- **置き換えです**。予定を直すときは、全体を送り直します (送らなかった項目は空になります)。先に `GET /api/v1/events/{id}` (または `get_event`) で今の内容を読み、変える項目だけを書き換えて送ります
+- **削除は予定だけ**です。予定の削除は、元に戻せません。削除の道具には、壊す操作の印を付け、クライアントに承認を求めさせます。授業や通知の削除はありません
+- **回数を厳しく制限します**。読み取りの 1 分に 60 回とは別に、書き込みは、トークンごとに 1 分に 20 回までです
+- **履歴を残します**。書き込みのたびに、どのトークンが、何をしたかを `api_activity` に記録し、設定の「公開 API と MCP」の画面に出します。身に覚えのない書き込みに気づいたら、そのトークンを無効にします。履歴は 1 人につき最新の 200 件までで、古いものから消えます。トークンを無効にしても、履歴には残ります
+
 ### 守ること
 
 - トークンで読めるのは、その持ち主のデータだけです。全体の休講の一覧も、ログインした利用者が画面で見られる範囲を超えません
-- 回数制限を、トークンごとに hono-rate-limiter で掛けます (1 分に 60 回)
+- 回数制限を、トークンごとに hono-rate-limiter で掛けます (読み取りは 1 分に 60 回、書き込みは 1 分に 20 回)
 - 公開 API と MCP には CORS を開けません。ほかのサイトのブラウザから呼ぶ使い方は想定しません。Cookie では認証しないので、CSRF の心配はありません
 - 公開シラバスや休講の備考など、外から取り込んだ文は、決まった欄に**データとして**入れて返します。エージェントへの指示と取り違えられないように、文を道具の説明や見出しに混ぜません
 - 利用者の時間割が、その人が使う AI の会社に渡ります。トークンの発行画面で、そのことを説明しています

@@ -1,5 +1,6 @@
 // /mcp の MCP サーバー。公開 API と同じ個人用のアクセストークンで認証し、
-// 同じ reads/ の関数を呼ぶので、REST と中身が食い違わない。道具はすべて読み取り専用 (readOnlyHint)。
+// 同じ reads/ の関数を呼ぶので、REST と中身が食い違わない。読み取りの道具は readOnlyHint を付ける。
+// 書き込みの道具 (mcp-write-tools.ts) は、書き込みの範囲を持つトークンにだけ出す。
 import { hasAcceptedTerms, jstDateTime } from '@funmary/core';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { SUPPORTED_PROTOCOL_VERSIONS } from '@modelcontextprotocol/sdk/types.js';
@@ -19,6 +20,8 @@ import {
 import { getDataStatus, listUserEventOccurrences } from './reads/public-events.ts';
 import { getSubjectSessions, searchSubjects } from './reads/public-subjects.ts';
 import { getSubjectDetail } from './reads/subject-detail.ts';
+import { registerWriteTools, type McpWriteOwner } from './mcp-write-tools.ts';
+import { getEvent } from './writes/events.ts';
 import type { TimetableSources } from './reads/user-timetable.ts';
 import { termsRequiredMessage } from './terms-gate.ts';
 import type { V1RoutesDeps } from './v1/routes.ts';
@@ -53,10 +56,7 @@ function serverIcons(origin: string) {
 }
 
 /** MCP サーバーを組み立てる。テストでは、SDK の in-memory の接続で道具を直接確かめるのに使う */
-export function buildMcpServer(
-	deps: McpRoutesDeps,
-	owner: { userId: string; scopes: readonly string[] },
-) {
+export function buildMcpServer(deps: McpRoutesDeps, owner: McpWriteOwner) {
 	const server = new McpServer({
 		name: 'funmary',
 		version: '1',
@@ -149,6 +149,21 @@ export function buildMcpServer(
 						end: end ?? start ?? today,
 					}),
 				});
+			},
+		);
+		server.registerTool(
+			'get_event',
+			{
+				description:
+					'自分の予定を 1 件、update_event に送り直せる形で返す。繰り返しや除く日も入る。ほかの人の予定は、見つからないことにする',
+				inputSchema: { id: z.number().describe('予定の id (list_events の eventId)') },
+				annotations: { readOnlyHint: true },
+			},
+			({ id }) => {
+				const event = getEvent(deps, owner.userId, id);
+				return event
+					? jsonText(event)
+					: { isError: true, content: [{ type: 'text' as const, text: '予定が見つかりません' }] };
 			},
 		);
 		server.registerTool(
@@ -257,6 +272,8 @@ export function buildMcpServer(
 		);
 	}
 
+	registerWriteTools(server, deps, owner);
+
 	return server;
 }
 
@@ -322,7 +339,12 @@ export function createMcpRoutes(deps: McpRoutesDeps): Hono {
 		const server =
 			waitingForTerms && deps.termsGate
 				? buildTermsRequiredMcpServer(deps.termsGate.consentUrl, deps.origin)
-				: buildMcpServer(deps, { userId: found.userId, scopes: found.scopes });
+				: buildMcpServer(deps, {
+						userId: found.userId,
+						scopes: found.scopes,
+						tokenId: found.id,
+						tokenName: found.name,
+					});
 		const transport = new StreamableHTTPTransport();
 		await server.connect(transport);
 		return transport.handleRequest(c);

@@ -3,11 +3,13 @@
 import type {
 	AccessGrantStore,
 	AccessTokenStore,
+	ApiActivityStore,
 	AuthStore,
 	ClassChangeStore,
 	NotificationKind,
 	NotificationStore,
 	SubjectStore,
+	UserEventStore,
 } from '@funmary/db';
 import { jstDateTime } from '@funmary/core';
 import { Hono } from 'hono';
@@ -41,10 +43,21 @@ import {
 import { getSubjectDetail } from '../reads/subject-detail.ts';
 import type { TimetableSources } from '../reads/user-timetable.ts';
 import type { TermsGate } from '../terms-gate.ts';
+import {
+	createEvent,
+	deleteEvent,
+	getEvent,
+	replaceEvent,
+	type WriteActor,
+} from '../writes/events.ts';
+import { EventBodySchema, EventResultSchema } from '../writes/event-json.ts';
+import { markAllNotificationsRead, markNotificationRead } from '../writes/notifications.ts';
 import { requireScope, v1Auth, type V1AuthVariables } from './auth.ts';
 
 /** 1 分に 60 回まで。トークンごとに数える */
 const RATE_LIMIT = { windowMs: 60 * 1000, limit: 60 };
+/** 書き込みは、読み取りより厳しく、1 分に 20 回まで。暴走した AI の連打を抑える */
+const WRITE_RATE_LIMIT = { windowMs: 60 * 1000, limit: 20 };
 
 const NOTIFICATION_KINDS: readonly NotificationKind[] = [
 	'cancellation',
@@ -68,9 +81,15 @@ export interface V1RoutesDeps
 	/** 利用規約の再同意を求めるとき。同意していない利用者のトークンは、403 を返す */
 	readonly termsGate?: TermsGate | undefined;
 	readonly subjects: Pick<SubjectStore, 'findById' | 'findBySyllabus' | 'list'>;
-	readonly accessGrants: Pick<AccessGrantStore, 'isGranted'>;
+	readonly accessGrants: Pick<AccessGrantStore, 'isGranted' | 'revokeAll'>;
 	readonly classChanges: TimetableSources['classChanges'] & Pick<ClassChangeStore, 'listBySubject'>;
-	readonly notifications: Pick<NotificationStore, 'list'>;
+	readonly notifications: Pick<NotificationStore, 'list' | 'markRead' | 'markAllRead'>;
+	/** 書き込みの履歴 */
+	readonly activity: Pick<ApiActivityStore, 'record'>;
+	readonly userEvents: Pick<
+		UserEventStore,
+		'listByOwner' | 'listSubscribed' | 'create' | 'update' | 'delete' | 'get'
+	>;
 	readonly accessTokens: Pick<AccessTokenStore, 'findOwner' | 'markUsed'>;
 	readonly users: Pick<AuthStore, 'findUserById'>;
 }
@@ -78,6 +97,11 @@ export interface V1RoutesDeps
 const DateParam = v.pipe(v.string(), v.isoDate());
 
 const WeekQuery = v.object({ date: v.optional(DateParam) });
+
+/** パスの ID。正の整数 */
+const IdParam = v.object({
+	id: v.pipe(v.string(), v.regex(/^[1-9]\d{0,9}$/), v.transform(Number)),
+});
 
 const RangeQuery = v.object({
 	start: DateParam,
@@ -276,8 +300,11 @@ const AUTHED_PATHS = [
 	'/api/v1/subjects/:year/:syllabusId',
 	'/api/v1/subjects/:year/:syllabusId/sessions',
 	'/api/v1/events',
+	'/api/v1/events/:id',
 	'/api/v1/status',
 	'/api/v1/notifications',
+	'/api/v1/notifications/read',
+	'/api/v1/notifications/:id/read',
 	'/api/v1/me',
 ] as const;
 
@@ -289,10 +316,21 @@ export function createV1Routes(deps: V1RoutesDeps): Hono<{ Variables: V1AuthVari
 		standardHeaders: 'draft-7',
 		keyGenerator: (c) => c.req.header('Authorization') ?? '',
 	});
+	const writeLimit = rateLimiter({
+		...WRITE_RATE_LIMIT,
+		standardHeaders: 'draft-7',
+		keyGenerator: (c) => c.req.header('Authorization') ?? '',
+	});
 	for (const path of AUTHED_PATHS) {
 		app.use(path, auth);
 		app.use(path, limit);
+		app.on(['POST', 'PUT', 'DELETE'], path, writeLimit);
 	}
+	const actorOf = (owner: WriteActor & { scopes?: unknown }): WriteActor => ({
+		userId: owner.userId,
+		tokenId: owner.tokenId,
+		tokenName: owner.tokenName,
+	});
 
 	app.get(
 		'/api/v1/lessons',
@@ -487,6 +525,110 @@ export function createV1Routes(deps: V1RoutesDeps): Hono<{ Variables: V1AuthVari
 	);
 
 	app.get(
+		'/api/v1/events/:id',
+		requireScope('read:lessons'),
+		describeRoute({
+			description:
+				'自分の予定を 1 件、足すときと同じ形で返す。直すときは、この形から id を除いて送り直す',
+			responses: {
+				200: {
+					description: 'OK',
+					content: { 'application/json': { schema: resolver(EventResultSchema) } },
+				},
+				404: { description: '予定が見つからない (ほかの人の予定も、見つからないことにする)' },
+			},
+		}),
+		validator('param', IdParam),
+		(c) => {
+			const event = getEvent(deps, c.get('tokenOwner').userId, c.req.valid('param').id);
+			return event
+				? c.json(event)
+				: c.json({ error: 'not_found', message: '予定が見つかりません' }, 404);
+		},
+	);
+
+	app.post(
+		'/api/v1/events',
+		requireScope('write:events'),
+		describeRoute({
+			description:
+				'自分の予定を足す。公開範囲は決められず、常に非公開で足す。書き込みは、1 分あたり 20 回まで',
+			responses: {
+				201: {
+					description: '足した予定',
+					content: { 'application/json': { schema: resolver(EventResultSchema) } },
+				},
+				400: { description: '入力が正しくない (message に、直し方が分かる文が入る)' },
+			},
+		}),
+		validator('json', EventBodySchema),
+		(c) => {
+			const result = createEvent(
+				deps,
+				actorOf(c.get('tokenOwner')),
+				c.req.valid('json'),
+				new Date(),
+			);
+			return result.ok
+				? c.json(result.event, 201)
+				: c.json({ error: 'invalid_request', message: result.error }, 400);
+		},
+	);
+
+	app.put(
+		'/api/v1/events/:id',
+		requireScope('write:events'),
+		describeRoute({
+			description:
+				'自分の予定を、送った内容に置き換える (送らなかった項目は、空になる)。公開範囲は変わらない',
+			responses: {
+				200: {
+					description: '直した予定',
+					content: { 'application/json': { schema: resolver(EventResultSchema) } },
+				},
+				400: { description: '入力が正しくない' },
+				404: { description: '予定が見つからない' },
+			},
+		}),
+		validator('param', IdParam),
+		validator('json', EventBodySchema),
+		(c) => {
+			const result = replaceEvent(
+				deps,
+				actorOf(c.get('tokenOwner')),
+				c.req.valid('param').id,
+				c.req.valid('json'),
+				new Date(),
+			);
+			if (result.ok) return c.json(result.event);
+			return result.kind === 'not_found'
+				? c.json({ error: 'not_found', message: result.error }, 404)
+				: c.json({ error: 'invalid_request', message: result.error }, 400);
+		},
+	);
+
+	app.delete(
+		'/api/v1/events/:id',
+		requireScope('write:events'),
+		describeRoute({
+			description: '自分の予定を消す。元には戻せない',
+			responses: { 204: { description: '消した' }, 404: { description: '予定が見つからない' } },
+		}),
+		validator('param', IdParam),
+		(c) => {
+			const result = deleteEvent(
+				deps,
+				actorOf(c.get('tokenOwner')),
+				c.req.valid('param').id,
+				new Date(),
+			);
+			return result.ok
+				? c.body(null, 204)
+				: c.json({ error: 'not_found', message: result.error }, 404);
+		},
+	);
+
+	app.get(
 		'/api/v1/status',
 		requireScope('read:lessons'),
 		describeRoute({
@@ -598,6 +740,51 @@ export function createV1Routes(deps: V1RoutesDeps): Hono<{ Variables: V1AuthVari
 				...(limit === undefined ? {} : { limit }),
 			});
 			return c.json(list);
+		},
+	);
+
+	app.post(
+		'/api/v1/notifications/read',
+		requireScope('write:notifications'),
+		describeRoute({
+			description: '未読の通知をすべて既読にし、既読にした件数を返す',
+			responses: {
+				200: {
+					description: 'OK',
+					content: { 'application/json': { schema: resolver(v.object({ count: v.number() })) } },
+				},
+			},
+		}),
+		(c) => {
+			const { count } = markAllNotificationsRead(deps, actorOf(c.get('tokenOwner')), new Date());
+			return c.json({ count });
+		},
+	);
+
+	app.post(
+		'/api/v1/notifications/:id/read',
+		requireScope('write:notifications'),
+		describeRoute({
+			description: '通知を 1 件、既読にして返す',
+			responses: {
+				200: {
+					description: 'OK',
+					content: { 'application/json': { schema: resolver(NotificationSchema) } },
+				},
+				404: { description: '通知が見つからない' },
+			},
+		}),
+		validator('param', IdParam),
+		(c) => {
+			const result = markNotificationRead(
+				deps,
+				actorOf(c.get('tokenOwner')),
+				c.req.valid('param').id,
+				new Date(),
+			);
+			return result.ok
+				? c.json(result.notification)
+				: c.json({ error: 'not_found', message: result.error }, 404);
 		},
 	);
 

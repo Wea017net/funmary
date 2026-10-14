@@ -1,6 +1,11 @@
 // 同意の画面 (/oauth/authorize) が受け取る、クライアントからの依頼の検査。
 // 画面は SvelteKit 側にあるので、検査だけをここに置き、単体で試せるようにする。
-import { ACCESS_TOKEN_SCOPES, type AccessTokenScope, type OAuthClient } from '@funmary/db';
+import {
+	ACCESS_TOKEN_SCOPES,
+	READ_SCOPES,
+	type AccessTokenScope,
+	type OAuthClient,
+} from '@funmary/db';
 
 export interface AuthorizeRequest {
 	readonly client: OAuthClient;
@@ -65,7 +70,7 @@ export function parseAuthorizeRequest(
 			redirectUri,
 			state,
 			codeChallenge,
-			requestedScopes: known.length > 0 ? known : ACCESS_TOKEN_SCOPES,
+			requestedScopes: known.length > 0 ? known : READ_SCOPES,
 		},
 	};
 }

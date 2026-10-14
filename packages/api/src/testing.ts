@@ -4,6 +4,7 @@ import {
 	createAcademicCalendarStore,
 	createAccessGrantStore,
 	createAccessTokenStore,
+	createApiActivityStore,
 	createAuthStore,
 	createClassChangeStore,
 	createCourseStore,
@@ -31,5 +32,6 @@ export function createTestApiDeps(database: Database) {
 		accessGrants: createAccessGrantStore(database),
 		accessTokens: createAccessTokenStore(database),
 		users: createAuthStore(database),
+		activity: createApiActivityStore(database),
 	};
 }

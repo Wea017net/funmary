@@ -8,8 +8,12 @@ import { generateToken, hashToken } from './secrets.ts';
 /** GitHub の secret scanning などで、誤って公開されたトークンに気づきやすくする */
 const TOKEN_PREFIX = 'fmy_';
 
+/** 読み取りの範囲。同意の画面で範囲が指定されなかったときの既定は、これだけ */
+export const READ_SCOPES = ['read:lessons', 'read:changes', 'read:notifications'] as const;
+/** 書き込みの範囲。読み取りと分け、求められたときだけ付ける (誤って書き込めるトークンを渡さないため) */
+export const WRITE_SCOPES = ['write:events', 'write:notifications'] as const;
 /** 発行できる範囲 */
-export const ACCESS_TOKEN_SCOPES = ['read:lessons', 'read:changes', 'read:notifications'] as const;
+export const ACCESS_TOKEN_SCOPES = [...READ_SCOPES, ...WRITE_SCOPES] as const;
 export type AccessTokenScope = (typeof ACCESS_TOKEN_SCOPES)[number];
 
 /** 使った日時を書き込む間隔。問い合わせのたびに書き込まないようにする */
@@ -18,6 +22,8 @@ const MARK_USED_INTERVAL_MS = 60 * 60 * 1000;
 export interface AccessTokenOwner {
 	readonly id: number;
 	readonly userId: string;
+	/** トークンの名前 (書き込みの履歴に残す) */
+	readonly name: string;
 	readonly scopes: readonly AccessTokenScope[];
 	/** 持ち主が同意した利用規約とプライバシーポリシーの版。一度も同意していなければ null */
 	readonly termsAcceptedVersion: string | null;
@@ -73,6 +79,7 @@ export function createAccessTokenStore(database: Database): AccessTokenStore {
 				.select({
 					id: accessTokens.id,
 					userId: accessTokens.userId,
+					name: accessTokens.name,
 					scopes: accessTokens.scopes,
 					termsAcceptedVersion: users.termsAcceptedVersion,
 				})

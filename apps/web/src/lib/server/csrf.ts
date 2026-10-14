@@ -5,6 +5,14 @@
 /** Origin がなくても通す口。Cookie を使わず、クライアントのサーバーから直接呼ばれる */
 const SERVER_TO_SERVER_PATHS: ReadonlySet<string> = new Set(['/oauth/token']);
 
+/**
+ * 公開 API (/api/v1/) と MCP (/mcp) は、Authorization ヘッダの Bearer トークンだけで認証し、Cookie を使わない。
+ * ブラウザは、別のサイトから、このヘッダを付けて送れないので、CSRF の心配はない。
+ * 本文のない DELETE や POST (curl など) は、Content-Type も Origin もないので、通すために除く
+ */
+const isTokenAuthPath = (path: string) =>
+	path === '/mcp' || path.startsWith('/mcp/') || path.startsWith('/api/v1/');
+
 const MUTATING_METHODS: ReadonlySet<string> = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 const FORM_CONTENT_TYPES = [
 	'application/x-www-form-urlencoded',
@@ -20,7 +28,7 @@ export function isCsrfForbidden(input: {
 	readonly selfOrigin: string;
 }): boolean {
 	if (!MUTATING_METHODS.has(input.method)) return false;
-	if (SERVER_TO_SERVER_PATHS.has(input.path)) return false;
+	if (SERVER_TO_SERVER_PATHS.has(input.path) || isTokenAuthPath(input.path)) return false;
 	const isForm =
 		!input.contentType ||
 		FORM_CONTENT_TYPES.some((type) => input.contentType?.toLowerCase().startsWith(type));

@@ -322,7 +322,7 @@ describe('同意の画面への依頼の検査', () => {
 			...override,
 		});
 
-	it('正しい依頼は通り、scope がなければすべてを求めたことになる', () => {
+	it('正しい依頼は通り、scope がなければ、読み取りの範囲だけを求めたことになる (書き込みは、求められたときだけ)', () => {
 		const { oauth, client } = setupClient();
 
 		const result = parseAuthorizeRequest(query(client), (id) => oauth.findClient(id));
@@ -346,6 +346,20 @@ describe('同意の画面への依頼の検査', () => {
 		);
 
 		expect(result).toMatchObject({ kind: 'ok', request: { requestedScopes: ['read:changes'] } });
+	});
+
+	it('書き込みの範囲は、scope に書かれたときだけ求める', () => {
+		const { oauth, client } = setupClient();
+
+		const result = parseAuthorizeRequest(
+			query(client, { scope: 'read:lessons write:events write:notifications' }),
+			(id) => oauth.findClient(id),
+		);
+
+		expect(result).toMatchObject({
+			kind: 'ok',
+			request: { requestedScopes: ['read:lessons', 'write:events', 'write:notifications'] },
+		});
 	});
 
 	it('知らない client_id と、登録にない redirect_uri は、どこへも戻さない', () => {

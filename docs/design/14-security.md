@@ -18,7 +18,7 @@
 
 - ログインは、Google の OpenID Connect で、PKCE、state、nonce、ID トークンの署名を検証します。ドメインと `email_verified` は、サーバー側で確かめます ([7 章](07-accounts.md))
 - セッションは、DB に保存し、ブラウザには HttpOnly の Cookie で ID だけを渡します。本番の Cookie は、`__Host-` を付けて、`Secure`、`Path=/`、ドメインなしを、ブラウザに強制させます
-- **CSRF**: フォームの送信は、`Origin` ヘッダを、公開 URL と照らして断ります。SvelteKit 組み込みの検査の代わりに、`hooks.server.ts` で同じ検査を行っています。MCP のクライアントが、`Origin` なしで `form` を送る `/oauth/token` だけは、Cookie を使わない口なので、例外にしています
+- **CSRF**: フォームの送信は、`Origin` ヘッダを、公開 URL と照らして断ります。SvelteKit 組み込みの検査の代わりに、`hooks.server.ts` で同じ検査を行っています。Cookie を使わない口は、例外にしています。MCP のクライアントが `Origin` なしで `form` を送る `/oauth/token` と、Bearer トークンだけで認証する `/api/v1/` と `/mcp` です (本文のない `DELETE` や `POST` も通すため)
 - 公開 API と MCP は、Cookie では認証しません (Bearer トークンだけ)。CORS も開けないので、ほかのサイトのブラウザから呼ぶ使い方は、想定しません
 - カレンダーと RSS の購読、公開 API、OAuth の登録とトークンの口には、回数の制限を置きます
 - 戻り先 (ログインや同意のあとに戻る URL) は、このサイトの中のパスだけを通します。外のサイトへは飛ばしません

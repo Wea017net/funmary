@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { parseAccessTokenId, parseAccessTokenIssue } from './access-token-form.ts';
+import { READ_SCOPES } from '@funmary/db';
+import {
+	ACCESS_TOKEN_SCOPE_OPTIONS,
+	parseAccessTokenId,
+	parseAccessTokenIssue,
+} from './access-token-form.ts';
 
 const NOW = new Date('2026-10-04T00:00:00Z');
 
@@ -62,6 +67,31 @@ describe('parseAccessTokenIssue', () => {
 				NOW,
 			),
 		).toMatchObject({ ok: false });
+	});
+});
+
+describe('書き込みの範囲', () => {
+	it('書き込みの範囲だけを選んでも、発行できる', () => {
+		expect(
+			parseAccessTokenIssue(
+				form({ name: '予定の登録', scopes: ['write:events'], expiresInDays: '30' }),
+				NOW,
+			),
+		).toMatchObject({ ok: true, scopes: ['write:events'] });
+	});
+
+	it('範囲が空のときの文は、読み取りに限らない', () => {
+		expect(
+			parseAccessTokenIssue(form({ name: 'test', scopes: [], expiresInDays: '90' }), NOW),
+		).toEqual({ ok: false, error: '許可する範囲を、1 つ以上選んでください。' });
+	});
+
+	it('選択肢は、読み取りと書き込みを分ける。書き込みは、既定ではオフにするための印が付く', () => {
+		const reads = ACCESS_TOKEN_SCOPE_OPTIONS.filter((option) => !option.write);
+		const writes = ACCESS_TOKEN_SCOPE_OPTIONS.filter((option) => option.write);
+
+		expect(reads.map((option) => option.scope)).toEqual([...READ_SCOPES]);
+		expect(writes.map((option) => option.scope)).toEqual(['write:events', 'write:notifications']);
 	});
 });
 

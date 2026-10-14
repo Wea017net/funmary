@@ -32,6 +32,7 @@ describe('buildMcpServer', () => {
 		expect(tools.map((tool) => tool.name).sort()).toEqual([
 			'get_academic_calendar',
 			'get_data_status',
+			'get_event',
 			'get_lessons',
 			'get_next_lesson',
 			'get_periods',
@@ -45,7 +46,7 @@ describe('buildMcpServer', () => {
 		expect(tools.every((tool) => tool.annotations?.readOnlyHint)).toBe(true);
 	});
 
-	it('すべての範囲を持つトークンでは、13 の道具がそろう', async () => {
+	it('すべての読み取りの範囲を持つトークンでは、14 の道具がそろう', async () => {
 		const src = deps();
 		const server = buildMcpServer(src, {
 			userId: 'u1',
@@ -56,6 +57,7 @@ describe('buildMcpServer', () => {
 		expect(tools.map((tool) => tool.name).sort()).toEqual([
 			'get_academic_calendar',
 			'get_data_status',
+			'get_event',
 			'get_lessons',
 			'get_next_lesson',
 			'get_periods',

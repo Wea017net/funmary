@@ -20,7 +20,8 @@
 				createdAt: string;
 				lastUsedAt: string | null;
 			}[];
-			scopeOptions: readonly { scope: string; label: string }[];
+			scopeOptions: readonly { scope: string; label: string; write: boolean }[];
+			activity: readonly { id: number; tokenName: string; summary: string; at: string }[];
 			expiresOptions: readonly { days: number; label: string }[];
 			apiBase: string;
 			docsUrl: string;
@@ -42,8 +43,8 @@
 	<h1>公開 API と MCP</h1>
 	<p>
 		自分の AI エージェント (Claude、ChatGPT、Cursor など)
-		や自作のスクリプトから、自分の時間割や休講を
-		読み取り専用で読めます。発行したトークンを渡した相手には、あなたの時間割の内容が伝わります。渡す相手は
+		や自作のスクリプトから、自分の時間割や休講を読めます。書き込みの範囲を許可したトークンは、予定を足す、直す、消す、通知を既読にすることもできます
+		(既定ではオフです)。発行したトークンを渡した相手には、あなたの時間割の内容が伝わります。渡す相手は
 		信用できるものだけにしてください。
 	</p>
 	<p>
@@ -75,7 +76,19 @@
 			</label>
 			<fieldset>
 				<legend>読める範囲</legend>
-				{#each data.scopeOptions as option (option.scope)}
+				{#each data.scopeOptions.filter((option) => !option.write) as option (option.scope)}
+					<label class="choice">
+						<input type="checkbox" name="scopes" value={option.scope} />
+						{option.label}
+					</label>
+				{/each}
+			</fieldset>
+			<fieldset>
+				<legend>書き込める範囲</legend>
+				<p class="hint">
+					必要なときだけ選んでください。渡した相手が、あなたの予定を変えられるようになります。予定の公開範囲は、トークンからは変えられません。足す予定は、常に非公開です。
+				</p>
+				{#each data.scopeOptions.filter((option) => option.write) as option (option.scope)}
 					<label class="choice">
 						<input type="checkbox" name="scopes" value={option.scope} />
 						{option.label}
@@ -127,11 +140,32 @@
 		{/if}
 	</section>
 
+	<section aria-labelledby="activity-heading">
+		<h2 id="activity-heading">書き込みの履歴</h2>
+		<p class="muted">
+			トークンや接続から、予定や通知に書き込んだ記録です。新しい順に、最大 50 件を出します
+			(記録は、最新の 200
+			件まで残ります)。身に覚えのないものがあれば、そのトークンを無効にしてください。
+		</p>
+		{#if data.activity.length === 0}
+			<p class="muted">まだ書き込みはありません。</p>
+		{:else}
+			<ul class="activity">
+				{#each data.activity as row (row.id)}
+					<li>
+						<p class="name">{row.summary}</p>
+						<p class="meta">{row.at} / {row.tokenName}</p>
+					</li>
+				{/each}
+			</ul>
+		{/if}
+	</section>
+
 	<section aria-labelledby="usage-heading">
 		<h2 id="usage-heading">使い方</h2>
 		<p>
 			MCP (Model Context Protocol) に対応した AI アプリから、Funmary
-			の時間割や通知を読ませられます。読むだけで、データは書き換わりません。
+			の時間割や通知を読ませられます。読み取りの範囲だけを許可した接続は、データを書き換えません。書き込みの範囲を許可すると、予定の追加などもでき、その記録は上の履歴に残ります。
 		</p>
 		<CopyField id="mcp-url" label="MCP サーバーの URL" value={data.mcpUrl} {copyState} />
 
@@ -218,7 +252,14 @@
 		min-height: 48px;
 	}
 
-	.tokens {
+	.hint {
+		margin: 0;
+		color: var(--fm-text-muted);
+		font-size: 0.8125rem;
+	}
+
+	.tokens,
+	.activity {
 		margin: 0;
 		padding: 0;
 		list-style: none;

@@ -62,6 +62,61 @@ test.describe('公開 API と MCP', () => {
 		expect(afterRevoke.status()).toBe(401);
 	});
 
+	test('書き込みの範囲のトークンで予定を足せて、設定の履歴にトークンの名前が残る。読み取りだけのトークンでは足せない', async ({
+		page,
+		request,
+	}) => {
+		const email = `e2e-write-${Date.now()}@fun.ac.jp`;
+		oidc.setIdentity({ sub: email, email, email_verified: true, hd: 'fun.ac.jp' });
+		await signIn(page);
+		await page.goto('/app/settings/tokens');
+
+		// 書き込みの範囲は、初めはオフ。読み取りだけのトークンでは、予定を足せない
+		await expect(page.getByLabel('予定を足す、直す、消す')).not.toBeChecked();
+		await page.getByLabel('名前 (どこで使うかのメモ)').fill('読むだけ');
+		await page.getByLabel('今日や週の授業').check();
+		await page.getByRole('button', { name: '発行する' }).click();
+		const readOnly = await page.locator('#new-token').inputValue();
+		const event = {
+			title: 'E2E の予定',
+			startDate: '2030-01-07',
+			time: { kind: 'allDay' },
+		};
+		const denied = await request.post('/api/v1/events', {
+			headers: { Authorization: `Bearer ${readOnly}` },
+			data: event,
+		});
+		expect(denied.status()).toBe(403);
+
+		await page.goto('/app/settings/tokens');
+		await page.getByLabel('名前 (どこで使うかのメモ)').fill('予定の登録用');
+		await page.getByLabel('予定を足す、直す、消す').check();
+		await page.getByRole('button', { name: '発行する' }).click();
+		const writer = await page.locator('#new-token').inputValue();
+
+		const created = await request.post('/api/v1/events', {
+			headers: { Authorization: `Bearer ${writer}` },
+			data: event,
+		});
+		expect(created.status()).toBe(201);
+		const { id } = (await created.json()) as { id: number };
+
+		// 画面の予定の一覧に出て、設定の履歴に、どのトークンが足したかが残る
+		await page.goto('/app/events');
+		await expect(page.getByText('E2E の予定').first()).toBeVisible();
+		await page.goto('/app/settings/tokens');
+		const history = page.getByRole('region', { name: '書き込みの履歴' });
+		await expect(history).toContainText('予定「E2E の予定」を足した');
+		await expect(history).toContainText('予定の登録用');
+
+		const removed = await request.delete(`/api/v1/events/${id}`, {
+			headers: { Authorization: `Bearer ${writer}` },
+		});
+		expect(removed.status(), await removed.text()).toBe(204);
+		await page.reload();
+		await expect(history).toContainText('予定「E2E の予定」を消した');
+	});
+
 	test('MCP の認可 (OAuth): 登録、ログイン、同意、トークンの引き換え、リフレッシュ、取り消し', async ({
 		page,
 		request,
