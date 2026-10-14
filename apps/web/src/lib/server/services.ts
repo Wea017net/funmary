@@ -4,6 +4,7 @@ import type {
 	AcademicCalendarStore,
 	AccessGrantStore,
 	AccessTokenStore,
+	ApiActivityStore,
 	AccountStore,
 	TestAccountStore,
 	AuditLogStore,
@@ -127,6 +128,8 @@ export interface Services {
 	readonly feedTokens: FeedTokenStore;
 	/** 公開 API と MCP サーバー向けの個人用アクセストークン */
 	readonly accessTokens: AccessTokenStore;
+	/** アクセストークンからの書き込みの履歴。設定の画面で見せる */
+	readonly activity: ApiActivityStore;
 	/** アカウントのデータの書き出しと、退会 */
 	readonly account: AccountStore;
 	/** 管理者が用意するテストアカウント (大学のアカウントでなくても、ログインして試せる) */

@@ -14,7 +14,8 @@ export interface EventWriteSources {
 /** 書き込んだトークン。履歴に残す */
 export interface WriteActor {
 	readonly userId: string;
-	readonly tokenId: number;
+	/** 取り消されたあとの記録のために、null も許す */
+	readonly tokenId: number | null;
 	readonly tokenName: string;
 }
 
