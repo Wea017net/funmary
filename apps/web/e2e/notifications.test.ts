@@ -20,7 +20,8 @@ test.describe('通知欄', () => {
 		await page.goto('/app');
 		await expect(page.getByRole('link', { name: '通知', exact: true }).first()).toBeVisible();
 
-		// 履修を入れてから、そのあとに見つけた休講を入れる
+		// 履修を入れてから、そのあとに見つけた休講を入れる。
+		// 履修の前に、ほかのテストや前の試行が同じ科目に入れた休講を拾わないよう、休講の時刻を履修より後ろにする
 		seedSubjects((database, exerciseId) => {
 			const user = database.sqlite.prepare('SELECT id FROM users WHERE email = ?').get(email) as {
 				id: string;
@@ -30,13 +31,13 @@ test.describe('通知欄', () => {
 				.prepare(
 					'INSERT INTO course_registrations (user_id, subject_id, created_at) VALUES (?, ?, ?)',
 				)
-				.run(user.id, exerciseId, now - 60_000);
+				.run(user.id, exerciseId, now);
 			database.sqlite
 				.prepare(
 					`INSERT INTO class_changes (kind, subject_id, lesson_name, date, period, first_seen_at, last_seen_at)
 						VALUES ('cancellation', ?, ?, '2030-01-07', 2, ?, ?)`,
 				)
-				.run(exerciseId, lessonName, now, now);
+				.run(exerciseId, lessonName, now + 1_000, now + 1_000);
 		});
 
 		// 管理者が、休講などを通知欄に入れる定期処理を今すぐ動かす
@@ -274,18 +275,27 @@ test.describe('Webhook', () => {
 		const admin = 'e2e-admin@fun.ac.jp';
 		oidc.setIdentity({ sub: admin, email: admin, email_verified: true, hd: 'fun.ac.jp' });
 		await signIn(page);
-		await page.goto('/app/admin/webhooks');
-		await page.getByLabel(/1 人あたりの上限/).fill('0');
-		await page.getByRole('button', { name: '保存する' }).click();
-		await expect(page.getByRole('status')).toHaveText('上限を 0 個にしました。');
+		// 画面が動き出す前に入れた値は、動き出したときに元に戻ることがある。保存の結果で確かめ、戻っていたらやり直す
+		await expect(async () => {
+			await page.goto('/app/admin/webhooks');
+			await page.getByLabel(/1 人あたりの上限/).fill('0');
+			await page.getByRole('button', { name: '保存する' }).click();
+			await expect(page.getByRole('status')).toHaveText('上限を 0 個にしました。', {
+				timeout: 3000,
+			});
+		}).toPass();
 
 		await page.goto('/app/settings/webhooks');
 		await expect(page.getByText('上限に達しています')).toBeVisible();
 		await expect(page.getByRole('button', { name: '登録して、テスト通知を送る' })).toHaveCount(0);
 
-		await page.goto('/app/admin/webhooks');
-		await page.getByLabel(/1 人あたりの上限/).fill('5');
-		await page.getByRole('button', { name: '保存する' }).click();
-		await expect(page.getByRole('status')).toHaveText('上限を 5 個にしました。');
+		await expect(async () => {
+			await page.goto('/app/admin/webhooks');
+			await page.getByLabel(/1 人あたりの上限/).fill('5');
+			await page.getByRole('button', { name: '保存する' }).click();
+			await expect(page.getByRole('status')).toHaveText('上限を 5 個にしました。', {
+				timeout: 3000,
+			});
+		}).toPass();
 	});
 });
