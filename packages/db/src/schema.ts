@@ -521,6 +521,28 @@ export const accessTokens = sqliteTable(
 	(table) => [index('access_tokens_user').on(table.userId)],
 );
 
+/** アクセストークン (公開 API、MCP) からの書き込みの履歴。利用者が、どのクライアントが何をしたかを確かめる。1 人につき最新の分だけ残す */
+export const apiActivity = sqliteTable(
+	'api_activity',
+	{
+		id: integer('id').primaryKey({ autoIncrement: true }),
+		userId: text('user_id')
+			.notNull()
+			.references(() => users.id, { onDelete: 'cascade' }),
+		/** 書き込んだトークン。取り消されたあとも履歴は残すので、外部キーにはしない */
+		tokenId: integer('token_id'),
+		/** その時点のトークンの名前 (取り消しや名前の違いがあっても、履歴で何だったか分かるように) */
+		tokenName: text('token_name').notNull(),
+		/** event.create、event.update、event.delete、notification.read など */
+		action: text('action').notNull(),
+		/** 書き込んだ先の ID (予定や通知)。なければ null */
+		targetId: integer('target_id'),
+		summary: text('summary').notNull(),
+		createdAt: createdAt(),
+	},
+	(table) => [index('api_activity_user').on(table.userId, table.id)],
+);
+
 /** MCP の認可で、動的に登録されたクライアント (Claude など)。公開クライアントなので、秘密は持たない */
 export const oauthClients = sqliteTable('oauth_clients', {
 	/** client_id。推測できない乱数 */

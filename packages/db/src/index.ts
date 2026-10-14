@@ -1,6 +1,16 @@
 export { backupDatabase, restoreDatabase, type BackupOptions } from './backup.ts';
 export {
+	API_ACTIVITY_LIMIT,
+	createApiActivityStore,
+	type ApiActivityAction,
+	type ApiActivityInput,
+	type ApiActivityRecord,
+	type ApiActivityStore,
+} from './api-activity-store.ts';
+export {
 	ACCESS_TOKEN_SCOPES,
+	READ_SCOPES,
+	WRITE_SCOPES,
 	createAccessTokenStore,
 	type AccessTokenOwner,
 	type AccessTokenScope,
