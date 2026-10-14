@@ -65,7 +65,7 @@ Windows で開発しているので、npm scripts に POSIX シェル前提の�
 | `hono`                                            | Hono の API を書くとき                                                                              |
 | `pnpm`                                            | 依存の追加、workspace や catalog の設定を変えるとき                                                 |
 | `vitest`                                          | 単体テストを書くとき                                                                                |
-| `tdd`、`testing-anti-patterns`                    | 機能を足す、不具合を直す、テストを書く、直すとき。テストを先に書き、モックの使い方を確かめる        |
+| `tdd`、`test-driven-development`                  | 機能を足す、不具合を直す、テストを書く、直すとき。テストを先に書き、よいテストの書き方を確かめる    |
 | `playwright-cli`、`playwright-best-practices`     | E2E テストを書くとき、画面を実際に動かして確かめるとき                                              |
 | `code-review`                                     | ブランチや PR の変更を見直すとき                                                                    |
 | `diagnosing-bugs`                                 | 原因の分からない不具合や、遅さを調べるとき                                                          |
