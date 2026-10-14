@@ -80,8 +80,13 @@ test.describe('ホーム画面に追加 (PWA)', () => {
 		await expect(browserPage.getByText('プッシュ通知は、今後対応する予定')).toBeVisible();
 
 		// 折りたたむと、開き直しても折りたたんだまま (このブラウザだけ覚える)
-		await heading.click();
-		await expect(browserPage.getByText('プッシュ通知は、今後対応する予定')).toBeHidden();
+		// 画面が動き出す前に押すと、動き出したときに開き直される。折りたたまれるまで押し直す
+		await expect(async () => {
+			await heading.click();
+			await expect(browserPage.getByText('プッシュ通知は、今後対応する予定')).toBeHidden({
+				timeout: 1000,
+			});
+		}).toPass();
 		await browserPage.reload();
 		await expect(browserPage.getByRole('heading', { name: 'アプリとして使う' })).toBeVisible();
 		await expect(browserPage.getByText('プッシュ通知は、今後対応する予定')).toBeHidden();
