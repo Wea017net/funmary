@@ -1,6 +1,7 @@
 // 公開 API と MCP サーバー向けの個人用アクセストークン。発行、一覧、無効化。
 // トークンは発行したときに 1 回だけ見せ、DB にはハッシュだけを保存する。
 import { fail, type Actions, type ServerLoad } from '@sveltejs/kit';
+import { jstDateTime } from '@funmary/core';
 import {
 	ACCESS_TOKEN_EXPIRES_OPTIONS,
 	ACCESS_TOKEN_SCOPE_OPTIONS,
@@ -12,7 +13,7 @@ import { requireSignedIn } from '#lib/server/admin.ts';
 
 export const load: ServerLoad = ({ locals }) => {
 	requireSignedIn(locals);
-	const { accessTokens, origin } = getServices();
+	const { accessTokens, activity, origin } = getServices();
 	const now = new Date();
 	return {
 		tokens: accessTokens.list(locals.user.id, now).map((token) => ({
@@ -24,6 +25,16 @@ export const load: ServerLoad = ({ locals }) => {
 			lastUsedAt: token.lastUsedAt?.toISOString() ?? null,
 		})),
 		scopeOptions: ACCESS_TOKEN_SCOPE_OPTIONS,
+		// 書き込みの履歴 (どのトークンが、何をしたか)。日本時間の文字にして渡す
+		activity: activity.listRecent(locals.user.id, 50).map((row) => {
+			const at = jstDateTime(row.createdAt);
+			return {
+				id: row.id,
+				tokenName: row.tokenName,
+				summary: row.summary,
+				at: `${at.date} ${at.time}`,
+			};
+		}),
 		expiresOptions: ACCESS_TOKEN_EXPIRES_OPTIONS,
 		apiBase: `${origin}/api/v1`,
 		docsUrl: `${origin}/api/docs`,
