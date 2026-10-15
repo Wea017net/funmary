@@ -289,11 +289,24 @@ describe('parseConfig', () => {
 		['ADMIN_EMAILS', 'admin', 'メールアドレスでない'],
 		['ADMIN_DISCORD_WEBHOOK_URL', 'https://example.com/hook', 'Discord の Webhook でない'],
 		['HEARTBEAT_URL', 'ftp://hc-ping.com/abc', 'http でない'],
+		['BUS_API_BASE_URL', 'ftp://bus.example.com', 'http でない'],
 		['NOTIFY_DRY_RUN', 'yes', 'true か false でない'],
 		['XFF_DEPTH', '0', '1 以上でない'],
 	])('%s に %s と書くと (%s)、その変数の誤りとして返す', (name, value) => {
 		const result = parseConfig({ ...developmentEnv(), [name]: value });
 		expect(result.ok ? [] : result.issues.map((issue) => issue.name)).toEqual([name]);
+	});
+
+	it('BUS_API_BASE_URL は、書かなければバスの機能を無効にし、書けば URL として読む', () => {
+		const busUrlOf = (extra: Record<string, string>) => {
+			const result = parseConfig({ ...developmentEnv(), ...extra });
+			return result.ok ? result.config.busApiBaseUrl : 'error';
+		};
+		expect(busUrlOf({})).toBeUndefined();
+		expect(busUrlOf({ BUS_API_BASE_URL: '' })).toBeUndefined();
+		expect(busUrlOf({ BUS_API_BASE_URL: 'https://bus.example.com' })).toBe(
+			'https://bus.example.com',
+		);
 	});
 
 	it('カンマ区切りの値は、前後の空白を除き、空の要素を捨てる', () => {

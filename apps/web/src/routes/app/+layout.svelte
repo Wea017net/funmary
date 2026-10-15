@@ -9,6 +9,7 @@
 	import NotificationBell from '#lib/components/NotificationBell.svelte';
 	import ThemeToggle from '#lib/components/ThemeToggle.svelte';
 	import type { ThemePreference } from '#lib/theme.ts';
+	import IconBus from '~icons/material-symbols/directions-bus-outline';
 	import IconCourses from '~icons/material-symbols/menu-book-outline';
 	import IconHome from '~icons/material-symbols/home-outline';
 	import IconSettings from '~icons/material-symbols/settings-outline';
@@ -42,6 +43,7 @@
 			about: About;
 			operator: { name: string; url: string } | null;
 			unreadNotifications: number;
+			busEnabled: boolean;
 		};
 		children: Snippet;
 	} = $props();
@@ -69,6 +71,16 @@
 				page.url.pathname.startsWith('/app/courses') ||
 				page.url.pathname.startsWith('/app/subjects'),
 		},
+		...(data.busEnabled
+			? [
+					{
+						href: resolve('app/bus'),
+						label: 'バス',
+						icon: IconBus,
+						current: page.url.pathname.startsWith('/app/bus'),
+					},
+				]
+			: []),
 		{
 			href: resolve('app/settings'),
 			label: '設定',

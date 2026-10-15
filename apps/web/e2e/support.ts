@@ -2,7 +2,7 @@
 // サーバーは本物の RS256 で署名した ID トークンを返すので、アプリは本番と同じ手順 (PKCE、state、nonce、署名の検証) を通る。
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { createSubjectStore, openDatabase, type Database } from '@funmary/db';
+import { createBusStore, createSubjectStore, openDatabase, type Database } from '@funmary/db';
 import { expect, test, type Page } from '@playwright/test';
 import {
 	startMockOidcServer,
@@ -107,4 +107,56 @@ export async function signInAs(page: Page, email: string) {
 	oidc.setIdentity({ sub: email, email, email_verified: true, hd: 'fun.ac.jp' });
 	await signIn(page);
 	await expect(page).toHaveURL('/app');
+}
+
+/** バスの時刻表の写しを DB に入れる。毎日 5 時から 24 時まで 30 分おきの発車を、2 つの停留所に入れる (いつ動かしても次のバスがある) */
+export function seedBus() {
+	const database = openDatabase(join(E2E_DATA_DIR, 'funmary.db'), {
+		backupDir: join(E2E_DATA_DIR, 'backups'),
+	});
+	try {
+		const bus = createBusStore(database);
+		const now = new Date();
+		const generation = { code: 20200101, name: '令和2年1月1日', current: true };
+		const stops = [
+			{ id: '14023', name: 'はこだて未来大学' },
+			{ id: '11003', name: '函館駅前' },
+		];
+		bus.saveCatalog(
+			{ generatedAt: now.toISOString(), generations: [generation], stops },
+			null,
+			now,
+		);
+		const times = Array.from({ length: 38 }, (_, index) => {
+			const minutes = 5 * 60 + index * 30;
+			const hour = String(Math.floor(minutes / 60)).padStart(2, '0');
+			return `${hour}:${String(minutes % 60).padStart(2, '0')}`;
+		});
+		for (const stop of stops) {
+			bus.saveTimetable(
+				{
+					generatedAt: now.toISOString(),
+					generation,
+					stop,
+					timetables: (['weekday', 'holiday'] as const).map((day) => ({
+						platformNo: 1,
+						platformName: '1 番のりば',
+						day,
+						notes: ['△＝架空の注意書き'],
+						departures: times.map((time) => ({
+							time,
+							routes: ['55A'],
+							via: '架空の経由地',
+							destination: '架空の行き先',
+							marks: [],
+						})),
+					})),
+				},
+				null,
+				now,
+			);
+		}
+	} finally {
+		database.close();
+	}
 }

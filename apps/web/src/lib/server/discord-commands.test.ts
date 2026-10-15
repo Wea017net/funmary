@@ -1,6 +1,7 @@
 import {
 	createAcademicCalendarStore,
 	createAuthStore,
+	createBusStore,
 	createClassChangeStore,
 	createCourseStore,
 	createHolidayStore,
@@ -30,6 +31,8 @@ function services(
 		accepted?: string | null;
 		/** 取得に最後に成功した日時。省くと、直前に成功したことにする */
 		lastSuccessAt?: Date | null;
+		/** バスの時刻表の写し。省くと、バスの機能を使わない設定 */
+		bus?: ReturnType<typeof createBusStore>;
 	} = {},
 ): Services {
 	const { enabled = true, linked = null, status = 'active' } = options;
@@ -68,6 +71,7 @@ function services(
 		academicCalendar: createAcademicCalendarStore(database),
 		holidays: createHolidayStore(database),
 		estimateHolidays: () => [],
+		bus: options.bus ?? null,
 	} as unknown as Services;
 }
 
@@ -171,6 +175,74 @@ describe('answerCommand', () => {
 	it('授業がなければ、/next はその旨を返す', () => {
 		const text = answerCommand(services({ linked: { userId: 'u1' } }), 'next', 'discord-1', NOW);
 		expect(text).toBe('これから 14 日の間に、授業の予定はありません。');
+	});
+
+	describe('/bus', () => {
+		const stop = { id: '14023', name: 'はこだて未来大学' };
+		const generation = { code: 20261001, name: '令和8年10月1日', current: true };
+
+		function seededBus() {
+			const bus = createBusStore(database);
+			bus.saveCatalog(
+				{ generatedAt: NOW.toISOString(), generations: [generation], stops: [stop] },
+				null,
+				NOW,
+			);
+			bus.saveTimetable(
+				{
+					generatedAt: NOW.toISOString(),
+					generation,
+					stop,
+					timetables: [
+						{
+							platformNo: 1,
+							day: 'weekday',
+							notes: [],
+							departures: [
+								{
+									time: '10:05',
+									routes: ['55A'],
+									via: '赤川通',
+									destination: '亀田支所前',
+									marks: [],
+								},
+								{ time: '10:40', routes: ['55'], marks: [] },
+							],
+						},
+					],
+				},
+				null,
+				NOW,
+			);
+			return bus;
+		}
+
+		it('強調する停留所の次の発車を、系統と行き先つきで返す', () => {
+			const text = answerCommand(
+				services({ linked: { userId: 'u1' }, bus: seededBus() }),
+				'bus',
+				'discord-1',
+				NOW,
+			);
+			expect(text).toContain('**はこだて未来大学**');
+			expect(text).toContain('10:05 (5 分後) 55A 赤川通 → 亀田支所前');
+			expect(text).toContain('10:40 (40 分後) 55');
+		});
+
+		it('時刻表をまだ取り込んでいなければ、その旨を返す', () => {
+			const text = answerCommand(
+				services({ linked: { userId: 'u1' }, bus: createBusStore(database) }),
+				'bus',
+				'discord-1',
+				NOW,
+			);
+			expect(text).toBe('バスの時刻表は、まだ取り込めていません。');
+		});
+
+		it('バスの機能を使わない設定では、その旨を返す', () => {
+			const text = answerCommand(services({ linked: { userId: 'u1' } }), 'bus', 'discord-1', NOW);
+			expect(text).toBe('このサーバーでは、バスの時刻表を使っていません。');
+		});
 	});
 
 	it('知らないコマンドには、対応していないと返す', () => {

@@ -2,6 +2,7 @@
 // 管理用コマンドからも読み込むので、$lib を使わずに相対のパスで読み込む
 import {
 	createAcademicCalendarStore,
+	createBusStore,
 	createClassChangeStore,
 	createHolidayStore,
 	createNotificationStore,
@@ -19,11 +20,14 @@ import {
 	createPruneNotificationsJob,
 	createRemindTimetableImportJob,
 	createScrapePortalJob,
+	createSyncBusJob,
 	type JobDefinition,
 } from '@funmary/jobs';
 import type { AdminAlert } from '@funmary/notify';
 import {
 	fetchAcademicCalendarPdf,
+	fetchBusStopList,
+	fetchBusStopTimetable,
 	fetchHolidays,
 	fetchPortalPage,
 	fetchSyllabusCatalog,
@@ -38,6 +42,7 @@ export const JOB_LABELS: ReadonlyMap<string, string> = new Map([
 	['import-syllabus', '公開シラバスの取り込み'],
 	['import-holidays', '祝日の取り込み'],
 	['import-academic-calendar', '学年暦の取り込み'],
+	['sync-bus', 'バスの時刻表の取り込み'],
 	['remind-timetable-import', '時間割の PDF の取り込みの案内'],
 	['send-daily-digest', '予定のまとめの送信'],
 	['deliver-notifications', '通知の送信'],
@@ -116,6 +121,32 @@ export function createJobDefinitions({ config, database, alert }: JobFactoryDeps
 			alert,
 		}),
 	);
+	// バスの時刻表は、API の基準の URL を設定したときだけ取り込む
+	const busApiBaseUrl = config.busApiBaseUrl;
+	if (busApiBaseUrl) {
+		jobs.push(
+			createSyncBusJob({
+				fetchCatalog: (etag) =>
+					fetchBusStopList({
+						fetch: (url, init) => fetch(url, init),
+						baseUrl: busApiBaseUrl,
+						etag,
+					}),
+				fetchTimetable: ({ stopId, generation, etag }) =>
+					fetchBusStopTimetable({
+						fetch: (url, init) => fetch(url, init),
+						baseUrl: busApiBaseUrl,
+						stopId,
+						generation,
+						etag,
+					}),
+				disabledSources: config.sourcesDisabled,
+				health: createSourceHealthStore(database),
+				bus: createBusStore(database),
+				alert,
+			}),
+		);
+	}
 	// 履修している科目の休講などを、利用者の通知欄に入れる
 	const notificationStore = createNotificationStore(database);
 	jobs.push(

@@ -5,6 +5,10 @@ import { requireSignedIn } from '#lib/server/admin.ts';
 
 export const load: ServerLoad = ({ locals }) => {
 	requireSignedIn(locals);
-	// 上部のベルに出す未読数
-	return { unreadNotifications: getServices().notifications.unreadCount(locals.user.id) };
+	const services = getServices();
+	// 上部のベルに出す未読数と、バスのタブを出すか (BUS_API_BASE_URL を設定したときだけ)
+	return {
+		unreadNotifications: services.notifications.unreadCount(locals.user.id),
+		busEnabled: services.bus !== null,
+	};
 };

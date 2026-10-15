@@ -64,6 +64,7 @@ export const ACCESS_TOKEN_SCOPE_OPTIONS: readonly AccessTokenScopeOption[] = [
 	{ scope: 'read:lessons', label: '今日や週の授業、予定を読む', write: false },
 	{ scope: 'read:changes', label: '休講、補講、教室変更を読む', write: false },
 	{ scope: 'read:notifications', label: '通知欄を読む', write: false },
+	{ scope: 'read:transit', label: 'バスの時刻表を読む', write: false },
 	{ scope: 'write:events', label: '予定を足す、直す、消す', write: true },
 	{ scope: 'write:notifications', label: '通知を既読にする', write: true },
 ];
