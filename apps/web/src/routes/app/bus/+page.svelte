@@ -258,15 +258,6 @@
 					<p class="muted">今日の発車は、もうありません。</p>
 				{/if}
 			{/if}
-
-			{#if leg.notes.length > 0}
-				<details class="legend">
-					<summary>印の意味</summary>
-					<ul>
-						{#each leg.notes as note (note)}<li>{note}</li>{/each}
-					</ul>
-				</details>
-			{/if}
 		{:else}
 			<p>この停留所の時刻表は、取り込んだ時刻表にありません。</p>
 		{/if}
@@ -506,21 +497,6 @@
 
 	.empty {
 		margin: 1.5rem 0;
-	}
-
-	.legend {
-		margin-top: 0.75rem;
-		color: var(--fm-text-muted);
-		font-size: 0.8125rem;
-
-		summary {
-			cursor: pointer;
-		}
-
-		ul {
-			margin: 0.5rem 0 0;
-			padding-left: 1.25rem;
-		}
 	}
 
 	.meta {
