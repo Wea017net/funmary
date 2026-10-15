@@ -22,6 +22,7 @@
 		"packages/*/src/**/*",
 		"packages/*/*.ts",
 		"packages/*/*.js",
+		"packages/*/scripts/**/*",
 		"scripts/**/*",
 		"*.ts",
 		"*.js"

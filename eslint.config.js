@@ -12,6 +12,7 @@ export default defineConfig(
 			'**/.svelte-kit/',
 			'**/dist/',
 			'**/coverage/',
+			'packages/client/src/generated/',
 			'**/playwright-report/',
 			'**/test-results/',
 			// pnpm package-release が作るリリース

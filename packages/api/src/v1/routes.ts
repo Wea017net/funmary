@@ -422,6 +422,72 @@ const BusNextSchema = v.object({
 	),
 });
 
+const WeekGridSchema = v.object({
+	weekStart: v.pipe(v.string(), v.description('その週の月曜の日付 (YYYY-MM-DD)')),
+	periods: v.array(v.object({ number: v.number(), start: v.string(), end: v.string() })),
+	days: v.pipe(
+		v.array(
+			v.object({
+				date: v.string(),
+				weekday: v.pipe(v.number(), v.description('1 (月) から 7 (日)')),
+				note: v.pipe(
+					v.nullable(DaySchema),
+					v.description('振替授業日、全学の休講日、祝日。なければ null'),
+				),
+				cells: v.pipe(
+					v.array(v.object({ period: v.number(), lessons: v.array(LessonSchema) })),
+					v.description('時限の順。授業のない時限も入り、lessons が空になる'),
+				),
+			}),
+		),
+		v.description('月曜から日曜の 7 日'),
+	),
+	usesEstimatedTerms: v.boolean(),
+});
+
+const SubjectDetailSchema = v.object({
+	subject: v.object({
+		id: v.number(),
+		academicYear: v.number(),
+		syllabusId: v.string(),
+		name: v.string(),
+		teacher: v.nullable(v.string()),
+		credits: v.nullable(v.number()),
+		term: v.string(),
+		attributes: v.pipe(v.record(v.string(), v.string()), v.description('配当年次などの項目')),
+		syllabus: v.pipe(
+			v.record(v.string(), v.string()),
+			v.description('シラバスの内容 (授業の概要、到達目標など)'),
+		),
+		syllabusUrl: v.nullable(v.string()),
+		updatedAt: v.string(),
+		source: v.picklist(['syllabus', 'user']),
+		createdBy: v.nullable(v.string()),
+		visibility: v.picklist(['public', 'link', 'private']),
+	}),
+	changes: v.pipe(
+		v.array(
+			v.object({
+				kind: v.picklist(['cancellation', 'makeup', 'roomChange']),
+				date: v.string(),
+				period: v.number(),
+				room: v.nullable(v.string()),
+				fromRoom: v.nullable(v.string()),
+				comment: v.nullable(v.string()),
+				makeupPlan: v.nullable(v.picklist(['planned', 'none', 'undecided'])),
+				withdrawn: v.boolean(),
+			}),
+		),
+		v.description('休講、補講、教室変更の履歴 (新しい順)'),
+	),
+});
+
+const MeSchema = v.object({
+	id: v.string(),
+	email: v.string(),
+	scopes: v.pipe(v.array(v.string()), v.description('このトークンに許された範囲')),
+});
+
 const NotificationSchema = v.object({
 	id: v.number(),
 	kind: v.string(),
@@ -554,6 +620,12 @@ export function createV1Routes(deps: V1RoutesDeps): Hono<{ Variables: V1AuthVari
 		describeRoute({
 			description:
 				'date (省けば今日) を含む週 (月曜から日曜) の、曜日と時限の格子。画面の週の時間割と同じ並びで、クライアントでの整形が要らない。授業のない時限も cells に入る (lessons が空)',
+			responses: {
+				200: {
+					description: 'OK',
+					content: { 'application/json': { schema: resolver(WeekGridSchema) } },
+				},
+			},
 		}),
 		validator('query', WeekQuery),
 		(c) => {
@@ -638,7 +710,16 @@ export function createV1Routes(deps: V1RoutesDeps): Hono<{ Variables: V1AuthVari
 	app.get(
 		'/api/v1/subjects/:year/:syllabusId',
 		requireScope('read:lessons'),
-		describeRoute({ description: '授業の詳細を返す' }),
+		describeRoute({
+			description: '授業の詳細を返す',
+			responses: {
+				200: {
+					description: 'OK',
+					content: { 'application/json': { schema: resolver(SubjectDetailSchema) } },
+				},
+				404: { description: '科目がない、または見られない' },
+			},
+		}),
 		validator('param', SubjectParam),
 		(c) => {
 			const { year, syllabusId } = c.req.valid('param');
@@ -1155,12 +1236,24 @@ export function createV1Routes(deps: V1RoutesDeps): Hono<{ Variables: V1AuthVari
 		},
 	);
 
-	app.get('/api/v1/me', describeRoute({ description: 'トークンの持ち主の情報を返す' }), (c) => {
-		const { userId, scopes } = c.get('tokenOwner');
-		const user = deps.users.findUserById(userId);
-		if (!user) return c.json({ error: 'not_found' }, 404);
-		return c.json({ id: user.id, email: user.email, scopes });
-	});
+	app.get(
+		'/api/v1/me',
+		describeRoute({
+			description: 'トークンの持ち主の情報と、トークンに許された範囲を返す',
+			responses: {
+				200: {
+					description: 'OK',
+					content: { 'application/json': { schema: resolver(MeSchema) } },
+				},
+			},
+		}),
+		(c) => {
+			const { userId, scopes } = c.get('tokenOwner');
+			const user = deps.users.findUserById(userId);
+			if (!user) return c.json({ error: 'not_found' }, 404);
+			return c.json({ id: user.id, email: user.email, scopes });
+		},
+	);
 
 	return app;
 }
