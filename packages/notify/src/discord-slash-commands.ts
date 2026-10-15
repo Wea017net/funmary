@@ -23,7 +23,7 @@ export const SLASH_COMMANDS = [
 	},
 	{
 		name: 'bus',
-		description: '未来大と亀田支所前の、次のバスを、本人にだけ見せます',
+		description: '亀田支所前と未来大の間の、次のバスを、本人にだけ見せます',
 	},
 ] as const;
 

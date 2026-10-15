@@ -109,7 +109,11 @@ export async function signInAs(page: Page, email: string) {
 	await expect(page).toHaveURL('/app');
 }
 
-/** バスの時刻表の写しを DB に入れる。毎日 5 時から 24 時まで 30 分おきの発車を、2 つの停留所に入れる (いつ動かしても次のバスがある) */
+/**
+ * バスの時刻表の写しを DB に入れる。毎日 5 時から 24 時まで 30 分おきに、2 つの停留所の発車を入れる (いつ動かしても次のバスがある)。
+ * 函館駅前 (A) は、偶数の発車が未来大 (経由に未来大) を通る赤川行、奇数の発車が反対向きの千代台行。
+ * 未来大は、偶数の発車が千代台行 (A を通る)、奇数の発車が赤川行
+ */
 export function seedBus() {
 	const database = openDatabase(join(E2E_DATA_DIR, 'funmary.db'), {
 		backupDir: join(E2E_DATA_DIR, 'backups'),
@@ -132,7 +136,14 @@ export function seedBus() {
 			const hour = String(Math.floor(minutes / 60)).padStart(2, '0');
 			return `${hour}:${String(minutes % 60).padStart(2, '0')}`;
 		});
+		const toward = { destination: '赤川', via: '赤川通・はこだて未来大学' };
+		const away = { destination: '千代台', via: '亀田支所前' };
+		const patterns = new Map([
+			['11003', (index: number) => (index % 2 === 0 ? toward : away)],
+			['14023', (index: number) => (index % 2 === 0 ? away : { destination: '赤川' })],
+		]);
 		for (const stop of stops) {
+			const pattern = patterns.get(stop.id)!;
 			bus.saveTimetable(
 				{
 					generatedAt: now.toISOString(),
@@ -143,11 +154,10 @@ export function seedBus() {
 						platformName: '1 番のりば',
 						day,
 						notes: ['△＝架空の注意書き'],
-						departures: times.map((time) => ({
+						departures: times.map((time, index) => ({
 							time,
 							routes: ['55A'],
-							via: '架空の経由地',
-							destination: '架空の行き先',
+							...pattern(index),
 							marks: [],
 						})),
 					})),

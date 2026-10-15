@@ -111,6 +111,8 @@ export interface Services {
 	readonly holidays: HolidayStore;
 	/** バスの時刻表の写し。BUS_API_BASE_URL を設定していないときは null で、バスの機能を出さない */
 	readonly bus: BusStore | null;
+	/** 学内の Wi-Fi の IPv4 アドレスの範囲 (CAMPUS_IP_RANGES) */
+	readonly campusIpRanges: readonly string[];
 	readonly sourceHealth: SourceHealthStore;
 	readonly jobRuns: StoredJobRunStore;
 	/** サーバーの中で動いている定期処理。管理画面から今すぐ動かせる */

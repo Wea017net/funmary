@@ -178,55 +178,69 @@ describe('answerCommand', () => {
 	});
 
 	describe('/bus', () => {
-		const stop = { id: '14023', name: 'はこだて未来大学' };
+		const kameda = { id: '14013', name: '亀田支所前' };
+		const university = { id: '14023', name: 'はこだて未来大学' };
 		const generation = { code: 20261001, name: '令和8年10月1日', current: true };
+
+		function table(
+			stop: { id: string; name: string },
+			departures: { time: string; destination: string; via?: string }[],
+		) {
+			return {
+				generatedAt: NOW.toISOString(),
+				generation,
+				stop,
+				timetables: [
+					{
+						platformNo: 1,
+						day: 'weekday' as const,
+						notes: [],
+						departures: departures.map((d) => ({ routes: ['55A'], marks: [], ...d })),
+					},
+				],
+			};
+		}
 
 		function seededBus() {
 			const bus = createBusStore(database);
 			bus.saveCatalog(
-				{ generatedAt: NOW.toISOString(), generations: [generation], stops: [stop] },
+				{ generatedAt: NOW.toISOString(), generations: [generation], stops: [kameda, university] },
 				null,
 				NOW,
 			);
 			bus.saveTimetable(
-				{
-					generatedAt: NOW.toISOString(),
-					generation,
-					stop,
-					timetables: [
-						{
-							platformNo: 1,
-							day: 'weekday',
-							notes: [],
-							departures: [
-								{
-									time: '10:05',
-									routes: ['55A'],
-									via: '赤川通',
-									destination: '亀田支所前',
-									marks: [],
-								},
-								{ time: '10:40', routes: ['55'], marks: [] },
-							],
-						},
-					],
-				},
+				table(kameda, [
+					{ time: '10:05', destination: '赤川', via: '赤川通・はこだて未来大学' },
+					{ time: '10:20', destination: '函館駅前', via: '五稜郭' },
+				]),
+				null,
+				NOW,
+			);
+			bus.saveTimetable(
+				table(university, [
+					{ time: '10:15', destination: '函館駅前', via: '亀田支所前・五稜郭' },
+					{ time: '10:30', destination: '赤川' },
+				]),
 				null,
 				NOW,
 			);
 			return bus;
 		}
 
-		it('強調する停留所の次の発車を、系統と行き先つきで返す', () => {
+		it('亀田支所前と未来大の間の、2 つの向きの次の発車を、系統と行き先つきで返す', () => {
 			const text = answerCommand(
 				services({ linked: { userId: 'u1' }, bus: seededBus() }),
 				'bus',
 				'discord-1',
 				NOW,
 			);
-			expect(text).toContain('**はこだて未来大学**');
-			expect(text).toContain('10:05 (5 分後) 55A 赤川通 → 亀田支所前');
-			expect(text).toContain('10:40 (40 分後) 55');
+			expect(text).toContain('**亀田支所前 → はこだて未来大学**');
+			expect(text).toContain('10:05 (5 分後) 55A 赤川通・はこだて未来大学 → 赤川');
+			expect(text).toContain('**はこだて未来大学 → 亀田支所前**');
+			expect(text).toContain('10:15 (15 分後) 55A 亀田支所前・五稜郭 → 函館駅前');
+			// 反対向きの便は、混ぜない
+			expect(text).not.toContain('10:20');
+			expect(text).not.toContain('10:30');
 		});
 
 		it('時刻表をまだ取り込んでいなければ、その旨を返す', () => {

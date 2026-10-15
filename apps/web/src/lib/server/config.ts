@@ -36,6 +36,8 @@ export interface Config {
 	readonly sourcesFixtureDir: string | undefined;
 	/** バスの時刻表の API の基準の URL。ないときは、バスの機能を出さない */
 	readonly busApiBaseUrl: string | undefined;
+	/** 学内の Wi-Fi の IPv4 アドレスの範囲。空なら、IP アドレスでは学内を判定しない */
+	readonly campusIpRanges: readonly string[];
 	/** メールの送信。SMTP_URL が空ならない */
 	readonly smtp: { readonly url: string; readonly from: string } | undefined;
 	readonly adminDiscordWebhookUrl: string | undefined;
@@ -127,6 +129,13 @@ function httpUrl(message: string) {
 	);
 }
 
+const IPV4_RANGE = v.pipe(
+	v.string(),
+	v.regex(
+		/^\d{1,3}(\.\d{1,3}){3}(\/\d{1,2})?$/,
+		'IPv4 アドレスか、a.b.c.d/n の範囲をカンマ区切りで書いてください',
+	),
+);
 const EMAIL = v.pipe(
 	v.string(),
 	v.regex(/^[^@\s]+@[^@\s]+\.[^@\s]+$/, 'メールアドレスをカンマ区切りで書いてください'),
@@ -210,6 +219,8 @@ function envSchema(mode: Mode) {
 		SOURCES_DISABLED: v.optional(commaList(), ''),
 		SOURCES_FIXTURE_DIR: v.optional(v.string()),
 		// バスの時刻表の API の基準の URL。書いたときだけ、バスの機能が有効になる
+		// 学内の Wi-Fi の IPv4 アドレスの範囲 (カンマ区切り。例: 203.0.113.0/24)。バスの画面が、学内では未来大から出る向きを、はじめに出すのに使う
+		CAMPUS_IP_RANGES: v.optional(commaList(IPV4_RANGE), ''),
 		BUS_API_BASE_URL: v.optional(httpUrl('http:// か https:// で始まる URL を書いてください')),
 		SMTP_URL: v.optional(
 			v.pipe(
@@ -371,6 +382,7 @@ export function parseConfig(env: Readonly<Record<string, string | undefined>>): 
 			sourcesDisabled: e.SOURCES_DISABLED,
 			sourcesFixtureDir: e.SOURCES_FIXTURE_DIR,
 			busApiBaseUrl: e.BUS_API_BASE_URL,
+			campusIpRanges: e.CAMPUS_IP_RANGES,
 			smtp:
 				e.SMTP_URL !== undefined && e.MAIL_FROM !== undefined
 					? { url: e.SMTP_URL, from: e.MAIL_FROM }

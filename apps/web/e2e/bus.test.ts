@@ -13,35 +13,60 @@ test.describe('バス', () => {
 		seedBus();
 	});
 
-	test('メニューにバスが出て、強調する停留所の次のバスが並ぶ', async ({ page }) => {
-		await signInAs(page, email);
-		await page.getByRole('link', { name: 'バス', exact: true }).first().click();
-		await expect(page.getByRole('heading', { level: 1, name: 'バス' })).toBeVisible();
-		await expect(page.getByRole('heading', { level: 2, name: 'はこだて未来大学' })).toBeVisible();
-		const first = page.getByRole('listitem').filter({ hasText: '架空の行き先' }).first();
-		await expect(first).toContainText('55A');
-		await expect(first).toContainText('架空の経由地');
-	});
-
-	test('停留所を選ぶと、その停留所の次のバスと時刻表が出る。平日と休日を切り替えられる', async ({
+	test('メニューにバスが出る。選んだバス停から未来大へ向かう便だけが、到着の時刻つきで出る', async ({
 		page,
 	}) => {
 		await signInAs(page, email);
-		await page.goto('/app/bus');
-		await page.getByLabel('停留所').selectOption({ label: '函館駅前' });
-		await page.getByRole('button', { name: '表示する', exact: true }).click();
-		await expect(page).toHaveURL(/stop=11003/);
-		await expect(page.getByRole('heading', { level: 2, name: '函館駅前の次のバス' })).toBeVisible();
-		await expect(page.getByRole('heading', { level: 2, name: '函館駅前の時刻表' })).toBeVisible();
-		await expect(page.getByRole('table')).toBeVisible();
-		await expect(page.getByText('△＝架空の注意書き')).toBeVisible();
+		await page.getByRole('link', { name: 'バス', exact: true }).first().click();
+		await expect(page.getByRole('heading', { level: 1, name: 'バス' })).toBeVisible();
 
-		await page.getByRole('link', { name: /^土曜・日曜・祝日/ }).click();
+		await page.goto('/app/bus?stop=11003&direction=toUniversity');
+		await expect(page.getByRole('link', { name: /出発.*函館駅前/ })).toBeVisible();
+		const rows = page.getByRole('listitem').filter({ hasText: '55A' });
+		await expect(rows.first()).toContainText('赤川行き');
+		await expect(rows.first()).toContainText('函館駅前 - はこだて未来大学');
+		// 到着の時刻 (出発の 15 分後。未来大の発車表の同じ行き先の便) が付く
+		await expect(rows.first()).toContainText('→');
+		// 反対向き (千代台行き) は出ない
+		await expect(page.getByText('千代台行き')).toHaveCount(0);
+		await expect(page.getByText('△＝架空の注意書き')).toBeVisible();
+	});
+
+	test('向きを入れ替えると、未来大から出る便になる。向きは覚えず、選んだバス停だけを覚える', async ({
+		page,
+	}) => {
+		await signInAs(page, email);
+		await page.goto('/app/bus?stop=11003&direction=toUniversity');
+		await page.getByRole('link', { name: /向きを入れ替える/ }).click();
+		await expect(page).toHaveURL(/direction=fromUniversity/);
+		await expect(page.getByRole('link', { name: /到着.*函館駅前/ })).toBeVisible();
+		const rows = page.getByRole('listitem').filter({ hasText: '55A' });
+		await expect(rows.first()).toContainText('千代台行き');
+		await expect(rows.first()).toContainText('はこだて未来大学 - 函館駅前');
+
+		// 何も指定せずに開くと、前回のバス停で、未来大へ向かう向き (学内の Wi-Fi でなければ)
+		await page.goto('/app/bus');
+		await expect(page.getByRole('link', { name: /出発.*函館駅前/ })).toBeVisible();
+	});
+
+	test('バス停の選択の画面から、バス停を選ぶと、バスの画面に戻る', async ({ page }) => {
+		await signInAs(page, email);
+		await page.goto('/app/bus?stop=11003&direction=toUniversity');
+		await page.getByRole('link', { name: /出発.*函館駅前/ }).click();
+		await expect(page.getByRole('heading', { level: 1, name: 'バス停選択' })).toBeVisible();
+		// 未来大そのものは選べない
+		await expect(page.getByRole('link', { name: 'はこだて未来大学' })).toHaveCount(0);
+		await page.getByRole('link', { name: '函館駅前' }).click();
+		await expect(page).toHaveURL(/\/app\/bus\?stop=11003&direction=toUniversity/);
+	});
+
+	test('平日と休日を切り替えられ、今日の区分には (今日) が付く', async ({ page }) => {
+		await signInAs(page, email);
+		await page.goto('/app/bus?stop=11003&direction=toUniversity');
+		await expect(page.getByRole('link', { name: /\(今日\)/ })).toBeVisible();
+		await page.getByRole('link', { name: /^休日/ }).click();
 		await expect(page).toHaveURL(/day=holiday/);
-		await expect(page.getByRole('link', { name: /^土曜・日曜・祝日/ })).toHaveAttribute(
-			'aria-current',
-			'page',
-		);
+		await expect(page.getByRole('link', { name: /^休日/ })).toHaveAttribute('aria-current', 'page');
 	});
 
 	test('ログインしていなければ、バスの画面は開けない', async ({ page }) => {
