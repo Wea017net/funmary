@@ -21,7 +21,7 @@ const PUBLISHED = new Map([
  *   files?: string[];
  *   bin?: Record<string, string>;
  *   repository?: { url?: string };
- *   publishConfig?: { access?: string; provenance?: boolean; exports?: unknown };
+ *   publishConfig?: { access?: string; provenance?: boolean; exports?: unknown; types?: string };
  *   dependencies?: Record<string, string>;
  *   peerDependencies?: Record<string, string>;
  * }} PackageJson
@@ -69,6 +69,8 @@ describe('npm に公開するパッケージ', () => {
 			expect(pkg.license).toBe('(BSD-3-Clause OR Apache-2.0)');
 			// 公開する版の入口は、ビルドした dist を指す (開発では src を指す)
 			expect(JSON.stringify(pkg.publishConfig?.exports)).toContain('dist/');
+			// npm のサイトの TS の印は、exports ではなく、types の項目を見る
+			expect(pkg.publishConfig?.types).toBe('./dist/index.d.ts');
 			expect(pkg.repository?.url).toContain('funmary-app/funmary');
 		},
 	);
