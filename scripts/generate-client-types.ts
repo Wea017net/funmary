@@ -13,6 +13,8 @@ const document = (await response.json()) as Parameters<typeof openapiTS>[0];
 
 const header = `// このファイルは scripts/generate-client-types.ts が作る。手では直さない (pnpm generate:client)。\n\n`;
 const body = astToString(await openapiTS(document));
-const output = fileURLToPath(new URL('../packages/client/src/generated/api.ts', import.meta.url));
+const output = fileURLToPath(
+	new URL('../packages/public/client/src/generated/api.ts', import.meta.url),
+);
 await writeFile(output, header + body);
 console.log(`書き出しました: ${output}`);

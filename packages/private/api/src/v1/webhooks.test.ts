@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { WEBHOOK_EVENT_TYPES } from './webhooks.ts';
 
 describe('WEBHOOK_EVENT_TYPES', () => {
-	it('type の一覧が、送る側 (packages/notify) の対応表と同じになる', () => {
+	it('type の一覧が、送る側 (packages/private/notify) の対応表と同じになる', () => {
 		const source = readFileSync(
 			new URL('../../../notify/src/generic-webhook.ts', import.meta.url),
 			'utf8',

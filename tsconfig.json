@@ -19,10 +19,10 @@
 		"types": ["node"]
 	},
 	"include": [
-		"packages/*/src/**/*",
-		"packages/*/*.ts",
-		"packages/*/*.js",
-		"packages/*/scripts/**/*",
+		"packages/*/*/src/**/*",
+		"packages/*/*/*.ts",
+		"packages/*/*/*.js",
+		"packages/*/*/scripts/**/*",
 		"scripts/**/*",
 		"*.ts",
 		"*.js"

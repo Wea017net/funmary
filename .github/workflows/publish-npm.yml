@@ -60,8 +60,8 @@ jobs:
         run: |
           node -e "
             const fs = require('node:fs');
-            for (const dir of ['client', 'mcp', 'cli']) {
-              const file = 'packages/' + dir + '/package.json';
+            for (const dir of ['client', 'mcp', 'funmary']) {
+              const file = 'packages/public/' + dir + '/package.json';
               const pkg = JSON.parse(fs.readFileSync(file, 'utf8'));
               pkg.version = process.env.VERSION;
               fs.writeFileSync(file, JSON.stringify(pkg, null, '\t') + '\n');
@@ -72,7 +72,7 @@ jobs:
       - name: tar.gz を作る
         run: |
           mkdir -p tarballs
-          for dir in client mcp cli; do (cd "packages/$dir" && pnpm pack --pack-destination ../../tarballs); done
+          for dir in client mcp funmary; do (cd "packages/public/$dir" && pnpm pack --pack-destination ../../../tarballs); done
           ls tarballs
       # 公開は、依存される順 (client、mcp、funmary)。npm にある版は飛ばすので、途中で失敗しても、やり直せる
       - run: npm install -g npm@11

@@ -1,6 +1,6 @@
 # funmary
 
-[Funmary](https://github.com/funmary-app/funmary) のコマンドです。端末から、今日の授業、今週の時間割、休講、バスの時刻表を見られます。手元の MCP サーバーも、これで起動できます。Funmary は、公立はこだて未来大学の学生向けの、非公式のアプリです。
+[Funmary](https://github.com/funmary-app/funmary) のコマンドと、ライブラリの入口です。端末から、今日の授業、今週の時間割、休講、バスの時刻表を見られます。手元の MCP サーバーも、これで起動できます。プログラムからは、公開 API のクライアントと、MCP サーバーの組み立てを使えます。Funmary は、公立はこだて未来大学の学生向けの、非公式のアプリです。
 
 ## 使い方
 
@@ -30,6 +30,17 @@ echo "$FUNMARY_TOKEN" | npx funmary login --url https://funmary.example.com
 - `--json` を付けると、スクリプト向けに JSON で出します (`today`、`week`、`changes`、`bus`)
 - 環境変数 `FUNMARY_URL` と `FUNMARY_TOKEN` は、保存した値より先に使います。`NO_COLOR` があれば、色を出しません
 - 表は、端末の幅に合わせます
+
+## ライブラリとして
+
+`npm install funmary` だけで、次も使えます。
+
+```ts
+import { createFunmaryClient } from 'funmary'; // 公開 API のクライアント (@funmary/client と同じもの)
+import { createFunmaryMcpServer, createClientData } from 'funmary/mcp'; // MCP サーバーの組み立て (@funmary/mcp と同じもの)
+```
+
+細かく選びたいときは、`@funmary/client` と `@funmary/mcp` を、別々に入れられます。
 
 ## ライセンス
 

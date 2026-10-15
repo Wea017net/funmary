@@ -4,7 +4,7 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
 	test: {
 		projects: [
-			'packages/*',
+			'packages/*/*',
 			{
 				// GitHub Actions から呼ぶスクリプトの、判断の部分を試す
 				test: {

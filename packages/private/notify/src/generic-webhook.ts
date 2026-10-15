@@ -56,7 +56,7 @@ function defaultFetch(url: string, init?: RequestInit): Promise<Response> {
 		typeof undiciFetch
 	>[1];
 	// undici 独自の Response 型と、DOM の Response 型は、細部 (ヘッダの反復子など) がわずかに違う。実行時は同じ値なので、形を合わせる。
-	// ここ (packages/notify) の tsc では要らなく見えるが、DOM の型を持つ apps/web から使うと、この変換がないと型検査が通らない
+	// ここ (packages/private/notify) の tsc では要らなく見えるが、DOM の型を持つ apps/web から使うと、この変換がないと型検査が通らない
 	// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
 	return undiciFetch(url, requestInit) as unknown as Promise<Response>;
 }

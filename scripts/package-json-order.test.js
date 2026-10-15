@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 const root = join(import.meta.dirname, '..');
 const files = [
 	'package.json',
-	...['apps', 'packages'].flatMap((dir) =>
+	...['apps', 'packages/public', 'packages/private'].flatMap((dir) =>
 		readdirSync(join(root, dir), { withFileTypes: true })
 			.filter((entry) => entry.isDirectory())
 			.map((entry) => `${dir}/${entry.name}/package.json`),

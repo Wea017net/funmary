@@ -7,9 +7,9 @@ const root = join(import.meta.dirname, '..');
 
 /** npm に公開するパッケージ (名前 → ディレクトリ) */
 const PUBLISHED = new Map([
-	['@funmary/client', 'packages/client'],
-	['@funmary/mcp', 'packages/mcp'],
-	['funmary', 'packages/cli'],
+	['@funmary/client', 'packages/public/client'],
+	['@funmary/mcp', 'packages/public/mcp'],
+	['funmary', 'packages/public/funmary'],
 ]);
 
 /**
@@ -19,6 +19,7 @@ const PUBLISHED = new Map([
  *   private?: boolean;
  *   license?: string;
  *   files?: string[];
+ *   bin?: Record<string, string>;
  *   repository?: { url?: string };
  *   publishConfig?: { access?: string; provenance?: boolean; exports?: unknown };
  *   dependencies?: Record<string, string>;
@@ -36,7 +37,7 @@ function readPackage(dir) {
 	return /** @type {PackageJson} */ (json);
 }
 
-const workspaceDirs = ['apps', 'packages'].flatMap((parent) =>
+const workspaceDirs = ['apps', 'packages/public', 'packages/private'].flatMap((parent) =>
 	readdirSync(join(root, parent), { withFileTypes: true })
 		.filter((entry) => entry.isDirectory())
 		.map((entry) => `${parent}/${entry.name}`),
@@ -78,6 +79,14 @@ describe('npm に公開するパッケージ', () => {
 			expect(readPackage(dir).version).toBe('0.0.0');
 		},
 	);
+
+	it('funmary は、コマンドのほかに、ライブラリの入口 (funmary、funmary/mcp) を出す', () => {
+		const pkg = readPackage('packages/public/funmary');
+		expect(Object.keys(pkg.publishConfig?.exports ?? {})).toEqual(
+			expect.arrayContaining(['.', './mcp']),
+		);
+		expect(pkg.bin).toEqual({ funmary: './dist/bin.js' });
+	});
 
 	it('公開するパッケージが依存する、リポジトリ内のパッケージは、公開するものだけ', () => {
 		for (const [, dir] of PUBLISHED) {

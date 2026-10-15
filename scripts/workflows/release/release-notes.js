@@ -77,7 +77,7 @@ function checks(files) {
 	const has = (predicate) => files.some(predicate);
 	/** @type {string[]} */
 	const items = [];
-	if (has((f) => f.startsWith('packages/db/migrations/'))) {
+	if (has((f) => f.startsWith('packages/private/db/migrations/'))) {
 		items.push(
 			'DB のマイグレーションを含みます。起動するときに自動で適用され、その前にバックアップが取られます。',
 		);

@@ -1,11 +1,14 @@
-// 内閣府の祝日の CSV を取得して、同梱のデータ (packages/sources/src/holidays/bundled-data.ts) を作り直す。
+// 内閣府の祝日の CSV を取得して、同梱のデータ (packages/private/sources/src/holidays/bundled-data.ts) を作り直す。
 // 使い方: node scripts/update-bundled-holidays.js
 // 初回の起動で内閣府に届かないときの備えなので、ときどき (年に 1 回ほど) 更新すればよい。
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 // ルートは @funmary/sources に依存しないので、ファイルを直接読み込む
-import { HOLIDAY_CSV_URL } from '../packages/sources/src/holidays/fetch.ts';
-import { decodeHolidayCsv, parseHolidayCsv } from '../packages/sources/src/holidays/parse.ts';
+import { HOLIDAY_CSV_URL } from '../packages/private/sources/src/holidays/fetch.ts';
+import {
+	decodeHolidayCsv,
+	parseHolidayCsv,
+} from '../packages/private/sources/src/holidays/parse.ts';
 
 const response = await fetch(HOLIDAY_CSV_URL);
 if (!response.ok) throw new Error(`取得できませんでした: HTTP ${response.status}`);
@@ -30,7 +33,7 @@ export const BUNDLED_HOLIDAY_CSV = \`${csv}
 \`;
 `;
 writeFileSync(
-	join(import.meta.dirname, '../packages/sources/src/holidays/bundled-data.ts'),
+	join(import.meta.dirname, '../packages/private/sources/src/holidays/bundled-data.ts'),
 	source,
 );
 console.log(`${parsed.holidays.length} 件 (${last} まで) を書きました`);
