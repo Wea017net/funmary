@@ -7,7 +7,7 @@ import { expect, test, type Page } from '@playwright/test';
 import {
 	startMockOidcServer,
 	type MockOidcServer,
-} from '../../../packages/auth/src/testing/mock-oidc-server.ts';
+} from '../../../packages/private/auth/src/testing/mock-oidc-server.ts';
 import { E2E_DATA_DIR } from '../e2e-data-dir.ts';
 import { OIDC_PORT } from '../oidc-port.ts';
 

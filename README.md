@@ -91,14 +91,19 @@ funmary/
 ├── apps/
 │   └── web/          # SvelteKit の画面。本番の入口と、管理用コマンドもここ
 ├── packages/
-│   ├── core/         # I/O を持たない処理 (時間割の展開、祝日と学期の判定など)
-│   ├── db/           # スキーマ、マイグレーション、クエリ
-│   ├── auth/         # Google ログイン、セッション、招待コード
-│   ├── api/          # Hono のアプリ (/api、/cal、/feed、/mcp など)
-│   ├── sources/      # 学生ポータル、公開シラバス、学年暦、祝日の取得と解析
-│   ├── notify/       # Discord と Webhook への通知
-│   ├── jobs/         # 定期処理
-│   └── log/          # ログ
+│   ├── public/       # npm に公開するパッケージ
+│   │   ├── client/   # @funmary/client (公開 API のクライアント)
+│   │   ├── mcp/      # @funmary/mcp (手元で動く MCP)
+│   │   └── cli/      # funmary (コマンド)
+│   └── private/      # 公開しないパッケージ
+│       ├── core/     # I/O を持たない処理 (時間割の展開、祝日と学期の判定など)
+│       ├── db/       # スキーマ、マイグレーション、クエリ
+│       ├── auth/     # Google ログイン、セッション、招待コード
+│       ├── api/      # Hono のアプリ (/api、/cal、/feed、/mcp など)
+│       ├── sources/  # 学生ポータル、公開シラバス、学年暦、祝日の取得と解析
+│       ├── notify/   # Discord と Webhook への通知
+│       ├── jobs/     # 定期処理
+│       └── log/      # ログ
 ├── deploy/           # systemd の unit、nginx の設定、更新スクリプト
 ├── docs/             # 設計書、セルフホストの手順
 ├── scripts/          # ビルドや検査の補助

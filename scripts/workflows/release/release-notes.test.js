@@ -80,7 +80,7 @@ describe('buildReleaseNotes', () => {
 			...BASE,
 			subjects: ['feat: 足す (#1)'],
 			changedFiles: [
-				'packages/db/migrations/0001_subjects.sql',
+				'packages/private/db/migrations/0001_subjects.sql',
 				'.env.example',
 				'deploy/update.sh',
 				'pnpm-lock.yaml',

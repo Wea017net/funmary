@@ -37,7 +37,7 @@ jobs:
       - name: クライアントの型の確認
         run: |
           pnpm generate:client
-          git diff --exit-code -- packages/client/src/generated
+          git diff --exit-code -- packages/public/client/src/generated
       - run: pnpm build
       # VPS への反映のスクリプトは、実機でしか動かせないので、偽の systemctl と npm で動きを確かめる
       - name: 反映のスクリプトの検査

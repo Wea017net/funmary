@@ -5,7 +5,7 @@ import { cpSync, existsSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const source = fileURLToPath(new URL('../../../packages/db/migrations', import.meta.url));
+const source = fileURLToPath(new URL('../../../packages/private/db/migrations', import.meta.url));
 const targets = [
 	// vite preview (E2E テスト) が使う出力
 	'../.svelte-kit/output/server/migrations',

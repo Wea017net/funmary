@@ -4,7 +4,7 @@
 // 保存先を渡すと、取得した HTML を保存する。休講の一覧には、個人情報を含むことがあるので、公開の場所には置かない。
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { fetchPortalPage, parseClassChangePage } from '../packages/sources/src/index.ts';
+import { fetchPortalPage, parseClassChangePage } from '../packages/private/sources/src/index.ts';
 
 const userId = process.env['PORTAL_USER_ID'];
 const password = process.env['PORTAL_PASSWORD'];

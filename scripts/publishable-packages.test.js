@@ -7,9 +7,9 @@ const root = join(import.meta.dirname, '..');
 
 /** npm に公開するパッケージ (名前 → ディレクトリ) */
 const PUBLISHED = new Map([
-	['@funmary/client', 'packages/client'],
-	['@funmary/mcp', 'packages/mcp'],
-	['funmary', 'packages/cli'],
+	['@funmary/client', 'packages/public/client'],
+	['@funmary/mcp', 'packages/public/mcp'],
+	['funmary', 'packages/public/cli'],
 ]);
 
 /**
@@ -36,7 +36,7 @@ function readPackage(dir) {
 	return /** @type {PackageJson} */ (json);
 }
 
-const workspaceDirs = ['apps', 'packages'].flatMap((parent) =>
+const workspaceDirs = ['apps', 'packages/public', 'packages/private'].flatMap((parent) =>
 	readdirSync(join(root, parent), { withFileTypes: true })
 		.filter((entry) => entry.isDirectory())
 		.map((entry) => `${parent}/${entry.name}`),

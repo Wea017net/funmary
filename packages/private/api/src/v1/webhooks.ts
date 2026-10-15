@@ -1,5 +1,5 @@
 // 利用者の汎用 Webhook に送る JSON の形を、OpenAPI 3.1 の webhooks として書く。
-// 送る側は packages/notify の genericWebhookBody()。api は notify に依存しない設計なので、形をここに書き写している。
+// 送る側は packages/private/notify の genericWebhookBody()。api は notify に依存しない設計なので、形をここに書き写している。
 // 形を変えるときは、両方を直す (webhooks.test.ts が、種類の一覧の食い違いを見つける)
 import type { openAPIRouteHandler } from 'hono-openapi';
 

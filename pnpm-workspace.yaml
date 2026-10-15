@@ -1,6 +1,7 @@
 packages:
   - apps/*
-  - packages/*
+  - packages/public/*
+  - packages/private/*
 
 # 複数のパッケージで使う依存の版は、ここで 1 か所にまとめる。各 package.json では "catalog:" と書く
 catalog:

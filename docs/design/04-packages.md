@@ -51,7 +51,7 @@ SMUI を使うにあたって、次のように決めています。
 - **パッケージは部品ごとに入れます。** まとめ役の `svelte-material-ui` は入れず、`@smui/button` のように、使う部品だけを入れます。使っていない部品の CSS と JavaScript は入りません
 - **文字は OS の標準フォントにします。** SMUI の既定は Roboto なので、テーマの `$font-family` を OS の標準フォントの並びに書き換えます ([3.2](03-quality.md#32-速さと軽さ))
 - **アイコンは unplugin-icons と Material Symbols を使います。** ビルド時に、使ったアイコンだけを SVG の Svelte コンポーネントにして埋め込みます。アイコン用の Web フォントは読み込みません
-- **型の検査は `apps/web` だけ少し緩めます。** SMUI は型のために TypeScript のソースを同梱していて、svelte-check がこちらの設定で検査すると失敗します。パッチは当てず、`apps/web` の tsconfig だけ `noUncheckedIndexedAccess` を外します。`packages/*` と `scripts/` は、ルートの tsconfig で検査します
+- **型の検査は `apps/web` だけ少し緩めます。** SMUI は型のために TypeScript のソースを同梱していて、svelte-check がこちらの設定で検査すると失敗します。パッチは当てず、`apps/web` の tsconfig だけ `noUncheckedIndexedAccess` を外します。`packages/*/*` と `scripts/` は、ルートの tsconfig で検査します
 - **容量は、ページごとの JavaScript の上限で守ります。** 上限は [3.1](03-quality.md#31-目標値) のとおりです。`@smui/list` はテーマの CSS が約 300 KB になるので、左のメニューと下のタブの外枠は、標準の要素で作っています。重い部品は、自前の簡単な部品に置き換えます
 
 ## 4.3 使っているパッケージ

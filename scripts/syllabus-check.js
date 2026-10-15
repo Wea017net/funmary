@@ -2,7 +2,7 @@
 // 使い方: node scripts/syllabus-check.js [詳細を取る科目の数 (既定は 3)] [年度 (既定は今年度)]
 // 一覧のすべてのページ (18 ページほど) は取るが、詳細は、指定した数の科目だけ取る。
 // 大学のサーバーに負荷をかけないよう、リクエストの間は 2 秒あける。
-import { fetchSyllabusCatalog } from '../packages/sources/src/index.ts';
+import { fetchSyllabusCatalog } from '../packages/private/sources/src/index.ts';
 
 const detailLimit = Number(process.argv[2] ?? 3);
 const now = new Date();

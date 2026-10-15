@@ -1,31 +1,31 @@
 {
-	"name": "funmary",
+	"name": "@funmary/mcp",
 	"version": "0.0.0",
-	"description": "Funmary のコマンド。端末から、時間割、休講、バスの時刻表を見て、手元の MCP を起動する",
+	"description": "Funmary の MCP サーバー。手元で動かす (stdio) 入口と、サーバーと共有する道具の定義",
 	"license": "(BSD-3-Clause OR Apache-2.0)",
 	"author": "funmary (https://github.com/funmary-app)",
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/funmary-app/funmary.git",
-		"directory": "packages/cli"
+		"directory": "packages/public/mcp"
 	},
 	"type": "module",
 	"files": [
 		"dist"
 	],
 	"bin": {
-		"funmary": "./dist/bin.js"
+		"funmary-mcp": "./dist/bin.js"
 	},
 	"exports": {
-		".": "./src/cli.ts"
+		".": "./src/index.ts"
 	},
 	"publishConfig": {
 		"access": "public",
 		"provenance": true,
 		"exports": {
 			".": {
-				"types": "./dist/cli.d.ts",
-				"default": "./dist/cli.js"
+				"types": "./dist/index.d.ts",
+				"default": "./dist/index.js"
 			}
 		}
 	},
@@ -37,7 +37,8 @@
 	},
 	"dependencies": {
 		"@funmary/client": "workspace:*",
-		"@funmary/mcp": "workspace:*"
+		"@modelcontextprotocol/sdk": "^1.32.0",
+		"zod": "^4.6.5"
 	},
 	"devDependencies": {
 		"tsdown": "catalog:"

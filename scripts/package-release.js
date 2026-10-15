@@ -36,7 +36,9 @@ for (const required of ['cli.js', 'server.js']) {
 }
 for (const name of bundles) cpSync(join(webDir, 'dist', name), join(stage, name));
 // cli.js が自分の隣から探す
-cpSync(join(root, 'packages/db/migrations'), join(stage, 'migrations'), { recursive: true });
+cpSync(join(root, 'packages/private/db/migrations'), join(stage, 'migrations'), {
+	recursive: true,
+});
 cpSync(join(root, 'deploy'), join(stage, 'deploy'), { recursive: true });
 
 // 本番の依存は better-sqlite3 だけ。版は apps/web/package.json (catalog を解決したもの) に合わせる

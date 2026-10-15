@@ -10,7 +10,8 @@ pnpm workspace、TypeScript 7、ESLint、Prettier、Renovate、GitHub Actions �
 # pnpm-workspace.yaml (抜粋)
 packages:
   - apps/*
-  - packages/*
+  - packages/public/*
+  - packages/private/*
 
 catalog:
   svelte: ^5.57.1
