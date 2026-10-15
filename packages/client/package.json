@@ -30,15 +30,12 @@
 		"node": ">=20"
 	},
 	"scripts": {
-		"generate": "node scripts/generate-types.ts",
 		"build": "tsdown"
 	},
 	"dependencies": {
 		"ofetch": "^1.5.1"
 	},
 	"devDependencies": {
-		"@funmary/api": "workspace:*",
-		"openapi-typescript": "^7.13.0",
 		"tsdown": "catalog:"
 	}
 }

@@ -30,13 +30,15 @@
 		"test:watch": "vitest",
 		"test:e2e": "pnpm --filter @funmary/web test:e2e",
 		"prepare": "simple-git-hooks",
-		"changeset": "changeset"
+		"changeset": "changeset",
+		"generate:client": "node scripts/generate-client-types.ts"
 	},
 	"devDependencies": {
 		"@changesets/cli": "^3.0.3",
 		"@commitlint/cli": "catalog:",
 		"@commitlint/config-conventional": "catalog:",
 		"@eslint/js": "catalog:",
+		"@funmary/api": "workspace:*",
 		"@types/node": "catalog:",
 		"@typescript/native": "npm:typescript@^7.0.2",
 		"es-module-lexer": "^3.0.2",
@@ -45,6 +47,7 @@
 		"eslint-plugin-svelte": "catalog:",
 		"globals": "catalog:",
 		"lint-staged": "catalog:",
+		"openapi-typescript": "^7.13.0",
 		"prettier": "catalog:",
 		"prettier-plugin-svelte": "catalog:",
 		"simple-git-hooks": "catalog:",

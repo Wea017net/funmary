@@ -1,4 +1,4 @@
-// このファイルは scripts/generate-types.ts が作る。手では直さない (pnpm --filter @funmary/client generate)。
+// このファイルは scripts/generate-client-types.ts が作る。手では直さない (pnpm generate:client)。
 
 export interface paths {
     "/api/v1/lessons": {
