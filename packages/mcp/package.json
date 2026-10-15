@@ -1,6 +1,6 @@
 {
 	"name": "@funmary/mcp",
-	"version": "0.1.0",
+	"version": "0.0.0",
 	"description": "Funmary の MCP サーバー。手元で動かす (stdio) 入口と、サーバーと共有する道具の定義",
 	"license": "(BSD-3-Clause OR Apache-2.0)",
 	"author": "funmary (https://github.com/funmary-app)",

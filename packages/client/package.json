@@ -1,6 +1,6 @@
 {
 	"name": "@funmary/client",
-	"version": "0.1.0",
+	"version": "0.0.0",
 	"description": "Funmary の公開 API の型付きクライアント",
 	"license": "(BSD-3-Clause OR Apache-2.0)",
 	"author": "funmary (https://github.com/funmary-app)",
