@@ -336,6 +336,7 @@ export const init: ServerInit = () => {
 		academicCalendar: academicCalendarStore,
 		holidays: holidayStore,
 		bus: result.config.busApiBaseUrl ? createBusStore(database) : null,
+		campusIpRanges: result.config.campusIpRanges,
 		sourceHealth: createSourceHealthStore(database),
 		jobRuns: jobRunStore,
 		jobs: { names: jobs.map((job) => job.name), runNow: (name: string) => runner.runNow(name) },

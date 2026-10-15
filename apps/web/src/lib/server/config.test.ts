@@ -290,6 +290,7 @@ describe('parseConfig', () => {
 		['ADMIN_DISCORD_WEBHOOK_URL', 'https://example.com/hook', 'Discord の Webhook でない'],
 		['HEARTBEAT_URL', 'ftp://hc-ping.com/abc', 'http でない'],
 		['BUS_API_BASE_URL', 'ftp://bus.example.com', 'http でない'],
+		['CAMPUS_IP_RANGES', '203.0.113.0/24, bad', 'IPv4 の範囲でない'],
 		['NOTIFY_DRY_RUN', 'yes', 'true か false でない'],
 		['XFF_DEPTH', '0', '1 以上でない'],
 	])('%s に %s と書くと (%s)、その変数の誤りとして返す', (name, value) => {
@@ -307,6 +308,18 @@ describe('parseConfig', () => {
 		expect(busUrlOf({ BUS_API_BASE_URL: 'https://bus.example.com' })).toBe(
 			'https://bus.example.com',
 		);
+	});
+
+	it('CAMPUS_IP_RANGES は、書かなければ空で、書けばカンマで区切って読む', () => {
+		const rangesOf = (extra: Record<string, string>) => {
+			const result = parseConfig({ ...developmentEnv(), ...extra });
+			return result.ok ? result.config.campusIpRanges : 'error';
+		};
+		expect(rangesOf({})).toEqual([]);
+		expect(rangesOf({ CAMPUS_IP_RANGES: '203.0.113.0/24, 198.51.100.7' })).toEqual([
+			'203.0.113.0/24',
+			'198.51.100.7',
+		]);
 	});
 
 	it('カンマ区切りの値は、前後の空白を除き、空の要素を捨てる', () => {

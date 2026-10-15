@@ -145,3 +145,20 @@ export {
 	type SlotInput,
 	type SlotInputResult,
 } from './course-input.ts';
+export {
+	BRANCH_JUNCTION_STOP,
+	BUS_DIRECTIONS,
+	UNIVERSITY_STOP,
+	filterByDirection,
+	matchArrivals,
+	mentionsStop,
+	type BusDirection,
+	type BusUniversityStop,
+	type DirectionalTimetables,
+} from './bus-direction.ts';
+export {
+	NEAR_UNIVERSITY_METERS,
+	UNIVERSITY_LOCATION,
+	isInIpRanges,
+	isNearUniversity,
+} from './campus.ts';

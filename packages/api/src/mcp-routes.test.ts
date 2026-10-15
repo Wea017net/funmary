@@ -300,6 +300,7 @@ describe('バスの道具', () => {
 			buildMcpServer(deps(), { userId: 'u1', scopes: ['read:transit'] }),
 		);
 		expect((await withScope.listTools()).tools.map((tool) => tool.name).sort()).toEqual([
+			'get_bus_leg',
 			'get_bus_stop_timetable',
 			'get_next_buses',
 			'list_bus_stops',

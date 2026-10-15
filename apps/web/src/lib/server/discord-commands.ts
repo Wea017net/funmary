@@ -3,16 +3,20 @@
 import {
 	buildUserTimetable,
 	getDataStatus,
-	getNextBuses,
+	getBusLeg,
+	listBusStops,
 	getNextLesson,
 	listUserEventOccurrences,
 	termsRequiredMessage,
 	type DayNote,
-	type PublicUpcomingBus,
+	type PublicLegUpcoming,
 	type PublicEvent,
 	type TimetableLesson,
 } from '@funmary/api';
 import {
+	BUS_DIRECTIONS,
+	DEFAULT_BUS_STOP_IDS,
+	UNIVERSITY_STOP,
 	addDays,
 	findPeriod,
 	hasAcceptedTerms,
@@ -50,7 +54,7 @@ function eventLine(event: PublicEvent): string {
 }
 
 /** 次のバスの 1 行。例: 10:05 (5 分後) 55A 赤川通 → 亀田支所前 */
-function busLine(bus: PublicUpcomingBus): string {
+function busLine(bus: PublicLegUpcoming): string {
 	const via = bus.via ? ` ${plain(bus.via)}` : '';
 	const destination = bus.destination ? ` → ${plain(bus.destination)}` : '';
 	return `${bus.time} (${bus.minutesUntil} 分後) ${plain(bus.routes.join('・'))}${via}${destination}`;
@@ -156,16 +160,27 @@ export function answerCommand(
 		);
 	}
 	if (command === 'bus') {
-		const result = getNextBuses(services, now, {});
-		if (!result) return 'このサーバーでは、バスの時刻表を使っていません。';
-		if (result.stops.length === 0) return 'バスの時刻表は、まだ取り込めていません。';
-		const blocks = result.stops.flatMap((entry) => [
-			`**${plain(entry.stop.name)}**`,
-			...(entry.upcoming.length > 0
-				? entry.upcoming.map(busLine)
-				: ['この先の発車は、取り込んだ時刻表にありません。']),
-		]);
-		return blocks.join('\n');
+		// 既定の停留所 (亀田支所前) と未来大の間の、2 つの向きの次の発車
+		const stopId = DEFAULT_BUS_STOP_IDS.find((id) => id !== UNIVERSITY_STOP.id);
+		if (!listBusStops(services)) return 'このサーバーでは、バスの時刻表を使っていません。';
+		const legs = BUS_DIRECTIONS.map((direction) =>
+			stopId ? getBusLeg(services, now, { stopId, direction, limit: 3 }) : null,
+		);
+		if (legs.every((leg) => leg === null || leg.checkedAt === null)) {
+			return 'バスの時刻表は、まだ取り込めていません。';
+		}
+		return legs
+			.flatMap((leg) =>
+				leg
+					? [
+							`**${plain(leg.from.name)} → ${plain(leg.to.name)}**`,
+							...(leg.upcoming.length > 0
+								? leg.upcoming.map(busLine)
+								: ['この先の発車は、取り込んだ時刻表にありません。']),
+						]
+					: [],
+			)
+			.join('\n');
 	}
 	return 'そのコマンドには対応していません。';
 }
