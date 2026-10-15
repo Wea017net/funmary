@@ -23,11 +23,9 @@
 			stopId: string | null;
 			direction: Direction;
 			canDecideByLocation: boolean;
-			onCampus: boolean;
 			leg: PublicBusLeg | null;
 			universityName: string;
 			nowTime: string;
-			checkedAt: string | null;
 			stale: boolean;
 			hasStops: boolean;
 		};
@@ -77,14 +75,14 @@
 
 	// 現在地で向きを決める。未来大の近くなら未来大から出る向き、離れていれば未来大へ向かう向き。
 	// 許可の確認を、勝手には出さない。すでに許可されているときだけ自動で決め、そうでなければボタンから
-	let canLocate = $state(false);
 	let locating = $state(false);
-	let locationFailed = $state(false);
+	/** 失敗の理由 (許可されなかったか、現在地を取れなかったか)。うまくいったら null */
+	let locationProblem = $state<'denied' | 'unavailable' | null>(null);
 
 	function decideByLocation() {
 		if (!data.stopId || locating) return;
 		locating = true;
-		locationFailed = false;
+		locationProblem = null;
 		navigator.geolocation.getCurrentPosition(
 			({ coords }) => {
 				const direction: Direction = isNearUniversity(coords.latitude, coords.longitude)
@@ -95,17 +93,20 @@
 					void goto(busUrl({ stop: data.stopId, direction }), { replaceState: true });
 				}
 			},
-			() => {
+			(error) => {
 				locating = false;
-				locationFailed = true;
+				locationProblem = error.code === error.PERMISSION_DENIED ? 'denied' : 'unavailable';
 			},
 			{ maximumAge: 60_000, timeout: 10_000 },
 		);
 	}
 
+	// 位置情報が使える端末では、いつでもボタンを出す (URL に向きが付いていても、PWA には URL の欄がなく、決め直せなくなるため)
+	const canLocate = $derived(typeof navigator !== 'undefined' && 'geolocation' in navigator);
+
+	// すでに許可されていて、向きを URL で決めていないときだけ、開いたときに自動で決める
 	$effect(() => {
 		if (!data.canDecideByLocation || !('geolocation' in navigator)) return;
-		canLocate = true;
 		void navigator.permissions
 			?.query({ name: 'geolocation' })
 			.then((status) => {
@@ -113,18 +114,6 @@
 			})
 			.catch(() => undefined);
 	});
-
-	const checkedAtLabel = $derived(
-		data.checkedAt
-			? new Intl.DateTimeFormat('ja-JP', {
-					timeZone: 'Asia/Tokyo',
-					month: 'numeric',
-					day: 'numeric',
-					hour: '2-digit',
-					minute: '2-digit',
-				}).format(new Date(data.checkedAt))
-			: null,
-	);
 </script>
 
 <svelte:head>
@@ -212,17 +201,22 @@
 			</div>
 		</div>
 
-		{#if data.onCampus}
-			<p class="muted hint">
-				学内の Wi-Fi につながっているので、未来大から出る向きを出しています。
-			</p>
-		{:else if canLocate}
+		{#if canLocate}
 			<p class="hint">
 				<button type="button" class="locate" onclick={decideByLocation} disabled={locating}>
 					<IconLocation aria-hidden="true" />現在地から向きを決める
 				</button>
-				{#if locationFailed}<span class="muted">現在地を取れませんでした。</span>{/if}
 			</p>
+			{#if locationProblem === 'denied'}
+				<p class="muted hint" role="status">
+					位置情報が許可されていません。端末の設定で、このアプリ (またはブラウザ)
+					の位置情報を許可してください。
+				</p>
+			{:else if locationProblem === 'unavailable'}
+				<p class="muted hint" role="status">
+					現在地を取れませんでした。少し待って、もう一度試してください。
+				</p>
+			{/if}
 		{/if}
 
 		{#if leg}
@@ -266,19 +260,19 @@
 			{/if}
 
 			{#if leg.notes.length > 0}
-				<ul class="notes">
-					{#each leg.notes as note (note)}<li>{note}</li>{/each}
-				</ul>
+				<details class="legend">
+					<summary>印の意味</summary>
+					<ul>
+						{#each leg.notes as note (note)}<li>{note}</li>{/each}
+					</ul>
+				</details>
 			{/if}
 		{:else}
 			<p>この停留所の時刻表は、取り込んだ時刻表にありません。</p>
 		{/if}
 
 		<p class="muted meta">
-			函館バスが公開している時刻表を、毎日取り込んだものです。函館バスの公式のサービスではないので、ダイヤの変更や運休は、函館バスのサイトで確かめてください。
-			{#if leg?.generation}時刻表の版: {leg.generation.name}。{/if}
-			{#if checkedAtLabel}最後に確かめた日時: {checkedAtLabel}。{/if}
-			向きと到着の時刻は、時刻表の経由と行き先から割り出したものなので、経由に書かれない停留所を通る便は、出ないことがあります。
+			函館バスの公式のサービスではありません。ダイヤは、函館バスのサイトで確かめてください。
 		</p>
 	{/if}
 </div>
@@ -514,11 +508,19 @@
 		margin: 1.5rem 0;
 	}
 
-	.notes {
-		margin: 0.75rem 0 0;
-		padding-left: 1.25rem;
+	.legend {
+		margin-top: 0.75rem;
 		color: var(--fm-text-muted);
 		font-size: 0.8125rem;
+
+		summary {
+			cursor: pointer;
+		}
+
+		ul {
+			margin: 0.5rem 0 0;
+			padding-left: 1.25rem;
+		}
 	}
 
 	.meta {
