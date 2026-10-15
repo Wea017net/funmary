@@ -30,11 +30,9 @@
 		"test:watch": "vitest",
 		"test:e2e": "pnpm --filter @funmary/web test:e2e",
 		"prepare": "simple-git-hooks",
-		"changeset": "changeset",
 		"generate:client": "node scripts/generate-client-types.ts"
 	},
 	"devDependencies": {
-		"@changesets/cli": "^3.0.3",
 		"@commitlint/cli": "catalog:",
 		"@commitlint/config-conventional": "catalog:",
 		"@eslint/js": "catalog:",

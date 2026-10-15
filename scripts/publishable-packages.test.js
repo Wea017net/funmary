@@ -15,6 +15,7 @@ const PUBLISHED = new Map([
 /**
  * @typedef {{
  *   name: string;
+ *   version?: string;
  *   private?: boolean;
  *   license?: string;
  *   files?: string[];
@@ -68,6 +69,13 @@ describe('npm に公開するパッケージ', () => {
 			// 公開する版の入口は、ビルドした dist を指す (開発では src を指す)
 			expect(JSON.stringify(pkg.publishConfig?.exports)).toContain('dist/');
 			expect(pkg.repository?.url).toContain('funmary-app/funmary');
+		},
+	);
+
+	it.each([...PUBLISHED])(
+		'%s の版は、開発用の 0.0.0 のまま (公開のときに、ワークフローが書き込む)',
+		(_name, dir) => {
+			expect(readPackage(dir).version).toBe('0.0.0');
 		},
 	);
 
