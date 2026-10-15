@@ -36,6 +36,7 @@ export const load: ServerLoad = ({ locals }) => {
 			};
 		}),
 		expiresOptions: ACCESS_TOKEN_EXPIRES_OPTIONS,
+		origin,
 		apiBase: `${origin}/api/v1`,
 		docsUrl: `${origin}/api/docs`,
 		mcpUrl: `${origin}/mcp`,

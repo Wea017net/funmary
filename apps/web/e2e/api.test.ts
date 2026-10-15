@@ -94,6 +94,11 @@ test.describe('公開 API と MCP', () => {
 		await page.getByRole('button', { name: '発行する' }).click();
 		const writer = await page.locator('#new-token').inputValue();
 
+		// 手元の MCP の設定と、コマンドのログインの例が、この Funmary の URL で出る (トークンは、設定の例にだけ入る)
+		await expect(page.getByText('"@funmary/mcp"')).toBeVisible();
+		await expect(page.getByText('npx funmary login --url http://localhost:4173')).toBeVisible();
+		await expect(page.locator('pre', { hasText: 'FUNMARY_TOKEN' })).toContainText(writer);
+
 		const created = await request.post('/api/v1/events', {
 			headers: { Authorization: `Bearer ${writer}` },
 			data: event,

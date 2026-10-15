@@ -3,9 +3,11 @@
 	import { enhance } from '$app/forms';
 	import { confirmSubmit } from '#lib/actions/confirm-submit.ts';
 	import CopyField from '#lib/components/CopyField.svelte';
+	import CopySnippet from '#lib/components/CopySnippet.svelte';
 	import FormNotice from '#lib/components/FormNotice.svelte';
 	import SettingsBreadcrumb from '#lib/components/SettingsBreadcrumb.svelte';
 	import { createCopyState } from '#lib/clipboard.svelte.ts';
+	import { buildLoginCommand, buildMcpConfig } from '#lib/token-setup.ts';
 
 	let {
 		data,
@@ -23,6 +25,7 @@
 			scopeOptions: readonly { scope: string; label: string; write: boolean }[];
 			activity: readonly { id: number; tokenName: string; summary: string; at: string }[];
 			expiresOptions: readonly { days: number; label: string }[];
+			origin: string;
 			apiBase: string;
 			docsUrl: string;
 			mcpUrl: string;
@@ -58,6 +61,16 @@
 		<div class="key-box" role="status">
 			<p>トークン (今だけ表示します。コピーしてから閉じてください。もう一度は見られません):</p>
 			<CopyField id="new-token" label="トークン" value={form.token} {copyState} />
+			<CopySnippet
+				label="手元の MCP の設定 (Claude Desktop など。トークンが入っています)"
+				value={buildMcpConfig(data.origin, form.token)}
+				{copyState}
+			/>
+			<CopySnippet
+				label="コマンド (funmary) のログイン。トークンは、尋ねられたときに貼ります"
+				value={buildLoginCommand(data.origin)}
+				{copyState}
+			/>
 		</div>
 	{/if}
 
