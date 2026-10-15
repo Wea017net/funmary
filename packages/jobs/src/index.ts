@@ -51,3 +51,4 @@ export {
 	type DeliveryOutcome,
 	type IntegrationNotice,
 } from './deliver-notifications.ts';
+export { BUS_SOURCE, createSyncBusJob, type SyncBusDeps } from './sync-bus.ts';
