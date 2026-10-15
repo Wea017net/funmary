@@ -245,6 +245,12 @@ export const init: ServerInit = () => {
 		},
 	});
 	runner.start();
+	// バスの時刻表は、次の定期処理 (毎日 5 時台) を待たず、まだ何も取り込んでいなければ、起動のときに取り込む
+	if (result.config.busApiBaseUrl && createBusStore(database).getCatalog() === null) {
+		runner.runNow('sync-bus').catch((error: unknown) => {
+			logger?.withTag('app').warn(`バスの時刻表の最初の取り込みに失敗しました: ${String(error)}`);
+		});
+	}
 
 	// adapter-node は、SIGTERM を受けるとこのイベントを出して、終わるのを待つ (待つ時間の上限は SHUTDOWN_TIMEOUT)。
 	// 新しい処理を止め、実行中の処理を待ってから、書きかけのデータを残さないように DB を閉じる
