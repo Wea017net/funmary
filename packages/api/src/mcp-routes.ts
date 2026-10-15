@@ -1,29 +1,13 @@
 // /mcp の MCP サーバー。公開 API と同じ個人用のアクセストークンで認証し、
-// 同じ reads/ の関数を呼ぶので、REST と中身が食い違わない。読み取りの道具は readOnlyHint を付ける。
-// 書き込みの道具 (mcp-write-tools.ts) は、書き込みの範囲を持つトークンにだけ出す。
-import { hasAcceptedTerms, jstDateTime } from '@funmary/core';
+// 道具の定義は @funmary/mcp に 1 つだけあり、手元で動く MCP と共有する。ここでは、DB から読み書きするデータの口 (mcp-data.ts) を渡す。
+// 範囲 (read:*、write:*) を持つトークンにだけ、その範囲の道具を出す。
+import { hasAcceptedTerms } from '@funmary/core';
+import { createFunmaryMcpServer } from '@funmary/mcp';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { SUPPORTED_PROTOCOL_VERSIONS } from '@modelcontextprotocol/sdk/types.js';
 import { StreamableHTTPTransport } from '@hono/mcp';
 import { Hono } from 'hono';
-import { z } from 'zod';
-import { getBusLeg, getBusStopTimetable, getNextBuses, listBusStops } from './reads/bus.ts';
-import { listUserNotifications, type NotificationsSources } from './reads/notifications.ts';
-import {
-	currentAcademicYear,
-	getAcademicCalendar,
-	getNextLesson,
-	getPublicTimetable,
-	getWeekGrid,
-	listPeriods,
-	listUserCourses,
-} from './reads/public-data.ts';
-import { getDataStatus, listUserEventOccurrences } from './reads/public-events.ts';
-import { getSubjectSessions, searchSubjects } from './reads/public-subjects.ts';
-import { getSubjectDetail } from './reads/subject-detail.ts';
-import { registerWriteTools, type McpWriteOwner } from './mcp-write-tools.ts';
-import { getEvent } from './writes/events.ts';
-import type { TimetableSources } from './reads/user-timetable.ts';
+import { createServerData, type McpWriteOwner } from './mcp-data.ts';
 import { termsRequiredMessage } from './terms-gate.ts';
 import type { V1RoutesDeps } from './v1/routes.ts';
 
@@ -34,12 +18,6 @@ export interface McpRoutesDeps extends V1RoutesDeps {
 	/** 公開するオリジン。あれば、サーバーの情報にアイコン (/brand/ の画像) を載せる */
 	readonly origin?: string;
 }
-
-// MCP の structuredContent は、オブジェクト (record) でなければならない。配列はキーに包んで返す
-const jsonText = (value: object) => ({
-	content: [{ type: 'text' as const, text: JSON.stringify(value) }],
-	structuredContent: value as Record<string, unknown>,
-});
 
 /** クライアントが一覧に出すアイコン。ブラウザのタブと同じ画像で、ダークの画面向けのものも添える */
 function serverIcons(origin: string) {
@@ -58,278 +36,13 @@ function serverIcons(origin: string) {
 
 /** MCP サーバーを組み立てる。テストでは、SDK の in-memory の接続で道具を直接確かめるのに使う */
 export function buildMcpServer(deps: McpRoutesDeps, owner: McpWriteOwner) {
-	const server = new McpServer({
-		name: 'funmary',
-		version: '1',
+	return createFunmaryMcpServer({
+		data: createServerData(deps, owner),
+		scopes: owner.scopes,
+		// バスの機能を使わない設定では、範囲があっても、バスの道具を出さない
+		enabled: (tool) => tool.scope !== 'read:transit' || deps.bus !== null,
 		...(deps.origin ? { icons: serverIcons(deps.origin) } : {}),
 	});
-	const timetableSources: TimetableSources = deps;
-	const notificationsSources: NotificationsSources = deps;
-
-	if (owner.scopes.includes('read:lessons')) {
-		server.registerTool(
-			'get_lessons',
-			{
-				description:
-					'日付 (YYYY-MM-DD、日本時間) か期間の授業を、開始と終了の時刻つきで返す (日付を省くと今日)。days に、振替授業日 (その日に行う授業の曜日)、全学の休講日、祝日が入る。status は normal (変更なし)、cancelled (休講)、makeup (補講)、roomChanged (教室変更)。room が null なら教室は分からず、roomIsTentative が true なら補講の教室を、ふだんの教室で仮に出している',
-				inputSchema: { start: z.string().optional(), end: z.string().optional() },
-				annotations: { readOnlyHint: true },
-			},
-			({ start, end }) => {
-				const today = jstDateTime(new Date()).date;
-				return jsonText(
-					getPublicTimetable(timetableSources, owner.userId, {
-						start: start ?? today,
-						end: end ?? start ?? today,
-					}),
-				);
-			},
-		);
-		server.registerTool(
-			'get_week',
-			{
-				description:
-					'date (YYYY-MM-DD、日本時間。省くと今日) を含む週 (月曜から日曜) の、曜日と時限の格子。授業のない時限も cells に入る (lessons が空)。振替授業日などは note に入る',
-				inputSchema: { date: z.string().optional() },
-				annotations: { readOnlyHint: true },
-			},
-			({ date }) =>
-				jsonText(getWeekGrid(timetableSources, owner.userId, date ?? jstDateTime(new Date()).date)),
-		);
-		server.registerTool(
-			'get_next_lesson',
-			{
-				description:
-					'今の時刻から見た、次の授業を返す。授業中ならその授業 (inProgress が true)。休講の授業は飛ばし、14 日先まで見て、なければ next が null',
-				annotations: { readOnlyHint: true },
-			},
-			() => jsonText(getNextLesson(timetableSources, owner.userId, new Date())),
-		);
-		server.registerTool(
-			'get_periods',
-			{
-				description: '時限ごとの開始と終了の時刻 (日本時間)',
-				annotations: { readOnlyHint: true },
-			},
-			() => jsonText({ periods: listPeriods() }),
-		);
-		server.registerTool(
-			'list_courses',
-			{
-				description: '履修登録した科目と、その曜日 (1 が月曜から 7 が日曜) と時限',
-				annotations: { readOnlyHint: true },
-			},
-			() => jsonText({ courses: listUserCourses(timetableSources, owner.userId) }),
-		);
-		server.registerTool(
-			'get_academic_calendar',
-			{
-				description:
-					'年度の学期の期間と、その年度の祝日、全学の休講日、振替授業日を返す (年度を省くと今日が属する年度)',
-				inputSchema: { year: z.number().optional() },
-				annotations: { readOnlyHint: true },
-			},
-			({ year }) =>
-				jsonText(getAcademicCalendar(timetableSources, year ?? currentAcademicYear(new Date()))),
-		);
-		server.registerTool(
-			'list_events',
-			{
-				description:
-					'日付 (YYYY-MM-DD、日本時間) の範囲の、自分の予定と、時間割に加えたほかの人の予定 (繰り返しは回ごとに展開)。日付を省くと今日',
-				inputSchema: { start: z.string().optional(), end: z.string().optional() },
-				annotations: { readOnlyHint: true },
-			},
-			({ start, end }) => {
-				const user = deps.users.findUserById(owner.userId);
-				if (!user) return jsonText({ error: 'not_found' });
-				const today = jstDateTime(new Date()).date;
-				return jsonText({
-					events: listUserEventOccurrences(deps, user, {
-						start: start ?? today,
-						end: end ?? start ?? today,
-					}),
-				});
-			},
-		);
-		server.registerTool(
-			'get_event',
-			{
-				description:
-					'自分の予定を 1 件、update_event に送り直せる形で返す。繰り返しや除く日も入る。ほかの人の予定は、見つからないことにする',
-				inputSchema: { id: z.number().describe('予定の id (list_events の eventId)') },
-				annotations: { readOnlyHint: true },
-			},
-			({ id }) => {
-				const event = getEvent(deps, owner.userId, id);
-				return event
-					? jsonText(event)
-					: { isError: true, content: [{ type: 'text' as const, text: '予定が見つかりません' }] };
-			},
-		);
-		server.registerTool(
-			'get_data_status',
-			{
-				description:
-					'休講や教室の変更のデータが新しいか。stale が true のときは、反映が遅れているかもしれないので、授業の答えに添える',
-				annotations: { readOnlyHint: true },
-			},
-			() => jsonText(getDataStatus(deps, new Date())),
-		);
-		server.registerTool(
-			'search_subjects',
-			{
-				description:
-					'年度 (省けば今年度) の科目を、名前、教員、授業コードで探す。公開の科目だけを 50 件まで返す。term は spring、fall など',
-				inputSchema: {
-					q: z.string().max(100).optional(),
-					year: z.number().optional(),
-					term: z.string().optional(),
-				},
-				annotations: { readOnlyHint: true },
-			},
-			({ q, year, term }) =>
-				jsonText(
-					searchSubjects(deps, { academicYear: year ?? currentAcademicYear(new Date()), q, term }),
-				),
-		);
-		server.registerTool(
-			'get_subject_sessions',
-			{
-				description:
-					'科目のその年度の全授業日 (時刻、教室、休講、補講、教室変更を反映)。sequence は休講を除いた通し番号で、シラバスの第 n 回とは限らない',
-				inputSchema: { year: z.number(), syllabusId: z.string() },
-				annotations: { readOnlyHint: true },
-			},
-			({ year, syllabusId }) => {
-				const viewer = deps.users.findUserById(owner.userId);
-				if (!viewer) return jsonText({ error: 'not_found' });
-				const result = getSubjectSessions(
-					deps,
-					{ academicYear: year, syllabusId },
-					{ id: viewer.id, email: viewer.email, role: viewer.role },
-				);
-				return jsonText(result ?? { error: 'not_found' });
-			},
-		);
-		server.registerTool(
-			'get_subject',
-			{
-				description: '授業の詳細を返す',
-				inputSchema: { year: z.number(), syllabusId: z.string() },
-				annotations: { readOnlyHint: true },
-			},
-			({ year, syllabusId }) => {
-				const viewer = deps.users.findUserById(owner.userId);
-				if (!viewer) return jsonText({ error: 'not_found' });
-				const detail = getSubjectDetail(
-					deps,
-					{ academicYear: year, syllabusId },
-					{ id: viewer.id, email: viewer.email, role: viewer.role },
-				);
-				return jsonText(detail ?? { error: 'not_found' });
-			},
-		);
-	}
-
-	if (owner.scopes.includes('read:changes')) {
-		server.registerTool(
-			'list_changes',
-			{
-				description:
-					'日付 (YYYY-MM-DD、日本時間) の範囲の休講、補講、教室変更を返す。days に、その期間の振替授業日、全学の休講日、祝日も入る',
-				inputSchema: { start: z.string(), end: z.string() },
-				annotations: { readOnlyHint: true },
-			},
-			({ start, end }) => {
-				const { lessons, days } = getPublicTimetable(timetableSources, owner.userId, {
-					start,
-					end,
-				});
-				return jsonText({
-					changes: lessons.filter((lesson) => lesson.status !== 'normal'),
-					days,
-				});
-			},
-		);
-	}
-
-	if (owner.scopes.includes('read:notifications')) {
-		server.registerTool(
-			'list_notifications',
-			{
-				description:
-					'通知欄 (休講、補講、教室変更などの知らせ) を、新しい順に返す。前回読んだ最大の id を afterId に渡すと、それより新しいものだけを返すので、定期的な確認に使える',
-				inputSchema: { limit: z.number().optional(), afterId: z.number().optional() },
-				annotations: { readOnlyHint: true },
-			},
-			({ limit, afterId }) =>
-				jsonText({
-					notifications: listUserNotifications(notificationsSources, owner.userId, {
-						...(limit === undefined ? {} : { limit }),
-						...(afterId === undefined ? {} : { afterId }),
-					}),
-				}),
-		);
-	}
-
-	if (owner.scopes.includes('read:transit') && deps.bus) {
-		server.registerTool(
-			'list_bus_stops',
-			{
-				description:
-					'バスの停留所と、時刻表の版 (ダイヤ改正ごと) の一覧。highlighted が true の停留所は、既定で強調する停留所 (未来大、亀田支所前)。まだ取り込んでいなければ stops が空',
-				annotations: { readOnlyHint: true },
-			},
-			() => jsonText(listBusStops(deps) ?? { error: 'not_available' }),
-		);
-		server.registerTool(
-			'get_bus_stop_timetable',
-			{
-				description:
-					'1 つの停留所の発車表。のりばと曜日の区分 (weekday は平日、holiday は土曜、日曜、祝日) ごとに分かれ、発車の time は HH:MM (日本時間、24 時以降は 24:10 のように書く)。notes に印の意味がある。generation (8 桁の版のコード) を省くと、今日に有効な版',
-				inputSchema: { stopId: z.string(), generation: z.number().optional() },
-				annotations: { readOnlyHint: true },
-			},
-			({ stopId, generation }) =>
-				jsonText(
-					getBusStopTimetable(deps, new Date(), stopId, generation) ?? { error: 'not_found' },
-				),
-		);
-		server.registerTool(
-			'get_bus_leg',
-			{
-				description:
-					'「A から未来大へ」「未来大から A へ」のバスの発車。stopId は、未来大を通る任意の停留所 A (list_bus_stops で探す)。direction は toUniversity (A から未来大) か fromUniversity (未来大から A)。departures はその日の区分の全部、upcoming はこれからの発車。向きは、時刻表の経由と行き先の文字から決めるので、経由に書かれない停留所を通る便は、出ないことがある。day (weekday か holiday) を省くと今日の区分',
-				inputSchema: {
-					stopId: z.string(),
-					direction: z.enum(['toUniversity', 'fromUniversity']),
-					day: z.enum(['weekday', 'holiday']).optional(),
-					limit: z.number().optional(),
-				},
-				annotations: { readOnlyHint: true },
-			},
-			({ stopId, direction, day, limit }) =>
-				jsonText(
-					getBusLeg(deps, new Date(), { stopId, direction, day, limit }) ?? { error: 'not_found' },
-				),
-		);
-		server.registerTool(
-			'get_next_buses',
-			{
-				description:
-					'今から先のバスの発車を、停留所ごとに近い順に返す (土曜、日曜、祝日は休日の発車表)。stopId を省くと、強調する停留所 (未来大、亀田支所前)。limit は停留所ごとの件数 (既定 3)。minutesUntil は発車までの分',
-				inputSchema: { stopId: z.string().optional(), limit: z.number().optional() },
-				annotations: { readOnlyHint: true },
-			},
-			({ stopId, limit }) =>
-				jsonText(getNextBuses(deps, new Date(), { stopId, limit }) ?? { error: 'not_found' }),
-		);
-	}
-
-	registerWriteTools(server, deps, owner);
-
-	return server;
 }
 
 /**

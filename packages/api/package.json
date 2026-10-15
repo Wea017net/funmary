@@ -11,6 +11,7 @@
 		"@funmary/auth": "workspace:*",
 		"@funmary/core": "workspace:*",
 		"@funmary/db": "workspace:*",
+		"@funmary/mcp": "workspace:*",
 		"@hono/mcp": "^0.3.2",
 		"@hono/standard-validator": "^0.4.0",
 		"@hono/swagger-ui": "^0.6.1",
