@@ -14,12 +14,13 @@ describe('commandPayloads', () => {
 		}
 	});
 
-	it('Issue #36 の例の 3 つと、次の授業を、名前だけで並べる', () => {
+	it('Issue #36 の例の 3 つと、次の授業と、バスを、名前だけで並べる', () => {
 		expect(SLASH_COMMANDS.map((command) => command.name)).toEqual([
 			'today',
 			'next',
 			'week',
 			'changes',
+			'bus',
 		]);
 	});
 });
@@ -33,7 +34,7 @@ describe('registerSlashCommands', () => {
 			fetch,
 		});
 
-		expect(count).toBe(4);
+		expect(count).toBe(5);
 		const [url, init] = fetch.mock.calls[0] as [string, RequestInit];
 		expect(url).toBe('https://discord.com/api/v10/applications/42/commands');
 		expect(init.method).toBe('PUT');
