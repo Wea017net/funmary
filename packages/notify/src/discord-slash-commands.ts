@@ -21,6 +21,10 @@ export const SLASH_COMMANDS = [
 		name: 'changes',
 		description: 'これから 14 日の休講、補講、教室変更を、本人にだけ見せます',
 	},
+	{
+		name: 'bus',
+		description: '未来大と亀田支所前の、次のバスを、本人にだけ見せます',
+	},
 ] as const;
 
 /** Discord に送る、コマンドの定義 (type 1 は CHAT_INPUT)。integration_types 0 = サーバー、1 = ユーザー。contexts 0 = サーバー、1 = Bot との DM、2 = そのほかの DM */

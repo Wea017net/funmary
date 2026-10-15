@@ -18,6 +18,7 @@ SQLite に保存します。定義は `packages/db/src/schema.ts` に、マイ�
 | 休講など         | `class_changes`                                              | 休講、補講、教室変更。3 種類を 1 つの表にまとめる                                                                     |
 |                  | `unmatched_lessons`                                          | 科目と照合できなかった授業名                                                                                          |
 | 暦               | `academic_terms`、`academic_days`、`holidays`                | 学期の期間、振替授業日と全学の休講日、祝日。どれも、値の出どころ (自動取得、手入力、推定) を記録する                  |
+| バス             | `bus_catalog`、`bus_stop_timetables`                         | 時刻表 API から取り込んだ、停留所と版の一覧、停留所と版ごとの発車表 (ETag と確かめた日時つき)                         |
 | 予定             | `user_events`、`event_subscriptions`、`access_grants`        | 利用者の予定、ほかの人の予定を時間割に加えた記録、メールアドレスで指定した公開                                        |
 | 購読と API       | `feed_tokens`、`access_tokens`                               | カレンダーと RSS の URL のトークン、公開 API と MCP のアクセストークン (名前、範囲、期限)。どちらもハッシュで保存する |
 |                  | `oauth_clients`、`oauth_codes`、`oauth_refresh_tokens`       | MCP の認可 (OAuth 2.1) で、登録されたクライアント、認可コード、リフレッシュトークン                                   |

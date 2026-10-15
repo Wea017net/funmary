@@ -34,6 +34,8 @@ export interface Config {
 	readonly portal: { readonly userId: string; readonly password: string } | undefined;
 	readonly sourcesDisabled: readonly string[];
 	readonly sourcesFixtureDir: string | undefined;
+	/** バスの時刻表の API の基準の URL。ないときは、バスの機能を出さない */
+	readonly busApiBaseUrl: string | undefined;
 	/** メールの送信。SMTP_URL が空ならない */
 	readonly smtp: { readonly url: string; readonly from: string } | undefined;
 	readonly adminDiscordWebhookUrl: string | undefined;
@@ -207,6 +209,8 @@ function envSchema(mode: Mode) {
 		),
 		SOURCES_DISABLED: v.optional(commaList(), ''),
 		SOURCES_FIXTURE_DIR: v.optional(v.string()),
+		// バスの時刻表の API の基準の URL。書いたときだけ、バスの機能が有効になる
+		BUS_API_BASE_URL: v.optional(httpUrl('http:// か https:// で始まる URL を書いてください')),
 		SMTP_URL: v.optional(
 			v.pipe(
 				v.string(),
@@ -366,6 +370,7 @@ export function parseConfig(env: Readonly<Record<string, string | undefined>>): 
 					: undefined,
 			sourcesDisabled: e.SOURCES_DISABLED,
 			sourcesFixtureDir: e.SOURCES_FIXTURE_DIR,
+			busApiBaseUrl: e.BUS_API_BASE_URL,
 			smtp:
 				e.SMTP_URL !== undefined && e.MAIL_FROM !== undefined
 					? { url: e.SMTP_URL, from: e.MAIL_FROM }

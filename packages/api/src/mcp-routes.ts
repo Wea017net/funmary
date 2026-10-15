@@ -7,6 +7,7 @@ import { SUPPORTED_PROTOCOL_VERSIONS } from '@modelcontextprotocol/sdk/types.js'
 import { StreamableHTTPTransport } from '@hono/mcp';
 import { Hono } from 'hono';
 import { z } from 'zod';
+import { getBusStopTimetable, getNextBuses, listBusStops } from './reads/bus.ts';
 import { listUserNotifications, type NotificationsSources } from './reads/notifications.ts';
 import {
 	currentAcademicYear,
@@ -269,6 +270,42 @@ export function buildMcpServer(deps: McpRoutesDeps, owner: McpWriteOwner) {
 						...(afterId === undefined ? {} : { afterId }),
 					}),
 				}),
+		);
+	}
+
+	if (owner.scopes.includes('read:transit') && deps.bus) {
+		server.registerTool(
+			'list_bus_stops',
+			{
+				description:
+					'バスの停留所と、時刻表の版 (ダイヤ改正ごと) の一覧。highlighted が true の停留所は、既定で強調する停留所 (未来大、亀田支所前)。まだ取り込んでいなければ stops が空',
+				annotations: { readOnlyHint: true },
+			},
+			() => jsonText(listBusStops(deps) ?? { error: 'not_available' }),
+		);
+		server.registerTool(
+			'get_bus_stop_timetable',
+			{
+				description:
+					'1 つの停留所の発車表。のりばと曜日の区分 (weekday は平日、holiday は土曜、日曜、祝日) ごとに分かれ、発車の time は HH:MM (日本時間、24 時以降は 24:10 のように書く)。notes に印の意味がある。generation (8 桁の版のコード) を省くと、今日に有効な版',
+				inputSchema: { stopId: z.string(), generation: z.number().optional() },
+				annotations: { readOnlyHint: true },
+			},
+			({ stopId, generation }) =>
+				jsonText(
+					getBusStopTimetable(deps, new Date(), stopId, generation) ?? { error: 'not_found' },
+				),
+		);
+		server.registerTool(
+			'get_next_buses',
+			{
+				description:
+					'今から先のバスの発車を、停留所ごとに近い順に返す (土曜、日曜、祝日は休日の発車表)。stopId を省くと、強調する停留所 (未来大、亀田支所前)。limit は停留所ごとの件数 (既定 3)。minutesUntil は発車までの分',
+				inputSchema: { stopId: z.string().optional(), limit: z.number().optional() },
+				annotations: { readOnlyHint: true },
+			},
+			({ stopId, limit }) =>
+				jsonText(getNextBuses(deps, new Date(), { stopId, limit }) ?? { error: 'not_found' }),
 		);
 	}
 

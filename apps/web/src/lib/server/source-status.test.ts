@@ -83,6 +83,14 @@ describe('sourceStatuses', () => {
 	});
 });
 
+describe('バスの時刻表の取得元', () => {
+	it('記録がなければ並べず、記録があれば表示名つきで並べる', () => {
+		expect(sourceStatuses([]).map((row) => row.source)).not.toContain('bus');
+		const rows = sourceStatuses([{ source: 'bus', health: INITIAL_SOURCE_HEALTH }]);
+		expect(rows.at(-1)).toMatchObject({ source: 'bus', label: 'バスの時刻表 (API)' });
+	});
+});
+
 describe('formatSourcesReport', () => {
 	it('取得元ごとに 1 行で出す', () => {
 		const rows = sourceStatuses([

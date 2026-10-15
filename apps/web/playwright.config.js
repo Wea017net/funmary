@@ -28,6 +28,8 @@ const serverEnv = {
 	DISCORD_CLIENT_SECRET: '',
 	// 本物の Discord へ送らない (Webhook のテスト通知も、送らずに送れたことにする)
 	NOTIFY_DRY_RUN: 'true',
+	// バスの機能を有効にする。時刻表はテストが DB に直接入れるので、この URL には接続しない
+	BUS_API_BASE_URL: 'http://127.0.0.1:9',
 };
 
 export default defineConfig({

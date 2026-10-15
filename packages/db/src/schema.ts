@@ -832,3 +832,27 @@ export const auditLogEntries = sqliteTable(
 	},
 	(table) => [index('audit_log_entries_created').on(table.createdAt)],
 );
+
+// ---------------------------------------------------------------------------
+// バスの時刻表 (外部の API から取得した内容の写し。画面と API は、これだけを読む)
+
+/** 停留所の一覧と、ダイヤの版の一覧。行は 1 つだけ (id = 1) */
+export const busCatalog = sqliteTable('bus_catalog', {
+	id: integer('id').primaryKey(),
+	body: text('body', { mode: 'json' }).notNull(),
+	etag: text('etag'),
+	checkedAt: integer('checked_at', { mode: 'timestamp_ms' }).notNull(),
+});
+
+/** 停留所ごと、ダイヤの版ごとの発車表 */
+export const busStopTimetables = sqliteTable(
+	'bus_stop_timetables',
+	{
+		stopId: text('stop_id').notNull(),
+		generation: integer('generation').notNull(),
+		body: text('body', { mode: 'json' }).notNull(),
+		etag: text('etag'),
+		checkedAt: integer('checked_at', { mode: 'timestamp_ms' }).notNull(),
+	},
+	(table) => [primaryKey({ columns: [table.stopId, table.generation] })],
+);

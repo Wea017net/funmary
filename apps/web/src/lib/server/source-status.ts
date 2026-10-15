@@ -10,6 +10,9 @@ const SOURCE_LABELS = new Map([
 	['academic-calendar', '学年暦 (大学サイトの PDF)'],
 ]);
 
+/** 設定したときだけ動く取得元の表示名。取得した記録があるときだけ並べる */
+const OPTIONAL_SOURCE_LABELS = new Map([['bus', 'バスの時刻表 (API)']]);
+
 export interface SourceStatusRow {
 	readonly source: string;
 	readonly label: string;
@@ -48,7 +51,7 @@ export function sourceStatuses(
 		const health = bySource.get(source);
 		return {
 			source,
-			label: SOURCE_LABELS.get(source) ?? source,
+			label: SOURCE_LABELS.get(source) ?? OPTIONAL_SOURCE_LABELS.get(source) ?? source,
 			lastSuccessAt: format(health?.lastSuccessAt ?? null),
 			lastAttemptAt: format(health?.lastAttemptAt ?? null),
 			nextAttemptAt: format(health?.nextAttemptAt ?? null),

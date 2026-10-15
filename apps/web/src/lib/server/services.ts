@@ -16,6 +16,7 @@ import type {
 	DeliveryStore,
 	DiscordLinkStore,
 	FeedTokenStore,
+	BusStore,
 	HolidayStore,
 	NotificationStore,
 	OAuthStore,
@@ -108,6 +109,8 @@ export interface Services {
 	readonly unmatchedLessons: UnmatchedLessonStore;
 	readonly academicCalendar: AcademicCalendarStore;
 	readonly holidays: HolidayStore;
+	/** バスの時刻表の写し。BUS_API_BASE_URL を設定していないときは null で、バスの機能を出さない */
+	readonly bus: BusStore | null;
 	readonly sourceHealth: SourceHealthStore;
 	readonly jobRuns: StoredJobRunStore;
 	/** サーバーの中で動いている定期処理。管理画面から今すぐ動かせる */

@@ -3,10 +3,12 @@
 import {
 	buildUserTimetable,
 	getDataStatus,
+	getNextBuses,
 	getNextLesson,
 	listUserEventOccurrences,
 	termsRequiredMessage,
 	type DayNote,
+	type PublicUpcomingBus,
 	type PublicEvent,
 	type TimetableLesson,
 } from '@funmary/api';
@@ -45,6 +47,13 @@ function eventLine(event: PublicEvent): string {
 			: '';
 	const place = event.location ? ` (${plain(event.location)})` : '';
 	return `${when ? `${when} ` : ''}${plain(event.title)}${place} [予定]`;
+}
+
+/** 次のバスの 1 行。例: 10:05 (5 分後) 55A 赤川通 → 亀田支所前 */
+function busLine(bus: PublicUpcomingBus): string {
+	const via = bus.via ? ` ${plain(bus.via)}` : '';
+	const destination = bus.destination ? ` → ${plain(bus.destination)}` : '';
+	return `${bus.time} (${bus.minutesUntil} 分後) ${plain(bus.routes.join('・'))}${via}${destination}`;
 }
 
 /** 情報が古いときに、答えの終わりへ添える注意 */
@@ -145,6 +154,18 @@ export function answerCommand(
 				? body.join('\n')
 				: `これから ${CHANGES_DAYS} 日の休講、補講、教室変更はありません。`) + stale
 		);
+	}
+	if (command === 'bus') {
+		const result = getNextBuses(services, now, {});
+		if (!result) return 'このサーバーでは、バスの時刻表を使っていません。';
+		if (result.stops.length === 0) return 'バスの時刻表は、まだ取り込めていません。';
+		const blocks = result.stops.flatMap((entry) => [
+			`**${plain(entry.stop.name)}**`,
+			...(entry.upcoming.length > 0
+				? entry.upcoming.map(busLine)
+				: ['この先の発車は、取り込んだ時刻表にありません。']),
+		]);
+		return blocks.join('\n');
 	}
 	return 'そのコマンドには対応していません。';
 }
