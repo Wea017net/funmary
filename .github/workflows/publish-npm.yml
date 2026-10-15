@@ -56,7 +56,9 @@ jobs:
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
-      - name: 版を、公開する 3 つの package.json に書き込む (リポジトリには戻さない)
+      # gitHead は、npm の画面が、元のコミットを表示するのに使う。npm は、ディレクトリから公開するときだけ自動で入れる
+      # (ここでは pnpm pack の tar.gz を公開するので、入らない) ため、公開するコミットを、自分で書き込む
+      - name: 版とコミットを、公開する 3 つの package.json に書き込む (リポジトリには戻さない)
         run: |
           node -e "
             const fs = require('node:fs');
@@ -64,6 +66,7 @@ jobs:
               const file = 'packages/public/' + dir + '/package.json';
               const pkg = JSON.parse(fs.readFileSync(file, 'utf8'));
               pkg.version = process.env.VERSION;
+              pkg.gitHead = process.env.GITHUB_SHA;
               fs.writeFileSync(file, JSON.stringify(pkg, null, '\t') + '\n');
             }
           "
