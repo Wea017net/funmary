@@ -193,6 +193,7 @@
 	.methods button[aria-pressed='true'] {
 		border-color: var(--fm-primary);
 		background: var(--fm-primary-soft);
+		color: var(--fm-primary);
 	}
 	.script {
 		display: block;

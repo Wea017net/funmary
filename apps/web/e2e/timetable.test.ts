@@ -269,6 +269,27 @@ test.describe('今日と週の時間割', () => {
 		await expect(auto).toHaveAttribute('aria-pressed', 'true');
 	});
 
+	test('今週と選択中の表示方法は、ダークモードでも選択状態が分かる', async ({ page }) => {
+		await loginAs(page);
+		await page.setViewportSize({ width: 390, height: 844 });
+		await page.goto('/app/week');
+		await page.emulateMedia({ colorScheme: 'dark' });
+
+		const thisWeek = page.locator('.weeks .text-button.current');
+		await expect(thisWeek).toHaveAttribute('aria-current', 'date');
+		await expect(thisWeek).toHaveCSS('border-top-color', 'rgb(214, 153, 158)');
+		await expect(thisWeek).toHaveCSS('background-color', 'rgb(58, 26, 28)');
+		await expect(thisWeek).toHaveCSS('color', 'rgb(214, 153, 158)');
+
+		const views = page.getByRole('group', { name: '時間割の見せ方' });
+		const week = views.getByRole('button', { name: '週', exact: true });
+		await week.click();
+		await expect(week).toHaveAttribute('aria-pressed', 'true');
+		await expect(week).toHaveCSS('border-top-color', 'rgb(214, 153, 158)');
+		await expect(week).toHaveCSS('background-color', 'rgb(58, 26, 28)');
+		await expect(week).toHaveCSS('color', 'rgb(214, 153, 158)');
+	});
+
 	test('1 日ずつの見せ方では、今週を開いたとき今日の列が画面に入る', async ({ page }) => {
 		// 日曜と土曜は、授業がなければ列がないので、平日だけ確かめる
 		const weekday = new Date(Date.now() + 9 * 3600_000).getUTCDay();
@@ -297,6 +318,9 @@ test.describe('今日と週の時間割', () => {
 
 		await expect(bookmark).toHaveAttribute('aria-pressed', 'true');
 		await expect(page.getByRole('link', { name: 'Funmary に時間割を取り込む' })).toBeVisible();
+		await page.emulateMedia({ colorScheme: 'dark' });
+		await expect(bookmark).toHaveCSS('background-color', 'rgb(58, 26, 28)');
+		await expect(bookmark).toHaveCSS('color', 'rgb(214, 153, 158)');
 
 		const before = await bookmark.boundingBox();
 		await console_.click();
@@ -331,7 +355,7 @@ test.describe('自分の予定', () => {
 		page,
 	}) => {
 		await login(page, owner);
-		await page.getByRole('link', { name: '時間割', exact: true }).click();
+		await page.getByRole('link', { name: '時間割', exact: true }).first().click();
 		await page.getByRole('link', { name: '自分の予定' }).click();
 		await expect(page.getByText('まだ予定がありません')).toBeVisible();
 

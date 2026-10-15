@@ -322,11 +322,13 @@
 		padding: 0 1rem;
 	}
 	.text-button.current {
-		color: var(--fm-text-muted);
+		border-color: var(--fm-primary);
+		background: var(--fm-primary-soft);
+		color: var(--fm-primary);
 		cursor: default;
-	}
-	.text-button.current:hover {
-		background: var(--fm-surface);
+		&:hover {
+			background: var(--fm-primary-soft);
+		}
 	}
 	.picker {
 		position: relative;
@@ -342,6 +344,10 @@
 	.views .text-button[aria-pressed='true'] {
 		border-color: var(--fm-primary);
 		background: var(--fm-primary-soft);
+		color: var(--fm-primary);
+		&:hover {
+			background: var(--fm-primary-soft);
+		}
 	}
 	/* 日付の選択が、カレンダーのボタンの位置に開くよう、透明な入力欄をボタンの上に重ねる */
 	.picker input {

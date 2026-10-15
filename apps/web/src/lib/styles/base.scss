@@ -114,6 +114,13 @@ time,
 	color: var(--fm-primary);
 }
 
+// 無効なボタンも、テーマに合う文字・背景・輪郭で状態を判別できるようにする
+button.mdc-button:disabled {
+	border-color: var(--fm-outline);
+	background-color: var(--fm-surface-muted);
+	color: var(--fm-text-muted);
+}
+
 // 入力欄と選択欄。ブラウザの既定の見た目 (特にダークの灰色) を、テーマの色にそろえる
 input:not([type='radio'], [type='checkbox'], [type='hidden']),
 select,
