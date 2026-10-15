@@ -218,6 +218,14 @@ describe('バスの時刻表の定期処理', () => {
 		await expect(t.job.run(t.context)).resolves.toContain('待');
 	});
 
+	it('手で動かしたときは、不調のあとの待ち時間でも、取得する', async () => {
+		const t = setup({ catalogResult: { kind: 'failed', message: 'down' } });
+		await expect(t.job.run(t.context)).rejects.toThrow();
+		t.fetchCatalog.mockClear();
+		await expect(t.job.run({ ...t.context, manual: true })).rejects.toThrow('down');
+		expect(t.fetchCatalog).toHaveBeenCalledTimes(1);
+	});
+
 	it('中断の合図が出たら、残りの取得をやめる', async () => {
 		const controller = new AbortController();
 		const t = setup({
