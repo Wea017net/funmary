@@ -9,7 +9,7 @@ const root = join(import.meta.dirname, '..');
 const PUBLISHED = new Map([
 	['@funmary/client', 'packages/public/client'],
 	['@funmary/mcp', 'packages/public/mcp'],
-	['funmary', 'packages/public/cli'],
+	['funmary', 'packages/public/funmary'],
 ]);
 
 /**
@@ -19,6 +19,7 @@ const PUBLISHED = new Map([
  *   private?: boolean;
  *   license?: string;
  *   files?: string[];
+ *   bin?: Record<string, string>;
  *   repository?: { url?: string };
  *   publishConfig?: { access?: string; provenance?: boolean; exports?: unknown };
  *   dependencies?: Record<string, string>;
@@ -78,6 +79,14 @@ describe('npm に公開するパッケージ', () => {
 			expect(readPackage(dir).version).toBe('0.0.0');
 		},
 	);
+
+	it('funmary は、コマンドのほかに、ライブラリの入口 (funmary、funmary/mcp) を出す', () => {
+		const pkg = readPackage('packages/public/funmary');
+		expect(Object.keys(pkg.publishConfig?.exports ?? {})).toEqual(
+			expect.arrayContaining(['.', './mcp']),
+		);
+		expect(pkg.bin).toEqual({ funmary: './dist/bin.js' });
+	});
 
 	it('公開するパッケージが依存する、リポジトリ内のパッケージは、公開するものだけ', () => {
 		for (const [, dir] of PUBLISHED) {

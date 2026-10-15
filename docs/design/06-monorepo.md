@@ -11,7 +11,7 @@ funmary/
 │   ├── public/        # npm に公開するパッケージ (3 つだけ。公開の手順は 5.6)
 │   │   ├── client/    # @funmary/client: 公開 API の型付きのクライアント
 │   │   ├── mcp/       # @funmary/mcp: MCP の道具の定義と、手元で動く MCP (stdio)
-│   │   └── cli/       # funmary: コマンドと、クライアントと MCP の入口
+│   │   └── funmary/   # funmary: コマンドと、クライアントと MCP の入口
 │   └── private/       # 公開しないパッケージ (すべて private)
 │       ├── core/      # I/O のない処理: 時間割の展開、変更の差分、ICS の生成、祝日と学期の判定
 │       ├── db/        # スキーマ、マイグレーション、クエリ、暗号化とトークンの処理

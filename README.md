@@ -94,7 +94,7 @@ funmary/
 │   ├── public/       # npm に公開するパッケージ
 │   │   ├── client/   # @funmary/client (公開 API のクライアント)
 │   │   ├── mcp/      # @funmary/mcp (手元で動く MCP)
-│   │   └── cli/      # funmary (コマンド)
+│   │   └── funmary/  # funmary (コマンドと、ライブラリの入口)
 │   └── private/      # 公開しないパッケージ
 │       ├── core/     # I/O を持たない処理 (時間割の展開、祝日と学期の判定など)
 │       ├── db/       # スキーマ、マイグレーション、クエリ
