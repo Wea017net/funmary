@@ -163,9 +163,9 @@ main の CI が通ると、ビルドしてから次のファイルを GitHub Rel
 
 npm に公開するのは、`funmary` (コマンド)、`@funmary/client`、`@funmary/mcp` の 3 つだけです。ほかのパッケージは `private` で、テスト (`scripts/publishable-packages.test.js`) が、この 3 つ以外に `private` を外したものがないこと、公開の設定 (範囲、provenance、含めるファイル) がそろっていることを確かめます。
 
-- 版と変更履歴は、Changesets で管理します。公開するパッケージを変えた PR に、`pnpm changeset` で、変更の種類 (patch、minor、major) と、利用者が読む説明を足します
-- 版を上げるときは、`pnpm changeset version` を実行して、版と `CHANGELOG.md` の変更を PR にして、main に入れます (GitHub Actions が作った PR には、CI が動かず、必須の検査が通らないので、手で行います)
-- 公開は、ワークフロー `Publish npm` が、main の CI の成功のあとに行います。`pnpm changeset publish` が、npm にまだない版だけを公開します
-- npm の trusted publishing (OIDC) で公開するので、npm のトークンを secret に置きません。公開の記録には、どのコミットから、どのワークフローで作ったかを示す provenance が付きます
-- 公開の前に、npm 側で、3 つのパッケージのそれぞれに、このリポジトリ (`funmary-app/funmary`) とワークフローのファイル名 (`publish-npm.yml`) を、公開者 (trusted publisher) として登録しておきます。登録を終えて、リポジトリの変数 `NPM_PUBLISH_ENABLED` を `true` にするまでは、ワークフローは何もしません
+- 公開は、ワークフロー `Publish npm` を、GitHub の Actions の画面から、手で実行して行います。入力は、`patch`、`minor`、`major` (npm にある、いちばん新しい版から上げます。まだなければ `0.0.0` から)、または版そのもの (`1.0.0`、`1.1.0-beta.0` のような先行版も可) です。3 つは、同じ版で出します。dist-tag は、空なら、先行版は先行版の名前 (`beta` など)、通常の版は `latest` になります
+- main の最新から、CI と同じ検査 (整形、lint、型、単体テスト) を通し、版を 3 つの `package.json` に書き込んでビルドし、`pnpm pack` で tar.gz にして (`workspace:*` の依存が、公開する版に書き換わる)、依存される順 (client、mcp、funmary) に、npm の CLI で公開します。npm にある版は飛ばすので、途中で失敗しても、同じ版でやり直せます
+- リポジトリの `package.json` の版は、開発用の `0.0.0` のままです。main は保護されていて、ワークフローが版のコミットを push できないため、版は、公開のときに書き込むだけで、リポジトリには戻しません
+- 公開のあと、`npm-v<版>` のタグと GitHub Release (変更の一覧は、自動で作る) を作ります。`v*` のタグは、アプリ本体の節目の版が使っているので、別の名前にしています。アプリの更新は、最新の Release (latest) を見るので、npm の Release は、latest にしません
+- npm の trusted publishing (OIDC) で公開するので、npm のトークンを secret に置きません。公開の記録には、どのコミットから、どのワークフローで作ったかを示す provenance が付きます。npm 側で、3 つのパッケージのそれぞれに、このリポジトリ (`funmary-app/funmary`) とワークフローのファイル名 (`publish-npm.yml`) を、公開者 (trusted publisher) として登録しておきます
 - 公開する版の入口は、ビルドした `dist` を指します (開発では `src` を指します)。ビルドは tsdown で、ESM と型定義を作ります
