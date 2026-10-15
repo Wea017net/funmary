@@ -16,7 +16,7 @@ export const READ_SCOPES = [
 	'read:transit',
 ] as const;
 /** 書き込みの範囲。読み取りと分け、求められたときだけ付ける (誤って書き込めるトークンを渡さないため) */
-export const WRITE_SCOPES = ['write:events', 'write:notifications'] as const;
+export const WRITE_SCOPES = ['write:events', 'write:courses', 'write:notifications'] as const;
 /** 発行できる範囲 */
 export const ACCESS_TOKEN_SCOPES = [...READ_SCOPES, ...WRITE_SCOPES] as const;
 export type AccessTokenScope = (typeof ACCESS_TOKEN_SCOPES)[number];
