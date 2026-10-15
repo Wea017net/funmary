@@ -138,3 +138,10 @@ export {
 	type UpcomingBusDeparture,
 	type UpcomingBusInput,
 } from './bus.ts';
+export {
+	parseAbbreviation,
+	parseSlotInput,
+	type AbbreviationResult,
+	type SlotInput,
+	type SlotInputResult,
+} from './course-input.ts';

@@ -7,7 +7,16 @@ import { apiActivity } from './schema.ts';
 export const API_ACTIVITY_LIMIT = 200;
 
 export type ApiActivityAction =
-	'event.create' | 'event.update' | 'event.delete' | 'notification.read' | 'notification.readAll';
+	| 'event.create'
+	| 'event.update'
+	| 'event.delete'
+	| 'course.register'
+	| 'course.unregister'
+	| 'course.personalSlot.set'
+	| 'course.personalSlot.remove'
+	| 'course.abbreviation'
+	| 'notification.read'
+	| 'notification.readAll';
 
 export interface ApiActivityInput {
 	readonly userId: string;

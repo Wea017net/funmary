@@ -1,4 +1,4 @@
-// MCP の書き込みの道具。範囲 (write:events、write:notifications) を持つトークンにだけ出す。
+// MCP の書き込みの道具。範囲 (write:events、write:courses、write:notifications) を持つトークンにだけ出す。
 // 処理は REST と同じ writes/ の関数を呼ぶので、検査も履歴も食い違わない。
 // 書き込みの道具には readOnlyHint: false を付け、クライアントが実行の前に利用者へ承認を求められるようにする。
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
@@ -7,6 +7,16 @@ import { z } from 'zod';
 import { EventBodySchema, type EventBody } from './writes/event-json.ts';
 import { createEvent, deleteEvent, replaceEvent, type WriteActor } from './writes/events.ts';
 import type { EventWriteSources } from './writes/events.ts';
+import {
+	registerCourse,
+	removePersonalSlot,
+	setAbbreviation,
+	setPersonalSlot,
+	unregisterCourse,
+	type CourseWriteResult,
+	type CourseWriteSources,
+	type SubjectRef,
+} from './writes/courses.ts';
 import {
 	markAllNotificationsRead,
 	markNotificationRead,
@@ -86,9 +96,16 @@ const eventShape = {
 		.describe('繰り返しから除く日 (YYYY-MM-DD。始まりの日で数える)'),
 };
 
+/** 履修の道具が、科目を指すための項目 */
+const courseRefShape = {
+	academicYear: z.number().optional().describe('年度 (例: 2026)。name で指すときは省ける'),
+	syllabusId: z.string().optional().describe('シラバスの番号 (授業コード)'),
+	name: z.string().optional().describe('科目名。syllabusId を省くときに使う'),
+};
+
 export function registerWriteTools(
 	server: McpServer,
-	sources: EventWriteSources & NotificationWriteSources,
+	sources: EventWriteSources & NotificationWriteSources & CourseWriteSources,
 	owner: McpWriteOwner,
 ) {
 	const actor: WriteActor = {
@@ -148,6 +165,124 @@ export function registerWriteTools(
 			({ id }) => {
 				const result = deleteEvent(sources, actor, id, new Date());
 				return result.ok ? jsonResult({ deleted: true, id }) : errorResult(result.error);
+			},
+		);
+	}
+
+	if (owner.scopes.includes('write:courses')) {
+		const resultOf = (result: CourseWriteResult) => {
+			if (result.ok) return jsonResult(result.course);
+			return result.kind === 'ambiguous'
+				? errorResult(
+						`${result.error}: ${result.candidates
+							.map((c) => `${c.academicYear} ${c.syllabusId} ${c.name}`)
+							.join(' / ')}`,
+					)
+				: errorResult(result.error);
+		};
+		const refOf = (args: {
+			academicYear?: number | undefined;
+			syllabusId?: string | undefined;
+			name?: string | undefined;
+		}):
+			| { readonly ok: true; readonly ref: SubjectRef }
+			| { readonly ok: false; readonly error: string } => {
+			if (args.syllabusId !== undefined) {
+				return args.academicYear === undefined
+					? { ok: false, error: 'syllabusId で指すときは、academicYear (年度) も必要です' }
+					: { ok: true, ref: { academicYear: args.academicYear, syllabusId: args.syllabusId } };
+			}
+			if (args.name !== undefined) {
+				return { ok: true, ref: { name: args.name, academicYear: args.academicYear } };
+			}
+			return { ok: false, error: '科目を、academicYear と syllabusId か、name で指してください' };
+		};
+		server.registerTool(
+			'register_course',
+			{
+				description:
+					'履修登録する。科目は、academicYear (年度) と syllabusId (シラバスの番号) か、name (科目名。年度を省くと今年度) で指す。name が複数の科目に当たったら、登録せず候補を返すので、利用者に確かめて、番号で指し直す。登録済みなら、何も変えずに今の状態を返す',
+				inputSchema: courseRefShape,
+				annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true },
+			},
+			(args) => {
+				const input = refOf(args);
+				return input.ok
+					? resultOf(registerCourse(sources, actor, input.ref, new Date()))
+					: errorResult(input.error);
+			},
+		);
+		server.registerTool(
+			'unregister_course',
+			{
+				description:
+					'履修登録を取り消す。自分だけの曜日と時限と略称は残るので、登録し直せば元に戻る。取り消す前に、利用者に確かめる',
+				inputSchema: courseRefShape,
+				annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true },
+			},
+			(args) => {
+				const input = refOf(args);
+				return input.ok
+					? resultOf(unregisterCourse(sources, actor, input.ref, new Date()))
+					: errorResult(input.error);
+			},
+		);
+		server.registerTool(
+			'set_personal_slot',
+			{
+				description:
+					'自分だけに使う曜日と時限を足す (同じ曜日と時限があれば、教室を上書きする)。ほかの利用者の時間割には効かない。履修登録した科目だけ。共有の枠は、ここからは書き込めない',
+				inputSchema: {
+					...courseRefShape,
+					weekday: z.number().describe('曜日 (1 が月曜から 6 が土曜)'),
+					period: z.number().describe('時限 (1 から 6)'),
+					room: z.string().nullable().optional().describe('教室 (100 文字まで)。省くと空'),
+				},
+				annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true },
+			},
+			({ weekday, period, room, ...refArgs }) => {
+				const input = refOf(refArgs);
+				return input.ok
+					? resultOf(
+							setPersonalSlot(sources, actor, input.ref, { weekday, period, room }, new Date()),
+						)
+					: errorResult(input.error);
+			},
+		);
+		server.registerTool(
+			'remove_personal_slot',
+			{
+				description: '自分だけの曜日と時限を消す',
+				inputSchema: {
+					...courseRefShape,
+					weekday: z.number().describe('曜日 (1 が月曜から 6 が土曜)'),
+					period: z.number().describe('時限 (1 から 6)'),
+				},
+				annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true },
+			},
+			({ weekday, period, ...refArgs }) => {
+				const input = refOf(refArgs);
+				return input.ok
+					? resultOf(removePersonalSlot(sources, actor, input.ref, weekday, period, new Date()))
+					: errorResult(input.error);
+			},
+		);
+		server.registerTool(
+			'set_subject_abbreviation',
+			{
+				description:
+					'時間割のセルに出す、自分だけの略称を保存する (100 文字まで)。空にすると、正式名称を使う指定になる',
+				inputSchema: {
+					...courseRefShape,
+					abbreviation: z.string().describe('略称。空文字で、正式名称に戻す'),
+				},
+				annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true },
+			},
+			({ abbreviation, ...refArgs }) => {
+				const input = refOf(refArgs);
+				return input.ok
+					? resultOf(setAbbreviation(sources, actor, input.ref, abbreviation, new Date()))
+					: errorResult(input.error);
 			},
 		);
 	}

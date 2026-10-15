@@ -59,6 +59,23 @@ import {
 } from '../writes/events.ts';
 import { EventBodySchema, EventResultSchema } from '../writes/event-json.ts';
 import { markAllNotificationsRead, markNotificationRead } from '../writes/notifications.ts';
+import {
+	AbbreviationBodySchema,
+	CoursePathParam,
+	CourseRefBodySchema,
+	CourseStateSchema,
+	courseFailureResponse,
+	PersonalSlotBodySchema,
+	PersonalSlotPathParam,
+} from '../writes/course-json.ts';
+import {
+	registerCourse,
+	removePersonalSlot,
+	setAbbreviation,
+	setPersonalSlot,
+	unregisterCourse,
+	type CourseWriteSources,
+} from '../writes/courses.ts';
 import { requireScope, v1Auth, type V1AuthVariables } from './auth.ts';
 
 /** 1 分に 60 回まで。トークンごとに数える */
@@ -100,6 +117,10 @@ export interface V1RoutesDeps
 	>;
 	readonly accessTokens: Pick<AccessTokenStore, 'findOwner' | 'markUsed'>;
 	readonly users: Pick<AuthStore, 'findUserById'>;
+	/** 履修の書き込み (登録、解除、自分だけの曜日と時限、略称) */
+	readonly courses: CourseSources['courses'] & CourseWriteSources['courses'];
+	readonly personalSlots: TimetableSources['personalSlots'] & CourseWriteSources['personalSlots'];
+	readonly subjectAbbreviations: CourseWriteSources['subjectAbbreviations'];
 }
 
 const DateParam = v.pipe(v.string(), v.isoDate());
@@ -418,6 +439,10 @@ const AUTHED_PATHS = [
 	'/api/v1/timetable/week',
 	'/api/v1/periods',
 	'/api/v1/courses',
+	'/api/v1/courses/:year/:syllabusId',
+	'/api/v1/courses/:year/:syllabusId/personal-slots',
+	'/api/v1/courses/:year/:syllabusId/personal-slots/:weekday/:period',
+	'/api/v1/courses/:year/:syllabusId/abbreviation',
 	'/api/v1/academic-calendar',
 	'/api/v1/changes',
 	'/api/v1/subjects',
@@ -897,6 +922,158 @@ export function createV1Routes(deps: V1RoutesDeps): Hono<{ Variables: V1AuthVari
 			const { stopId, limit } = c.req.valid('query');
 			const result = getNextBuses(deps, new Date(), { stopId, limit });
 			return result ? c.json(result) : c.json({ error: 'not_found' }, 404);
+		},
+	);
+
+	app.post(
+		'/api/v1/courses',
+		requireScope('write:courses'),
+		describeRoute({
+			description:
+				'履修登録する。科目は、年度とシラバスの番号か、名前で指す (名前が複数の科目に当たったら、登録せず、409 で候補を返す)。登録済みなら、何も変えずに今の状態を返す。書き込みは、1 分あたり 20 回まで',
+			responses: {
+				200: {
+					description: '登録後の状態',
+					content: { 'application/json': { schema: resolver(CourseStateSchema) } },
+				},
+				404: {
+					description: '科目が見つからない (ほかの人の非公開の科目も、見つからないことにする)',
+				},
+				409: { description: '名前が複数の科目に当たった (candidates に候補が入る)' },
+			},
+		}),
+		validator('json', CourseRefBodySchema),
+		(c) => {
+			const result = registerCourse(
+				deps,
+				actorOf(c.get('tokenOwner')),
+				c.req.valid('json'),
+				new Date(),
+			);
+			if (result.ok) return c.json(result.course);
+			const failure = courseFailureResponse(result);
+			return c.json(failure.body, failure.status);
+		},
+	);
+
+	app.delete(
+		'/api/v1/courses/:year/:syllabusId',
+		requireScope('write:courses'),
+		describeRoute({
+			description: '履修登録を取り消す。自分だけの曜日と時限と略称は残るので、登録し直せば元に戻る',
+			responses: {
+				200: {
+					description: '取り消し後の状態',
+					content: { 'application/json': { schema: resolver(CourseStateSchema) } },
+				},
+				404: { description: '科目がない、または履修登録していない' },
+			},
+		}),
+		validator('param', CoursePathParam),
+		(c) => {
+			const { year, syllabusId } = c.req.valid('param');
+			const result = unregisterCourse(
+				deps,
+				actorOf(c.get('tokenOwner')),
+				{ academicYear: year, syllabusId },
+				new Date(),
+			);
+			if (result.ok) return c.json(result.course);
+			const failure = courseFailureResponse(result);
+			return c.json(failure.body, failure.status);
+		},
+	);
+
+	app.put(
+		'/api/v1/courses/:year/:syllabusId/personal-slots',
+		requireScope('write:courses'),
+		describeRoute({
+			description:
+				'自分だけに使う曜日と時限を足す (同じ曜日と時限があれば、教室を上書きする)。ほかの利用者の時間割には効かない。履修登録した科目だけ。共有の枠は、ここからは書き込めない',
+			responses: {
+				200: {
+					description: '書き込み後の状態',
+					content: { 'application/json': { schema: resolver(CourseStateSchema) } },
+				},
+				400: { description: '曜日か時限が範囲の外' },
+				409: { description: '履修登録していない科目' },
+			},
+		}),
+		validator('param', CoursePathParam),
+		validator('json', PersonalSlotBodySchema),
+		(c) => {
+			const { year, syllabusId } = c.req.valid('param');
+			const result = setPersonalSlot(
+				deps,
+				actorOf(c.get('tokenOwner')),
+				{ academicYear: year, syllabusId },
+				c.req.valid('json'),
+				new Date(),
+			);
+			if (result.ok) return c.json(result.course);
+			const failure = courseFailureResponse(result);
+			return c.json(failure.body, failure.status);
+		},
+	);
+
+	app.delete(
+		'/api/v1/courses/:year/:syllabusId/personal-slots/:weekday/:period',
+		requireScope('write:courses'),
+		describeRoute({
+			description: '自分だけの曜日と時限を消す',
+			responses: {
+				200: {
+					description: '消した後の状態',
+					content: { 'application/json': { schema: resolver(CourseStateSchema) } },
+				},
+				404: { description: 'その曜日と時限は、登録されていない' },
+			},
+		}),
+		validator('param', PersonalSlotPathParam),
+		(c) => {
+			const { year, syllabusId, weekday, period } = c.req.valid('param');
+			const result = removePersonalSlot(
+				deps,
+				actorOf(c.get('tokenOwner')),
+				{ academicYear: year, syllabusId },
+				weekday,
+				period,
+				new Date(),
+			);
+			if (result.ok) return c.json(result.course);
+			const failure = courseFailureResponse(result);
+			return c.json(failure.body, failure.status);
+		},
+	);
+
+	app.put(
+		'/api/v1/courses/:year/:syllabusId/abbreviation',
+		requireScope('write:courses'),
+		describeRoute({
+			description:
+				'時間割のセルに出す、自分だけの略称を保存する。空にすると、正式名称を使う指定になる',
+			responses: {
+				200: {
+					description: '保存後の状態',
+					content: { 'application/json': { schema: resolver(CourseStateSchema) } },
+				},
+				400: { description: '100 文字を超えている' },
+			},
+		}),
+		validator('param', CoursePathParam),
+		validator('json', AbbreviationBodySchema),
+		(c) => {
+			const { year, syllabusId } = c.req.valid('param');
+			const result = setAbbreviation(
+				deps,
+				actorOf(c.get('tokenOwner')),
+				{ academicYear: year, syllabusId },
+				c.req.valid('json').abbreviation,
+				new Date(),
+			);
+			if (result.ok) return c.json(result.course);
+			const failure = courseFailureResponse(result);
+			return c.json(failure.body, failure.status);
 		},
 	);
 

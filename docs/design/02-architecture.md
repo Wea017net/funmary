@@ -74,30 +74,35 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 `/api/` の下には、画面が使う内部の API (未読数など) もあります。内部の API はログインの Cookie で認証し、形は予告なく変えます。公開 API は `/api/v1/` の下に分け、アクセストークンで認証し、形を保ちます。形を壊す変更は `/api/v2/` を作って行い、`v1` はしばらく残します。
 
-| メソッドとパス                                              | 返すもの                                                                      |
-| ----------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| `GET /api/v1/me`                                            | トークンの持ち主の表示名と、許されている範囲 (scope)                          |
-| `GET /api/v1/lessons`                                       | 日付または期間の授業。休講、補講、教室変更を反映したもの                      |
-| `GET /api/v1/lessons/next`                                  | 次の授業 (授業中ならその授業)                                                 |
-| `GET /api/v1/timetable`                                     | 授業 (時刻つき) と、振替授業日、全学の休講日、祝日                            |
-| `GET /api/v1/timetable/week`                                | 週の曜日と時限の格子                                                          |
-| `GET /api/v1/periods`                                       | 時限ごとの開始と終了の時刻                                                    |
-| `GET /api/v1/courses`                                       | 履修登録した科目と、その曜日と時限                                            |
-| `GET /api/v1/academic-calendar`                             | 年度の学期の期間と、祝日、全学の休講日、振替授業日                            |
-| `GET /api/v1/events`                                        | 自分の予定と、時間割に加えた予定                                              |
-| `GET /api/v1/events/{id}`                                   | 自分の予定を 1 件 (足すときと同じ形)                                          |
-| `POST /api/v1/events`                                       | 自分の予定を足す (`write:events`)                                             |
-| `PUT /api/v1/events/{id}`                                   | 自分の予定を置き換える (`write:events`)                                       |
-| `DELETE /api/v1/events/{id}`                                | 自分の予定を消す (`write:events`)                                             |
-| `GET /api/v1/status`                                        | 休講などのデータが新しいか                                                    |
-| `GET /api/v1/subjects`                                      | 科目の検索 (公開の科目だけ)                                                   |
-| `GET /api/v1/subjects/{year}/{syllabusId}/sessions`         | 科目の全授業日                                                                |
-| `GET /api/v1/changes`                                       | 休講、補講、教室変更の一覧                                                    |
-| `GET /api/v1/subjects/{year}/{syllabusId}`                  | 授業の詳細 (公開シラバスの内容、教員、教室、休講の履歴)                       |
-| `GET /api/v1/bus/stops`、`/bus/stops/{stopId}`、`/bus/next` | バスの停留所、発車表、次のバス (`read:transit`。[16 章](16-bus-timetable.md)) |
-| `GET /api/v1/notifications`                                 | 通知欄                                                                        |
-| `POST /api/v1/notifications/{id}/read`                      | 通知を 1 件、既読にする (`write:notifications`)                               |
-| `POST /api/v1/notifications/read`                           | 未読をすべて既読にする (`write:notifications`)                                |
+| メソッドとパス                                                                 | 返すもの                                                                      |
+| ------------------------------------------------------------------------------ | ----------------------------------------------------------------------------- |
+| `GET /api/v1/me`                                                               | トークンの持ち主の表示名と、許されている範囲 (scope)                          |
+| `GET /api/v1/lessons`                                                          | 日付または期間の授業。休講、補講、教室変更を反映したもの                      |
+| `GET /api/v1/lessons/next`                                                     | 次の授業 (授業中ならその授業)                                                 |
+| `GET /api/v1/timetable`                                                        | 授業 (時刻つき) と、振替授業日、全学の休講日、祝日                            |
+| `GET /api/v1/timetable/week`                                                   | 週の曜日と時限の格子                                                          |
+| `GET /api/v1/periods`                                                          | 時限ごとの開始と終了の時刻                                                    |
+| `GET /api/v1/courses`                                                          | 履修登録した科目と、その曜日と時限                                            |
+| `GET /api/v1/academic-calendar`                                                | 年度の学期の期間と、祝日、全学の休講日、振替授業日                            |
+| `GET /api/v1/events`                                                           | 自分の予定と、時間割に加えた予定                                              |
+| `GET /api/v1/events/{id}`                                                      | 自分の予定を 1 件 (足すときと同じ形)                                          |
+| `POST /api/v1/events`                                                          | 自分の予定を足す (`write:events`)                                             |
+| `PUT /api/v1/events/{id}`                                                      | 自分の予定を置き換える (`write:events`)                                       |
+| `DELETE /api/v1/events/{id}`                                                   | 自分の予定を消す (`write:events`)                                             |
+| `POST /api/v1/courses`                                                         | 履修登録する。科目は年度とシラバスの番号か、名前で指す (`write:courses`)      |
+| `DELETE /api/v1/courses/{year}/{syllabusId}`                                   | 履修登録を取り消す (`write:courses`)                                          |
+| `PUT /api/v1/courses/{year}/{syllabusId}/personal-slots`                       | 自分だけの曜日と時限を足す (`write:courses`)                                  |
+| `DELETE /api/v1/courses/{year}/{syllabusId}/personal-slots/{weekday}/{period}` | 自分だけの曜日と時限を消す (`write:courses`)                                  |
+| `PUT /api/v1/courses/{year}/{syllabusId}/abbreviation`                         | 時間割に出す略称を保存する (`write:courses`)                                  |
+| `GET /api/v1/status`                                                           | 休講などのデータが新しいか                                                    |
+| `GET /api/v1/subjects`                                                         | 科目の検索 (公開の科目だけ)                                                   |
+| `GET /api/v1/subjects/{year}/{syllabusId}/sessions`                            | 科目の全授業日                                                                |
+| `GET /api/v1/changes`                                                          | 休講、補講、教室変更の一覧                                                    |
+| `GET /api/v1/subjects/{year}/{syllabusId}`                                     | 授業の詳細 (公開シラバスの内容、教員、教室、休講の履歴)                       |
+| `GET /api/v1/bus/stops`、`/bus/stops/{stopId}`、`/bus/next`                    | バスの停留所、発車表、次のバス (`read:transit`。[16 章](16-bus-timetable.md)) |
+| `GET /api/v1/notifications`                                                    | 通知欄                                                                        |
+| `POST /api/v1/notifications/{id}/read`                                         | 通知を 1 件、既読にする (`write:notifications`)                               |
+| `POST /api/v1/notifications/read`                                              | 未読をすべて既読にする (`write:notifications`)                                |
 
 ### OpenAPI と Swagger UI
 
@@ -108,28 +113,33 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 ### MCP の道具
 
-| 道具                                                         | 内容                                                                   |
-| ------------------------------------------------------------ | ---------------------------------------------------------------------- |
-| `get_lessons`                                                | 日付か期間の授業 (時刻つき) と、振替授業日などを返す。日付を省くと今日 |
-| `get_next_lesson`                                            | 今の時刻から見た、次の授業                                             |
-| `list_events`                                                | 自分の予定と、時間割に加えた予定                                       |
-| `get_data_status`                                            | 休講などのデータが新しいか                                             |
-| `search_subjects`                                            | 科目の検索 (公開の科目だけ)                                            |
-| `get_subject_sessions`                                       | 科目の全授業日                                                         |
-| `get_week`                                                   | 週の曜日と時限の格子                                                   |
-| `get_periods`                                                | 時限ごとの開始と終了の時刻                                             |
-| `list_courses`                                               | 履修登録した科目と、その曜日と時限                                     |
-| `get_academic_calendar`                                      | 年度の学期の期間と、祝日、全学の休講日、振替授業日                     |
-| `list_changes`                                               | 休講、補講、教室変更の一覧                                             |
-| `get_subject`                                                | 授業の詳細                                                             |
-| `list_notifications`                                         | 通知欄                                                                 |
-| `list_bus_stops`、`get_bus_stop_timetable`、`get_next_buses` | バスの時刻表 (`read:transit`)                                          |
-| `get_event`                                                  | 自分の予定を 1 件 (`update_event` に送り直せる形)                      |
-| `create_event`                                               | 自分の予定を足す (`write:events`)                                      |
-| `update_event`                                               | 自分の予定を置き換える (`write:events`)                                |
-| `delete_event`                                               | 自分の予定を消す (`write:events`)                                      |
-| `mark_notification_read`                                     | 通知を 1 件、既読にする (`write:notifications`)                        |
-| `mark_all_notifications_read`                                | 未読をすべて既読にする (`write:notifications`)                         |
+| 道具                                                         | 内容                                                                                                           |
+| ------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------- |
+| `get_lessons`                                                | 日付か期間の授業 (時刻つき) と、振替授業日などを返す。日付を省くと今日                                         |
+| `get_next_lesson`                                            | 今の時刻から見た、次の授業                                                                                     |
+| `list_events`                                                | 自分の予定と、時間割に加えた予定                                                                               |
+| `get_data_status`                                            | 休講などのデータが新しいか                                                                                     |
+| `search_subjects`                                            | 科目の検索 (公開の科目だけ)                                                                                    |
+| `get_subject_sessions`                                       | 科目の全授業日                                                                                                 |
+| `get_week`                                                   | 週の曜日と時限の格子                                                                                           |
+| `get_periods`                                                | 時限ごとの開始と終了の時刻                                                                                     |
+| `list_courses`                                               | 履修登録した科目と、その曜日と時限                                                                             |
+| `get_academic_calendar`                                      | 年度の学期の期間と、祝日、全学の休講日、振替授業日                                                             |
+| `list_changes`                                               | 休講、補講、教室変更の一覧                                                                                     |
+| `get_subject`                                                | 授業の詳細                                                                                                     |
+| `list_notifications`                                         | 通知欄                                                                                                         |
+| `list_bus_stops`、`get_bus_stop_timetable`、`get_next_buses` | バスの時刻表 (`read:transit`)                                                                                  |
+| `get_event`                                                  | 自分の予定を 1 件 (`update_event` に送り直せる形)                                                              |
+| `create_event`                                               | 自分の予定を足す (`write:events`)                                                                              |
+| `update_event`                                               | 自分の予定を置き換える (`write:events`)                                                                        |
+| `delete_event`                                               | 自分の予定を消す (`write:events`)                                                                              |
+| `register_course`                                            | 履修登録する。年度とシラバスの番号か、名前で指す。名前が複数に当たったら、登録せず候補を返す (`write:courses`) |
+| `unregister_course`                                          | 履修登録を取り消す (`write:courses`)                                                                           |
+| `set_personal_slot`                                          | 自分だけの曜日と時限を足す (`write:courses`)                                                                   |
+| `remove_personal_slot`                                       | 自分だけの曜日と時限を消す (`write:courses`)                                                                   |
+| `set_subject_abbreviation`                                   | 時間割に出す略称を保存する (`write:courses`)                                                                   |
+| `mark_notification_read`                                     | 通知を 1 件、既読にする (`write:notifications`)                                                                |
+| `mark_all_notifications_read`                                | 未読をすべて既読にする (`write:notifications`)                                                                 |
 
 - 読み取りの道具には、読み取り専用の印 (`readOnlyHint`) を付けます。エージェントが確認なしに呼んでも、何も変わりません
 - 書き込みの道具には、`readOnlyHint: false` を付けます。クライアントは、実行の前に利用者へ承認を求められます。置き換え (`update_event`) と削除 (`delete_event`) には、壊す操作の印 (`destructiveHint: true`) も付けます
@@ -147,11 +157,13 @@ export const handle: Handle = async ({ event, resolve }) => {
 - Discord のコマンドは、答えの代わりに同意の画面を案内します。通知の配信と毎日のまとめは、同意するまで送らず、待たせておきます。カレンダーと RSS の購読は、403 と説明を返します
 - 規約の本文 (`/terms`、`/privacy`)、ログイン、ログアウトは、同意の前でも使えます
 
+履修の書き込み (`write:courses`) は、自分にしか効かないものだけを開けています。共有の枠 (ほかの利用者の時間割にも効く曜日と時限、教室) と、科目そのものは、API からは書き込めず、画面で行います。名前で科目を指したときは、完全に一致する科目が 1 つならそれを、なければ部分一致が 1 つならそれを選びます。複数に当たったら、何も書き込まず、候補を返します。
+
 ### 認証
 
 個人用のアクセストークンで認証します。設定画面で発行し、`Authorization: Bearer <トークン>` で送ります。
 
-- 名前 (どこで使うか)、範囲 (scope)、有効期限を付けて発行します。読み取りの範囲は `read:lessons`、`read:changes`、`read:notifications`、`read:transit`、書き込みの範囲は `write:events`、`write:notifications` に分けています
+- 名前 (どこで使うか)、範囲 (scope)、有効期限を付けて発行します。読み取りの範囲は `read:lessons`、`read:changes`、`read:notifications`、`read:transit`、書き込みの範囲は `write:events`、`write:courses`、`write:notifications` に分けています
 - トークンは発行したときに 1 回だけ見せ、DB にはハッシュだけを保存します。最後に使った日時を記録し、設定画面の一覧からいつでも無効にできます
 - 見分けやすいように先頭に `fmy_` を付けます。GitHub の secret scanning などで、誤って公開されたトークンに気づきやすくするためです
 - Web 版の Claude や ChatGPT のコネクタは、OAuth での認可を前提にしています。この対応は、利用者が増えてから考えます
@@ -160,7 +172,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 AI エージェントが誤って、または乗っ取られて、利用者のデータを壊す事故を抑えるため、書き込みは読み取りと分けて、小さく始めています。
 
-- **範囲を分けます**。書き込みの範囲 (`write:events`、`write:notifications`) を持たないトークンは、書き込めません。範囲が指定されなかったときの既定は、読み取りの範囲だけです。同意の画面と発行の画面では、書き込みの範囲を、読み取りと分けて出し、初めはオフにします
+- **範囲を分けます**。書き込みの範囲 (`write:events`、`write:courses`、`write:notifications`) を持たないトークンは、書き込めません。範囲が指定されなかったときの既定は、読み取りの範囲だけです。同意の画面と発行の画面では、書き込みの範囲を、読み取りと分けて出し、初めはオフにします
 - **自分のデータだけ**です。自分の予定と、自分の通知だけを書き換えます。ほかの人の予定は、見つからない (404) ことにします。授業、科目、管理の操作には書き込めません
 - **公開範囲は変えられません**。足す予定は常に非公開で、置き換えても公開範囲は変わりません。誤って予定が公開される事故を防ぐためです
 - **画面と同じ検査を通します**。予定の入力は、画面のフォームと同じ検査 (`@funmary/core` の `parseEventFields`) を通ります。名前の長さ、時刻の順、繰り返しの形などが、口ごとに食い違いません。直し方が分かる文を返します
