@@ -66,7 +66,15 @@ test.describe('通知欄', () => {
 		await page.goto('/app/notifications');
 		await expect(item).not.toContainText('未読');
 		await expect(page.getByRole('link', { name: '通知', exact: true }).first()).toBeVisible();
-		await expect(page.getByRole('button', { name: 'すべて既読にする' })).toBeDisabled();
+		const markAllRead = page.getByRole('button', { name: 'すべて既読にする' });
+		await expect(markAllRead).toBeDisabled();
+		await expect(markAllRead).toHaveCSS('color', 'rgb(102, 102, 102)');
+		await expect(markAllRead).toHaveCSS('background-color', 'rgb(243, 242, 242)');
+		await expect(markAllRead).toHaveCSS('border-top-color', 'rgb(140, 134, 134)');
+		await page.emulateMedia({ colorScheme: 'dark' });
+		await expect(markAllRead).toHaveCSS('color', 'rgb(179, 171, 171)');
+		await expect(markAllRead).toHaveCSS('background-color', 'rgb(38, 34, 34)');
+		await expect(markAllRead).toHaveCSS('border-top-color', 'rgb(125, 118, 118)');
 
 		// 種類で絞り込む
 		await page
@@ -89,6 +97,7 @@ test.describe('カレンダーの購読', () => {
 		await page
 			.getByRole('navigation', { name: 'メニュー' })
 			.getByRole('link', { name: '設定', exact: true })
+			.first()
 			.click();
 		await page.getByRole('link', { name: /カレンダーの購読/ }).click();
 

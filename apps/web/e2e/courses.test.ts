@@ -115,6 +115,7 @@ test.describe('履修科目の登録', () => {
 		await page
 			.getByRole('navigation', { name: 'メニュー' })
 			.getByRole('link', { name: '科目', exact: true })
+			.first()
 			.click();
 		await expect(page.getByText('まだ登録していません')).toBeVisible();
 
@@ -164,6 +165,7 @@ test.describe('履修科目の登録', () => {
 		await page
 			.getByRole('navigation', { name: 'メニュー' })
 			.getByRole('link', { name: '科目', exact: true })
+			.first()
 			.click();
 
 		page.once('dialog', (dialog) => dialog.accept());
