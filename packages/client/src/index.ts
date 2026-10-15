@@ -252,6 +252,13 @@ export function createFunmaryClient(options: FunmaryClientOptions) {
 				}),
 			next: (query: { stopId?: string; limit?: number } = {}) =>
 				request<Get<'/api/v1/bus/next'>>('GET', '/api/v1/bus/next', { query }),
+			/** 「A から未来大へ」「未来大から A へ」の発車。A は、未来大を通る任意のバス停 */
+			legs: (query: {
+				stopId: string;
+				direction: 'toUniversity' | 'fromUniversity';
+				day?: 'weekday' | 'holiday';
+				limit?: number;
+			}) => request<Get<'/api/v1/bus/legs'>>('GET', '/api/v1/bus/legs', { query }),
 		},
 	};
 }

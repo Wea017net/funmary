@@ -66,6 +66,18 @@ describe('createFunmaryClient', () => {
 		expect(new URL(calls[1]!.url).searchParams.has('year')).toBe(false);
 	});
 
+	it('バスの発車 (A と未来大の間) を、向きと停留所を指定して取る', async () => {
+		const { client, calls } = setup(json({}));
+		await client.bus.legs({ stopId: '14013', direction: 'toUniversity', day: 'holiday' });
+		const url = new URL(calls[0]!.url);
+		expect(url.pathname).toBe('/api/v1/bus/legs');
+		expect(Object.fromEntries(url.searchParams)).toEqual({
+			stopId: '14013',
+			direction: 'toUniversity',
+			day: 'holiday',
+		});
+	});
+
 	it('パスの値は、URL に使える形にする', async () => {
 		const { client, calls } = setup(json({}));
 		await client.bus.stop('a/b', { generation: 20261001 });
