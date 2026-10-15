@@ -37,6 +37,7 @@ Windows で開発しているので、npm scripts に POSIX シェル前提の�
 - 作業は GitHub の Issue に対応させる。Issue の扱い方は [docs/agents/issue-tracker.md](docs/agents/issue-tracker.md) にある
 - main からブランチを切って作業し、PR にする。main に直接 push しない
 - コミットメッセージとブランチ名は CONTRIBUTING.md の決まりに従う。commitlint が検査する
+- コミットは、関心ごとに分ける ([CONTRIBUTING.md](CONTRIBUTING.md) の「コミットの粒度」)。大きな変更を 1 つのコミットにまとめず、層やパッケージごとに、依存される側から順に、実装とテストを同じコミットにして積む。フォルダの移動と中身の変更は、別のコミットにする
 - 用語とコードの名前は [CONTEXT.md](CONTEXT.md) に合わせる。新しい用語を使うときは CONTEXT.md に足す
 - 公開の設計書 (`docs/` の設計の文書) は、実態に即した内容にする。実装や仕様を変えたときは、同じ PR で関係する章も書き換える。作っていないものは「予定」と分かるように書き、実装が済んだら本文に移す
 - 分からないことや、作者が決めるべきことは、推測で進めずに質問する
