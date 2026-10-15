@@ -74,9 +74,9 @@ describe('npm に公開するパッケージ', () => {
 	);
 
 	it.each([...PUBLISHED])(
-		'%s の版は、開発用の 0.0.0 のまま (公開のときに、ワークフローが書き込む)',
+		'%s の版は、X.Y.Z の形 (公開のあと、ワークフローが書き込む)',
 		(_name, dir) => {
-			expect(readPackage(dir).version).toBe('0.0.0');
+			expect(readPackage(dir).version).toMatch(/^\d+\.\d+\.\d+(-[\w.]+)?$/);
 		},
 	);
 

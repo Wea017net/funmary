@@ -1,8 +1,8 @@
 name: Publish npm
 
 # npm のパッケージ (funmary、@funmary/client、@funmary/mcp) を、手で実行して公開する。3 つは、同じ版で出す。
-# 入力は、patch/minor/major (npm にある、いちばん新しい版から上げる) か、X.Y.Z (1.0.0-beta.0 のような先行版も可)。リポジトリの package.json の版は、
-# 開発用の 0.0.0 のままにして、公開のときに、この版を書き込む (main は保護されていて、版のコミットを push できないため)。
+# 入力は、patch/minor/major (npm にある、いちばん新しい版から上げる) か、X.Y.Z (1.0.0-beta.0 のような先行版も可)。公開したあと、版を package.json に書き込んだコミットと、
+# npm-v<版> のタグを、GitHub App (funmary-release) の名前で main に push する (main は保護されていて、App だけが、ruleset の例外になっている)。
 #
 # npm の trusted publishing (OIDC) で公開するので、npm のトークンを secret に置かない。provenance (どのコミットから、
 # どのワークフローで作ったか) が付く。npm 側で、パッケージごとに、このリポジトリとこのワークフローのファイル名
@@ -43,7 +43,15 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
+      # main への push に使う、短い期間だけ有効な App のトークン
+      - id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          token: ${{ steps.app-token.outputs.token }}
       - uses: ./.github/actions/setup
       # 版と dist-tag を決め、後の手順に、環境変数 (VERSION、NPM_TAG、PRERELEASE) で渡す
       - name: 公開する版を決める
@@ -58,7 +66,7 @@ jobs:
       - run: pnpm test
       # gitHead は、npm の画面が、元のコミットを表示するのに使う。npm は、ディレクトリから公開するときだけ自動で入れる
       # (ここでは pnpm pack の tar.gz を公開するので、入らない) ため、公開するコミットを、自分で書き込む
-      - name: 版とコミットを、公開する 3 つの package.json に書き込む (リポジトリには戻さない)
+      - name: 版とコミットを、公開する 3 つの package.json に書き込む (gitHead は、リポジトリには戻さない)
         run: |
           node -e "
             const fs = require('node:fs');
@@ -92,6 +100,31 @@ jobs:
           publish @funmary/client "funmary-client-$VERSION.tgz"
           publish @funmary/mcp "funmary-mcp-$VERSION.tgz"
           publish funmary "funmary-$VERSION.tgz"
+      # 版だけをコミットして、main に push する (gitHead は戻さない)。[skip ci] で、CI と、本番へのデプロイは動かさない
+      - name: 版のコミットを、main に push する
+        env:
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
+          APP_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          git checkout -- packages/public
+          node -e "
+            const fs = require('node:fs');
+            for (const dir of ['client', 'mcp', 'funmary']) {
+              const file = 'packages/public/' + dir + '/package.json';
+              const pkg = JSON.parse(fs.readFileSync(file, 'utf8'));
+              pkg.version = process.env.VERSION;
+              fs.writeFileSync(file, JSON.stringify(pkg, null, '\t') + '\n');
+            }
+          "
+          USER_ID=$(gh api "/users/$APP_SLUG[bot]" --jq .id)
+          git config user.name "$APP_SLUG[bot]"
+          git config user.email "$USER_ID+$APP_SLUG[bot]@users.noreply.github.com"
+          if git diff --quiet; then
+            echo "版は、すでに package.json にあります"
+          else
+            git commit -am "chore(release): npm パッケージを v$VERSION にする [skip ci]"
+            git push origin HEAD:main
+          fi
       # アプリ本体の更新は、最新の Release (latest) を見るので、npm の Release は、latest にしない
       - name: タグと GitHub Release を作る
         run: |
@@ -100,5 +133,5 @@ jobs:
           else
             FLAG="--latest=false"
             if [ "$PRERELEASE" = "true" ]; then FLAG="--prerelease"; fi
-            gh release create "npm-v$VERSION"               --target "$GITHUB_SHA"               --title "npm パッケージ v$VERSION"               --generate-notes               "$FLAG"
+            gh release create "npm-v$VERSION" --target "$(git rev-parse HEAD)" --title "npm パッケージ v$VERSION" --generate-notes "$FLAG"
           fi
