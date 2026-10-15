@@ -84,6 +84,18 @@ describe('runNow', () => {
 		expect(runs[0]!.finishedAt).not.toBeNull();
 	});
 
+	it('runNow は、処理に手で動かしたこと (manual) を伝える', async () => {
+		let manual: boolean | undefined;
+		const { runner } = setup({
+			run: (context) => {
+				manual = context.manual;
+				return Promise.resolve();
+			},
+		});
+		await runner.runNow('test-job');
+		expect(manual).toBe(true);
+	});
+
 	it('例外は外に出さず、失敗として記録する (1 つの失敗を、ほかの処理に波及させない)', async () => {
 		const { runner, runs } = setup({ run: () => Promise.reject(new Error('つながらない')) });
 		const result = await runner.runNow('test-job');

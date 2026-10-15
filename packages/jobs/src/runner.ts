@@ -30,6 +30,8 @@ export interface JobContext {
 	readonly signal: AbortSignal;
 	readonly now: () => Date;
 	readonly log: Logger;
+	/** 管理者や管理用コマンドが、手で動かしたとき true。cron で動いたときは false (省くと false) */
+	readonly manual?: boolean;
 }
 
 export interface JobDefinition {
@@ -70,6 +72,7 @@ export interface JobRunner {
 	/** cron 式に従って動かし始める */
 	start(): void;
 	/** 待たずに 1 回動かす (管理用コマンドの job run と、テストが使う)。動かさなかったときも結果を返す */
+	/** 今すぐ動かす (管理者の操作と、管理用コマンド)。処理には manual: true で伝わる */
 	runNow(name: string): Promise<JobResult>;
 	/** 次の実行の時刻を、from より後から count 個返す */
 	nextRuns(name: string, count: number, from?: Date): Date[];
@@ -112,7 +115,8 @@ export function createJobRunner(options: JobRunnerOptions): JobRunner {
 		return { status: 'skipped', message };
 	};
 
-	async function runNow(name: string): Promise<JobResult> {
+	/** manual が true のとき、処理に手で動かしたことを伝える。cron からは false で呼ぶ */
+	async function execute(name: string, manual: boolean): Promise<JobResult> {
 		const job = find(name);
 		if (stopping) return skip(name, '停止中なので、動かしませんでした');
 		if (running.has(name))
@@ -141,7 +145,7 @@ export function createJobRunner(options: JobRunnerOptions): JobRunner {
 					);
 				});
 				const outcome = await Promise.race([
-					job.run({ signal: controller.signal, now, log: tagged }),
+					job.run({ signal: controller.signal, now, log: tagged, manual }),
 					aborted,
 				]);
 				return { status: 'succeeded', message: typeof outcome === 'string' ? outcome : null };
@@ -180,14 +184,14 @@ export function createJobRunner(options: JobRunnerOptions): JobRunner {
 	}
 
 	return {
-		runNow,
+		runNow: (name) => execute(name, true),
 		start() {
 			for (const job of jobs.values()) {
 				crons.push(
 					new Cron(job.schedule, { timezone: TIMEZONE, protect: false, catch: true }, async () => {
 						// 取得元に毎回同じ時刻に接続しないよう、ゆらぎを入れる
 						if (job.jitterMs) await sleep(Math.floor(random() * job.jitterMs));
-						await runNow(job.name);
+						await execute(job.name, false);
 					}),
 				);
 			}

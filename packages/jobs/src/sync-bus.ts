@@ -52,13 +52,14 @@ export function createSyncBusJob(deps: SyncBusDeps): JobDefinition {
 		schedule: '30 5 * * *',
 		timeoutMs: 10 * 60 * 1000,
 		jitterMs: 10 * 60 * 1000,
-		async run({ now, signal }) {
+		async run({ now, signal, manual }) {
 			const at = now();
 			if (isSourceDisabled(deps.disabledSources, BUS_SOURCE)) {
 				return 'バスの時刻表の取得は、SOURCES_DISABLED で無効にされています';
 			}
 			const health = deps.health.load(BUS_SOURCE);
-			if (!shouldAttempt(health, at)) {
+			// 手で動かしたときは、不調のあとの待ち時間を待たない (取得先は自前の API で、原因を直したあとにすぐ試したいため)
+			if (!manual && !shouldAttempt(health, at)) {
 				return `不調のあとの待ち時間なので、${health.nextAttemptAt?.toISOString() ?? ''} まで待っています`;
 			}
 			const run: SourceRun = {
