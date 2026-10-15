@@ -3,12 +3,17 @@
 import {
 	addDays,
 	busDayType,
+	BRANCH_JUNCTION_STOP,
 	DEFAULT_BUS_STOP_IDS,
+	filterByDirection,
+	matchArrivals,
 	generationForDate,
 	jstDateTime,
 	resolveHolidays,
+	UNIVERSITY_STOP,
 	upcomingDepartures,
 	type BusDayType,
+	type BusDirection,
 	type BusGeneration,
 	type BusPlatformTimetable,
 	type BusStopTimetable,
@@ -241,4 +246,244 @@ export function getNextBuses(
 		};
 	});
 	return { stops };
+}
+
+export interface PublicBusLeg {
+	/** 利用者が選んだ停留所 A */
+	readonly stop: { readonly id: string; readonly name: string };
+	readonly direction: BusDirection;
+	/** 乗る停留所と、降りる停留所。direction が toUniversity なら A から未来大、fromUniversity なら未来大から A */
+	readonly from: { readonly id: string; readonly name: string };
+	readonly to: { readonly id: string; readonly name: string };
+	/** 発車を並べた日の区分 (weekday は平日、holiday は土曜、日曜、祝日) */
+	readonly day: BusDayType;
+	/** 今日の区分 */
+	readonly todayDay: BusDayType;
+	readonly generation: BusGeneration | null;
+	/** Funmary が時刻表の API に最後に確かめた日時 (ISO 8601)。発車表がなければ null */
+	readonly checkedAt: string | null;
+	/** その区分の、この向きの発車のすべて。時刻の順 */
+	readonly departures: readonly PublicLegDeparture[];
+	/** これからの発車 (day が今日の区分のときだけ。違えば空) */
+	readonly upcoming: readonly PublicLegUpcoming[];
+	/** 事業者の注意書き。発車に付く印の意味もここにある */
+	readonly notes: readonly string[];
+}
+
+export interface PublicLegDeparture {
+	/** HH:MM (日本時間)。24 時以降は 24:10 のように書く */
+	readonly time: string;
+	/**
+	 * 到着する停留所に着く時刻 (HH:MM)。時刻表に便をたどる情報はないので、到着する停留所の発車表から、
+	 * 同じ行き先で系統が重なる、あとの便を結んで求める。結べなければ null
+	 */
+	readonly arrivalTime: string | null;
+	/** この便に乗る停留所と、降りる停留所。亀田支所前から先で路線が分かれるので、選んだ停留所を通らない系統の便は、亀田支所前と未来大の間になる */
+	readonly from: { readonly id: string; readonly name: string };
+	readonly to: { readonly id: string; readonly name: string };
+	readonly platformNo: number;
+	readonly platformName: string | null;
+	readonly routes: readonly string[];
+	readonly via: string | null;
+	readonly destination: string | null;
+	readonly marks: readonly string[];
+}
+
+export interface PublicLegUpcoming extends Omit<PublicLegDeparture, 'arrivalTime'> {
+	/** この発車が属するダイヤの日。24 時以降の発車は、日付が変わったあとも前日の日付 */
+	readonly serviceDate: CalendarDate;
+	readonly minutesUntil: number;
+}
+
+export const DEFAULT_LEG_UPCOMING_LIMIT = 5;
+
+type Stop = { readonly id: string; readonly name: string };
+
+/** 1 つの区間 (乗る停留所から降りる停留所まで) の、向きに合う発車表と、到着を結ぶための相手の発車表 */
+interface LegSource {
+	readonly from: Stop;
+	readonly to: Stop;
+	readonly timetables: readonly BusPlatformTimetable[];
+	/** 降りる停留所の発車表 (到着の時刻を結ぶのに使う) */
+	readonly counterpart: readonly BusPlatformTimetable[];
+}
+
+/**
+ * 「A から未来大へ」「未来大から A へ」の発車。A は未来大を通る任意の停留所。
+ * 向きは、時刻表の経由と行き先の文字から決める (@funmary/core の filterByDirection)。
+ * 亀田支所前から先で路線が二つに分かれる (五稜郭の側と昭和の側) ので、A が通らない系統の便は、
+ * 亀田支所前と未来大の間の便として足す (共通の区間なので、A の位置によらず乗れる)。
+ * 未来大そのもの、一覧にない停留所は null。A の発車表がまだなければ、発車は空
+ */
+export function getBusLeg(
+	sources: BusSources,
+	now: Date,
+	options: {
+		readonly stopId: string;
+		readonly direction: BusDirection;
+		readonly day?: BusDayType | undefined;
+		readonly limit?: number | undefined;
+	},
+): PublicBusLeg | null {
+	if (!sources.bus || options.stopId === UNIVERSITY_STOP.id) return null;
+	const stored = sources.bus.getCatalog();
+	const stop = stored?.catalog.stops.find((candidate) => candidate.id === options.stopId);
+	if (!stored || !stop) return null;
+	const university = stored.catalog.stops.find(
+		(candidate) => candidate.id === UNIVERSITY_STOP.id,
+	) ?? {
+		id: UNIVERSITY_STOP.id,
+		name: UNIVERSITY_STOP.name,
+	};
+	const junction = stored.catalog.stops.find(
+		(candidate) => candidate.id === BRANCH_JUNCTION_STOP.id,
+	);
+
+	const current = jstDateTime(now);
+	const holidays = holidayDates(sources, current.date);
+	const todayDay = busDayType(current.date, holidays);
+	const day = options.day ?? todayDay;
+	const generation = generationForDate(stored.catalog.generations, current.date);
+	const timetableOf = (stopId: string) =>
+		generation ? (sources.bus?.getTimetable(stopId, generation.code) ?? null) : null;
+	const stopTimetable = timetableOf(stop.id);
+	const universityTimetable = timetableOf(university.id);
+	const toUniversity = options.direction === 'toUniversity';
+
+	const filtered = filterByDirection(
+		options.direction,
+		stopTimetable?.timetable ?? null,
+		universityTimetable?.timetable ?? null,
+		UNIVERSITY_STOP,
+	);
+	const own: LegSource = {
+		from: toUniversity ? stop : university,
+		to: toUniversity ? university : stop,
+		timetables: filtered?.timetables ?? [],
+		counterpart: (toUniversity ? universityTimetable : stopTimetable)?.timetable.timetables ?? [],
+	};
+	const sourcesOfLeg: LegSource[] = [own];
+
+	// A が通らない系統の便を、亀田支所前と未来大の間の便として足す
+	const junctionTimetable = junction && junction.id !== stop.id ? timetableOf(junction.id) : null;
+	// A の発車表がないときは、足さない (A が何も通らないのか、まだ取り込めていないのか、区別できないため)
+	if (stopTimetable && junction && junctionTimetable && universityTimetable) {
+		const viaJunction = filterByDirection(
+			options.direction,
+			junctionTimetable.timetable,
+			universityTimetable.timetable,
+			UNIVERSITY_STOP,
+		);
+		const served = new Set(
+			own.timetables.flatMap((timetable) =>
+				timetable.departures.flatMap((departure) => departure.routes),
+			),
+		);
+		const extra = (viaJunction?.timetables ?? []).map((timetable) => ({
+			...timetable,
+			departures: timetable.departures.filter(
+				(departure) => !departure.routes.some((route) => served.has(route)),
+			),
+		}));
+		if (extra.some((timetable) => timetable.departures.length > 0)) {
+			sourcesOfLeg.push({
+				from: toUniversity ? junction : university,
+				to: toUniversity ? university : junction,
+				timetables: extra,
+				counterpart: (toUniversity ? universityTimetable : junctionTimetable).timetable.timetables,
+			});
+		}
+	}
+
+	const decorate = (
+		source: LegSource,
+		timetable: BusPlatformTimetable,
+		departure: BusPlatformTimetable['departures'][number],
+	) => ({
+		from: source.from,
+		to: source.to,
+		platformNo: timetable.platformNo,
+		platformName: timetable.platformName ?? null,
+		routes: departure.routes,
+		via: departure.via ?? null,
+		destination: departure.destination ?? null,
+		marks: departure.marks,
+	});
+
+	const ofDayLists = sourcesOfLeg.map((source) => {
+		const sorted = source.timetables
+			.filter((timetable) => timetable.day === day)
+			.flatMap((timetable) => timetable.departures.map((departure) => ({ timetable, departure })))
+			.toSorted(
+				(a, b) =>
+					a.departure.time.localeCompare(b.departure.time) ||
+					a.timetable.platformNo - b.timetable.platformNo,
+			);
+		const counterpart = source.counterpart
+			.filter((timetable) => timetable.day === day)
+			.flatMap((timetable) => timetable.departures)
+			.toSorted((a, b) => a.time.localeCompare(b.time));
+		const arrivals = matchArrivals(
+			sorted.map((item) => item.departure),
+			counterpart,
+		);
+		return sorted.map(({ timetable, departure }, index): PublicLegDeparture => ({
+			time: departure.time,
+			arrivalTime: arrivals[index] ?? null,
+			...decorate(source, timetable, departure),
+		}));
+	});
+	const departures = ofDayLists
+		.flat()
+		.toSorted((a, b) => a.time.localeCompare(b.time) || a.platformNo - b.platformNo);
+
+	const limit = Math.min(
+		Math.max(options.limit ?? DEFAULT_LEG_UPCOMING_LIMIT, 1),
+		MAX_NEXT_BUS_LIMIT,
+	);
+	const upcoming: PublicLegUpcoming[] =
+		day === todayDay
+			? sourcesOfLeg
+					.flatMap((source) =>
+						upcomingDepartures(source.timetables, { now: current, holidays, limit }).map(
+							(item): PublicLegUpcoming => ({
+								time: item.departure.time,
+								serviceDate: item.serviceDate,
+								minutesUntil: item.minutesUntil,
+								from: source.from,
+								to: source.to,
+								platformNo: item.platformNo,
+								platformName: item.platformName ?? null,
+								routes: item.departure.routes,
+								via: item.departure.via ?? null,
+								destination: item.departure.destination ?? null,
+								marks: item.departure.marks,
+							}),
+						),
+					)
+					.toSorted((a, b) => a.minutesUntil - b.minutesUntil || a.platformNo - b.platformNo)
+					.slice(0, limit)
+			: [];
+
+	return {
+		stop,
+		direction: options.direction,
+		from: own.from,
+		to: own.to,
+		day,
+		todayDay,
+		generation,
+		checkedAt: stopTimetable?.checkedAt.toISOString() ?? null,
+		departures,
+		upcoming,
+		notes: [
+			...new Set(
+				sourcesOfLeg.flatMap((source) =>
+					source.timetables
+						.filter((timetable) => timetable.day === day)
+						.flatMap((timetable) => timetable.notes),
+				),
+			),
+		],
+	};
 }

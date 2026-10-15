@@ -7,7 +7,7 @@ import { SUPPORTED_PROTOCOL_VERSIONS } from '@modelcontextprotocol/sdk/types.js'
 import { StreamableHTTPTransport } from '@hono/mcp';
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { getBusStopTimetable, getNextBuses, listBusStops } from './reads/bus.ts';
+import { getBusLeg, getBusStopTimetable, getNextBuses, listBusStops } from './reads/bus.ts';
 import { listUserNotifications, type NotificationsSources } from './reads/notifications.ts';
 import {
 	currentAcademicYear,
@@ -294,6 +294,24 @@ export function buildMcpServer(deps: McpRoutesDeps, owner: McpWriteOwner) {
 			({ stopId, generation }) =>
 				jsonText(
 					getBusStopTimetable(deps, new Date(), stopId, generation) ?? { error: 'not_found' },
+				),
+		);
+		server.registerTool(
+			'get_bus_leg',
+			{
+				description:
+					'「A から未来大へ」「未来大から A へ」のバスの発車。stopId は、未来大を通る任意の停留所 A (list_bus_stops で探す)。direction は toUniversity (A から未来大) か fromUniversity (未来大から A)。departures はその日の区分の全部、upcoming はこれからの発車。向きは、時刻表の経由と行き先の文字から決めるので、経由に書かれない停留所を通る便は、出ないことがある。day (weekday か holiday) を省くと今日の区分',
+				inputSchema: {
+					stopId: z.string(),
+					direction: z.enum(['toUniversity', 'fromUniversity']),
+					day: z.enum(['weekday', 'holiday']).optional(),
+					limit: z.number().optional(),
+				},
+				annotations: { readOnlyHint: true },
+			},
+			({ stopId, direction, day, limit }) =>
+				jsonText(
+					getBusLeg(deps, new Date(), { stopId, direction, day, limit }) ?? { error: 'not_found' },
 				),
 		);
 		server.registerTool(

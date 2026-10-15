@@ -11,12 +11,13 @@ import type {
 	SubjectStore,
 	UserEventStore,
 } from '@funmary/db';
-import { jstDateTime } from '@funmary/core';
+import { BUS_DIRECTIONS, jstDateTime } from '@funmary/core';
 import { Hono } from 'hono';
 import { describeRoute, resolver, validator } from 'hono-openapi';
 import { rateLimiter } from 'hono-rate-limiter';
 import * as v from 'valibot';
 import {
+	getBusLeg,
 	getBusStopTimetable,
 	getNextBuses,
 	listBusStops,
@@ -156,6 +157,21 @@ const BusStopQuery = v.object({
 
 const BusNextQuery = v.object({
 	stopId: v.optional(v.pipe(v.string(), v.minLength(1), v.maxLength(32))),
+	limit: v.optional(
+		v.pipe(
+			v.string(),
+			v.transform(Number),
+			v.integer(),
+			v.minValue(1),
+			v.maxValue(MAX_NEXT_BUS_LIMIT),
+		),
+	),
+});
+
+const BusLegQuery = v.object({
+	stopId: v.pipe(v.string(), v.minLength(1), v.maxLength(32)),
+	direction: v.picklist(BUS_DIRECTIONS),
+	day: v.optional(v.picklist(['weekday', 'holiday'])),
 	limit: v.optional(
 		v.pipe(
 			v.string(),
@@ -488,6 +504,65 @@ const MeSchema = v.object({
 	scopes: v.pipe(v.array(v.string()), v.description('このトークンに許された範囲')),
 });
 
+const BusLegDepartureShape = {
+	time: v.pipe(v.string(), v.description('HH:MM (日本時間)。24 時以降は 24:10 のように書く')),
+	from: v.pipe(
+		v.object({ id: v.string(), name: v.string() }),
+		v.description(
+			'この便に乗る停留所。亀田支所前から先で路線が分かれるので、選んだ停留所を通らない系統の便は、亀田支所前と未来大の間になる',
+		),
+	),
+	to: v.pipe(v.object({ id: v.string(), name: v.string() }), v.description('この便で降りる停留所')),
+	platformNo: v.number(),
+	platformName: v.nullable(v.string()),
+	routes: v.array(v.string()),
+	via: v.nullable(v.string()),
+	destination: v.nullable(v.string()),
+	marks: v.array(v.string()),
+};
+
+const BusLegSchema = v.object({
+	stop: v.pipe(v.object({ id: v.string(), name: v.string() }), v.description('選んだ停留所 A')),
+	direction: v.picklist(BUS_DIRECTIONS),
+	from: v.pipe(v.object({ id: v.string(), name: v.string() }), v.description('乗る停留所')),
+	to: v.pipe(v.object({ id: v.string(), name: v.string() }), v.description('降りる停留所')),
+	day: v.pipe(
+		v.picklist(['weekday', 'holiday']),
+		v.description('発車を並べた日の区分。holiday は土曜、日曜、祝日'),
+	),
+	todayDay: v.picklist(['weekday', 'holiday']),
+	generation: v.nullable(BusGenerationSchema),
+	checkedAt: v.nullable(v.string()),
+	departures: v.pipe(
+		v.array(
+			v.object({
+				...BusLegDepartureShape,
+				arrivalTime: v.pipe(
+					v.nullable(v.string()),
+					v.description(
+						'降りる停留所に着く時刻 (HH:MM)。到着する停留所の発車表から、同じ行き先と系統の便を結んで求めるので、結べなければ null',
+					),
+				),
+			}),
+		),
+		v.description('その区分の、この向きの発車のすべて。時刻の順'),
+	),
+	upcoming: v.pipe(
+		v.array(
+			v.object({
+				...BusLegDepartureShape,
+				serviceDate: v.pipe(
+					v.string(),
+					v.description('その発車が属するダイヤの日。24 時以降の発車は、日付が変わったあとも前日'),
+				),
+				minutesUntil: v.number(),
+			}),
+		),
+		v.description('これからの発車 (day が今日の区分のときだけ。違えば空)'),
+	),
+	notes: v.array(v.string()),
+});
+
 const NotificationSchema = v.object({
 	id: v.number(),
 	kind: v.string(),
@@ -520,6 +595,7 @@ const AUTHED_PATHS = [
 	'/api/v1/bus/stops',
 	'/api/v1/bus/stops/:stopId',
 	'/api/v1/bus/next',
+	'/api/v1/bus/legs',
 	'/api/v1/notifications',
 	'/api/v1/notifications/read',
 	'/api/v1/notifications/:id/read',
@@ -1002,6 +1078,28 @@ export function createV1Routes(deps: V1RoutesDeps): Hono<{ Variables: V1AuthVari
 		(c) => {
 			const { stopId, limit } = c.req.valid('query');
 			const result = getNextBuses(deps, new Date(), { stopId, limit });
+			return result ? c.json(result) : c.json({ error: 'not_found' }, 404);
+		},
+	);
+
+	app.get(
+		'/api/v1/bus/legs',
+		requireScope('read:transit'),
+		describeRoute({
+			description:
+				'「A から未来大へ」「未来大から A へ」の発車。stopId は、未来大を通る任意の停留所 A。direction は toUniversity (A から未来大) か fromUniversity (未来大から A)。向きは、時刻表の経由と行き先の文字から決めるので、経由に書かれない停留所を通る便は、出ないことがある。day を省くと今日の区分',
+			responses: {
+				200: {
+					description: 'OK',
+					content: { 'application/json': { schema: resolver(BusLegSchema) } },
+				},
+				404: { description: '一覧にない停留所、または未来大そのもの' },
+			},
+		}),
+		validator('query', BusLegQuery),
+		(c) => {
+			const { stopId, direction, day, limit } = c.req.valid('query');
+			const result = getBusLeg(deps, new Date(), { stopId, direction, day, limit });
 			return result ? c.json(result) : c.json({ error: 'not_found' }, 404);
 		},
 	);

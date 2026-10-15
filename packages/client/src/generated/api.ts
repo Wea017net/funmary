@@ -294,6 +294,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/bus/legs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 「A から未来大へ」「未来大から A へ」の発車。stopId は、未来大を通る任意の停留所 A。direction は toUniversity (A から未来大) か fromUniversity (未来大から A)。向きは、時刻表の経由と行き先の文字から決めるので、経由に書かれない停留所を通る便は、出ないことがある。day を省くと今日の区分 */
+        get: operations["getApiV1BusLegs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/courses/{year}/{syllabusId}": {
         parameters: {
             query?: never;
@@ -2030,6 +2047,133 @@ export interface operations {
                         data: unknown;
                     };
                 };
+            };
+        };
+    };
+    getApiV1BusLegs: {
+        parameters: {
+            query: {
+                stopId: string;
+                direction: "toUniversity" | "fromUniversity";
+                day?: "weekday" | "holiday";
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @description 選んだ停留所 A */
+                        stop: {
+                            id: string;
+                            name: string;
+                        };
+                        /** @enum {string} */
+                        direction: "toUniversity" | "fromUniversity";
+                        /** @description 乗る停留所 */
+                        from: {
+                            id: string;
+                            name: string;
+                        };
+                        /** @description 降りる停留所 */
+                        to: {
+                            id: string;
+                            name: string;
+                        };
+                        /**
+                         * @description 発車を並べた日の区分。holiday は土曜、日曜、祝日
+                         * @enum {string}
+                         */
+                        day: "weekday" | "holiday";
+                        /** @enum {string} */
+                        todayDay: "weekday" | "holiday";
+                        generation: {
+                            /** @description 版のコード。有効になる日の 8 桁 (例: 20261001) */
+                            code: number;
+                            name: string;
+                            /** @description 一覧を取った日に、使われていた版か */
+                            current: boolean;
+                        } | null;
+                        checkedAt: string | null;
+                        /** @description その区分の、この向きの発車のすべて。時刻の順 */
+                        departures: {
+                            /** @description HH:MM (日本時間)。24 時以降は 24:10 のように書く */
+                            time: string;
+                            /** @description この便に乗る停留所。亀田支所前から先で路線が分かれるので、選んだ停留所を通らない系統の便は、亀田支所前と未来大の間になる */
+                            from: {
+                                id: string;
+                                name: string;
+                            };
+                            /** @description この便で降りる停留所 */
+                            to: {
+                                id: string;
+                                name: string;
+                            };
+                            platformNo: number;
+                            platformName: string | null;
+                            routes: string[];
+                            via: string | null;
+                            destination: string | null;
+                            marks: string[];
+                            /** @description 降りる停留所に着く時刻 (HH:MM)。到着する停留所の発車表から、同じ行き先と系統の便を結んで求めるので、結べなければ null */
+                            arrivalTime: string | null;
+                        }[];
+                        /** @description これからの発車 (day が今日の区分のときだけ。違えば空) */
+                        upcoming: {
+                            /** @description HH:MM (日本時間)。24 時以降は 24:10 のように書く */
+                            time: string;
+                            /** @description この便に乗る停留所。亀田支所前から先で路線が分かれるので、選んだ停留所を通らない系統の便は、亀田支所前と未来大の間になる */
+                            from: {
+                                id: string;
+                                name: string;
+                            };
+                            /** @description この便で降りる停留所 */
+                            to: {
+                                id: string;
+                                name: string;
+                            };
+                            platformNo: number;
+                            platformName: string | null;
+                            routes: string[];
+                            via: string | null;
+                            destination: string | null;
+                            marks: string[];
+                            /** @description その発車が属するダイヤの日。24 時以降の発車は、日付が変わったあとも前日 */
+                            serviceDate: string;
+                            minutesUntil: number;
+                        }[];
+                        notes: string[];
+                    };
+                };
+            };
+            /** @description Validation Error */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {boolean} */
+                        success: false;
+                        error: unknown[];
+                        data: unknown;
+                    };
+                };
+            };
+            /** @description 一覧にない停留所、または未来大そのもの */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
