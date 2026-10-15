@@ -83,7 +83,7 @@ jobs:
             if [ -n "$(npm view "$NAME@$VERSION" version 2>/dev/null)" ]; then
               echo "$NAME@$VERSION は、すでに公開されているので、飛ばします"
             else
-              npm publish "tarballs/$FILE" --access public --provenance --tag "$NPM_TAG"
+              npm publish "./tarballs/$FILE" --access public --provenance --tag "$NPM_TAG"
             fi
           }
           publish @funmary/client "funmary-client-$VERSION.tgz"
