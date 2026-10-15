@@ -573,7 +573,17 @@ importers:
         specifier: ^0.18.13
         version: 0.18.13
 
-  packages/public/cli:
+  packages/public/client:
+    dependencies:
+      ofetch:
+        specifier: ^1.5.1
+        version: 1.5.1
+    devDependencies:
+      tsdown:
+        specifier: 'catalog:'
+        version: 0.23.0(tsx@4.23.15)(typescript@6.0.3)
+
+  packages/public/funmary:
     dependencies:
       '@funmary/client':
         specifier: workspace:*
@@ -581,16 +591,6 @@ importers:
       '@funmary/mcp':
         specifier: workspace:*
         version: link:../mcp
-    devDependencies:
-      tsdown:
-        specifier: 'catalog:'
-        version: 0.23.0(tsx@4.23.15)(typescript@6.0.3)
-
-  packages/public/client:
-    dependencies:
-      ofetch:
-        specifier: ^1.5.1
-        version: 1.5.1
     devDependencies:
       tsdown:
         specifier: 'catalog:'
