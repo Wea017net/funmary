@@ -183,6 +183,13 @@
       "when": 1791983371707,
       "tag": "0025_outgoing_ted_forrester",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "6",
+      "when": 1792041532961,
+      "tag": "0026_smooth_big_bertha",
+      "breakpoints": true
     }
   ]
 }

@@ -9,7 +9,12 @@ import { generateToken, hashToken } from './secrets.ts';
 const TOKEN_PREFIX = 'fmy_';
 
 /** 読み取りの範囲。同意の画面で範囲が指定されなかったときの既定は、これだけ */
-export const READ_SCOPES = ['read:lessons', 'read:changes', 'read:notifications'] as const;
+export const READ_SCOPES = [
+	'read:lessons',
+	'read:changes',
+	'read:notifications',
+	'read:transit',
+] as const;
 /** 書き込みの範囲。読み取りと分け、求められたときだけ付ける (誤って書き込めるトークンを渡さないため) */
 export const WRITE_SCOPES = ['write:events', 'write:notifications'] as const;
 /** 発行できる範囲 */

@@ -196,3 +196,9 @@ export {
 	type PendingDelivery,
 	type RetryPlan,
 } from './delivery-store.ts';
+export {
+	createBusStore,
+	type BusStore,
+	type StoredBusCatalog,
+	type StoredBusTimetable,
+} from './bus-store.ts';
