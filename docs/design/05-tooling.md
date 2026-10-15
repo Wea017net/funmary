@@ -158,3 +158,14 @@ main の CI が通ると、ビルドしてから次のファイルを GitHub Rel
 - 同梱したライブラリのライセンス文 (`THIRD_PARTY_LICENSES.txt`)
 - tar.gz の SHA-256 のチェックサム
 - ビルド結果のハッシュ。中身が前のリリースと同じなら (文書だけの変更など)、更新スクリプトは再起動を省く
+
+### npm への公開
+
+npm に公開するのは、`funmary` (コマンド)、`@funmary/client`、`@funmary/mcp` の 3 つだけです。ほかのパッケージは `private` で、テスト (`scripts/publishable-packages.test.js`) が、この 3 つ以外に `private` を外したものがないこと、公開の設定 (範囲、provenance、含めるファイル) がそろっていることを確かめます。
+
+- 版と変更履歴は、Changesets で管理します。公開するパッケージを変えた PR に、`pnpm changeset` で、変更の種類 (patch、minor、major) と、利用者が読む説明を足します
+- 版を上げるときは、`pnpm changeset version` を実行して、版と `CHANGELOG.md` の変更を PR にして、main に入れます (GitHub Actions が作った PR には、CI が動かず、必須の検査が通らないので、手で行います)
+- 公開は、ワークフロー `Publish npm` が、main の CI の成功のあとに行います。`pnpm changeset publish` が、npm にまだない版だけを公開します
+- npm の trusted publishing (OIDC) で公開するので、npm のトークンを secret に置きません。公開の記録には、どのコミットから、どのワークフローで作ったかを示す provenance が付きます
+- 公開の前に、npm 側で、3 つのパッケージのそれぞれに、このリポジトリ (`funmary-app/funmary`) とワークフローのファイル名 (`publish-npm.yml`) を、公開者 (trusted publisher) として登録しておきます。登録を終えて、リポジトリの変数 `NPM_PUBLISH_ENABLED` を `true` にするまでは、ワークフローは何もしません
+- 公開する版の入口は、ビルドした `dist` を指します (開発では `src` を指します)。ビルドは tsdown で、ESM と型定義を作ります
