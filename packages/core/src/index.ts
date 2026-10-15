@@ -123,3 +123,18 @@ export {
 	type EventInput,
 	type Visibility,
 } from './event-input.ts';
+export {
+	busDayType,
+	DEFAULT_BUS_STOP_IDS,
+	generationForDate,
+	upcomingDepartures,
+	type BusCatalog,
+	type BusDayType,
+	type BusDeparture,
+	type BusGeneration,
+	type BusPlatformTimetable,
+	type BusStop,
+	type BusStopTimetable,
+	type UpcomingBusDeparture,
+	type UpcomingBusInput,
+} from './bus.ts';
