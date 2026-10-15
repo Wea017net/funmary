@@ -332,7 +332,7 @@ describe('同意の画面への依頼の検査', () => {
 			request: {
 				redirectUri: REDIRECT,
 				state: 'xyz',
-				requestedScopes: ['read:lessons', 'read:changes', 'read:notifications'],
+				requestedScopes: ['read:lessons', 'read:changes', 'read:notifications', 'read:transit'],
 			},
 		});
 	});

@@ -336,3 +336,93 @@ describe('createV1Routes', () => {
 		expect(body.map((n) => n.kind)).toEqual(['cancellation']);
 	});
 });
+
+describe('バスの時刻表', () => {
+	const busStop = { id: '14023', name: 'はこだて未来大学' };
+	const generation = { code: 20261001, name: '令和8年10月1日', current: true };
+	// 2026-10-07 は水曜。日本時間 09:00 は UTC の 00:00
+	const checkedAt = new Date('2026-10-06T20:00:00Z');
+
+	function busApp(
+		options: { scopes?: ('read:transit' | 'read:lessons')[]; disabled?: boolean } = {},
+	) {
+		const src = deps();
+		const userId = newUser(src, 'a');
+		const token = src.accessTokens.issue(
+			userId,
+			{ name: 'test', scopes: options.scopes ?? ['read:transit'] },
+			new Date(NOW.getTime() + 90 * 24 * 60 * 60 * 1000),
+			NOW,
+		);
+		src.bus.saveCatalog(
+			{ generatedAt: checkedAt.toISOString(), generations: [generation], stops: [busStop] },
+			null,
+			checkedAt,
+		);
+		src.bus.saveTimetable(
+			{
+				generatedAt: checkedAt.toISOString(),
+				generation,
+				stop: busStop,
+				timetables: [
+					{
+						platformNo: 1,
+						day: 'weekday',
+						notes: [],
+						departures: [{ time: '09:30', routes: ['55A'], destination: '亀田支所前', marks: [] }],
+					},
+				],
+			},
+			null,
+			checkedAt,
+		);
+		const app = createV1Routes(options.disabled ? { ...src, bus: null } : src);
+		const get = (path: string) =>
+			app.request(path, { headers: { Authorization: `Bearer ${token}` } });
+		return { get };
+	}
+
+	it('read:transit がないトークンでは 403', async () => {
+		const { get } = busApp({ scopes: ['read:lessons'] });
+		expect((await get('/api/v1/bus/stops')).status).toBe(403);
+	});
+
+	it('GET /api/v1/bus/stops は、停留所と版の一覧を返す', async () => {
+		const { get } = busApp();
+		const res = await get('/api/v1/bus/stops');
+		expect(res.status).toBe(200);
+		expect(await res.json()).toMatchObject({
+			generations: [generation],
+			stops: [{ id: '14023', name: 'はこだて未来大学', highlighted: true }],
+		});
+	});
+
+	it('GET /api/v1/bus/stops/:stopId は、発車表を返す。ない停留所は 404', async () => {
+		const { get } = busApp();
+		const res = await get('/api/v1/bus/stops/14023');
+		expect(res.status).toBe(200);
+		expect(await res.json()).toMatchObject({
+			stop: busStop,
+			platforms: [{ platformNo: 1, day: 'weekday' }],
+		});
+		expect((await get('/api/v1/bus/stops/99999')).status).toBe(404);
+		expect((await get('/api/v1/bus/stops/14023?generation=19990101')).status).toBe(404);
+	});
+
+	it('GET /api/v1/bus/next は、次の発車を返す。limit が範囲の外なら 400', async () => {
+		const { get } = busApp();
+		const res = await get('/api/v1/bus/next?stopId=14023&limit=1');
+		expect(res.status).toBe(200);
+		const body = (await res.json()) as { stops: { upcoming: unknown[] }[] };
+		expect(body.stops).toHaveLength(1);
+		expect(body.stops[0]?.upcoming.length).toBeLessThanOrEqual(1);
+		expect((await get('/api/v1/bus/next?limit=0')).status).toBe(400);
+		expect((await get('/api/v1/bus/next?stopId=99999')).status).toBe(404);
+	});
+
+	it('バスの機能を使わない設定では、404', async () => {
+		const { get } = busApp({ disabled: true });
+		expect((await get('/api/v1/bus/stops')).status).toBe(404);
+		expect((await get('/api/v1/bus/next')).status).toBe(404);
+	});
+});

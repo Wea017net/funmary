@@ -293,3 +293,42 @@ describe('トランスポートが投げるクライアントの誤り', () => {
 		expect(errors).toEqual([]);
 	});
 });
+
+describe('バスの道具', () => {
+	it('read:transit を持つトークンにだけ、バスの道具を出す', async () => {
+		const withScope = await connectedClient(
+			buildMcpServer(deps(), { userId: 'u1', scopes: ['read:transit'] }),
+		);
+		expect((await withScope.listTools()).tools.map((tool) => tool.name).sort()).toEqual([
+			'get_bus_stop_timetable',
+			'get_next_buses',
+			'list_bus_stops',
+		]);
+		const without = await connectedClient(
+			buildMcpServer(deps(), { userId: 'u1', scopes: ['read:lessons'] }),
+		);
+		expect((await without.listTools()).tools.map((tool) => tool.name)).not.toContain(
+			'get_next_buses',
+		);
+	});
+
+	it('バスの機能を使わない設定では、read:transit があっても道具を出さない', async () => {
+		const client = await connectedClient(
+			buildMcpServer(
+				{ ...deps(), bus: null },
+				{ userId: 'u1', scopes: ['read:transit', 'read:lessons'] },
+			),
+		);
+		const names = (await client.listTools()).tools.map((tool) => tool.name);
+		expect(names).toContain('get_lessons');
+		expect(names).not.toContain('get_next_buses');
+	});
+
+	it('get_next_buses は、まだ取り込んでいなくても、強調する停留所を空で答える', async () => {
+		const client = await connectedClient(
+			buildMcpServer(deps(), { userId: 'u1', scopes: ['read:transit'] }),
+		);
+		const result = await client.callTool({ name: 'get_next_buses', arguments: {} });
+		expect(result.structuredContent).toEqual({ stops: [] });
+	});
+});

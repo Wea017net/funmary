@@ -13,6 +13,21 @@ export {
 	type PublicEvent,
 } from './reads/public-events.ts';
 export {
+	busDayTypeOn,
+	DEFAULT_NEXT_BUS_LIMIT,
+	getBusStopTimetable,
+	getNextBuses,
+	listBusStops,
+	MAX_NEXT_BUS_LIMIT,
+	type BusSources,
+	type PublicBusPlatform,
+	type PublicBusStops,
+	type PublicBusStopTimetable,
+	type PublicNextBuses,
+	type PublicNextBusesAtStop,
+	type PublicUpcomingBus,
+} from './reads/bus.ts';
+export {
 	getSubjectSessions,
 	searchSubjects,
 	type PublicSubjectSummary,

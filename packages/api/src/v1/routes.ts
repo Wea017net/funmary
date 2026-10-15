@@ -16,6 +16,13 @@ import { Hono } from 'hono';
 import { describeRoute, resolver, validator } from 'hono-openapi';
 import { rateLimiter } from 'hono-rate-limiter';
 import * as v from 'valibot';
+import {
+	getBusStopTimetable,
+	getNextBuses,
+	listBusStops,
+	MAX_NEXT_BUS_LIMIT,
+	type BusSources,
+} from '../reads/bus.ts';
 import { listUserNotifications, type NotificationsSources } from '../reads/notifications.ts';
 import {
 	getDataStatus,
@@ -76,6 +83,7 @@ export interface V1RoutesDeps
 		CourseSources,
 		AcademicCalendarSources,
 		EventSources,
+		BusSources,
 		StatusSources,
 		SubjectSearchSources {
 	/** 利用規約の再同意を求めるとき。同意していない利用者のトークンは、403 を返す */
@@ -116,6 +124,25 @@ const NotificationsQuery = v.object({
 	afterId: v.optional(v.pipe(v.string(), v.transform(Number), v.integer(), v.minValue(0))),
 	limit: v.optional(
 		v.pipe(v.string(), v.transform(Number), v.integer(), v.minValue(1), v.maxValue(200)),
+	),
+});
+
+const BusStopParam = v.object({ stopId: v.pipe(v.string(), v.minLength(1), v.maxLength(32)) });
+
+const BusStopQuery = v.object({
+	generation: v.optional(v.pipe(v.string(), v.regex(/^[0-9]{8}$/), v.transform(Number))),
+});
+
+const BusNextQuery = v.object({
+	stopId: v.optional(v.pipe(v.string(), v.minLength(1), v.maxLength(32))),
+	limit: v.optional(
+		v.pipe(
+			v.string(),
+			v.transform(Number),
+			v.integer(),
+			v.minValue(1),
+			v.maxValue(MAX_NEXT_BUS_LIMIT),
+		),
 	),
 });
 
@@ -277,6 +304,103 @@ const AcademicCalendarQuery = v.object({
 	),
 });
 
+const BusGenerationSchema = v.object({
+	code: v.pipe(v.number(), v.description('版のコード。有効になる日の 8 桁 (例: 20261001)')),
+	name: v.string(),
+	current: v.pipe(v.boolean(), v.description('一覧を取った日に、使われていた版か')),
+});
+
+const BusStopsSchema = v.object({
+	checkedAt: v.pipe(
+		v.nullable(v.string()),
+		v.description(
+			'一覧を、時刻表の API に最後に確かめた日時 (ISO 8601)。まだ取り込んでいなければ null',
+		),
+	),
+	generations: v.array(BusGenerationSchema),
+	stops: v.array(
+		v.object({
+			id: v.string(),
+			name: v.string(),
+			highlighted: v.pipe(v.boolean(), v.description('既定で強調する停留所 (未来大、亀田支所前)')),
+		}),
+	),
+});
+
+const BusStopTimetableSchema = v.object({
+	stop: v.object({ id: v.string(), name: v.string() }),
+	generation: BusGenerationSchema,
+	fetchedAt: v.pipe(
+		v.nullable(v.string()),
+		v.description('時刻表の API が事業者から、この発車表を取った日時 (ISO 8601)'),
+	),
+	checkedAt: v.pipe(v.string(), v.description('Funmary が時刻表の API に最後に確かめた日時')),
+	platforms: v.pipe(
+		v.array(
+			v.object({
+				platformNo: v.number(),
+				platformName: v.nullable(v.string()),
+				day: v.pipe(
+					v.picklist(['weekday', 'holiday']),
+					v.description('holiday は土曜、日曜、祝日'),
+				),
+				notes: v.pipe(v.array(v.string()), v.description('事業者の注意書き。印の意味もここにある')),
+				departures: v.array(
+					v.object({
+						time: v.pipe(
+							v.string(),
+							v.description('HH:MM (日本時間)。24 時以降は 24:10 のように書く'),
+						),
+						routes: v.array(v.string()),
+						via: v.nullable(v.string()),
+						destination: v.nullable(v.string()),
+						marks: v.array(v.string()),
+					}),
+				),
+			}),
+		),
+		v.description('のりばと曜日の区分ごとの発車表'),
+	),
+});
+
+const BusNextSchema = v.object({
+	stops: v.array(
+		v.object({
+			stop: v.object({ id: v.string(), name: v.string() }),
+			generation: v.nullable(BusGenerationSchema),
+			checkedAt: v.nullable(v.string()),
+			upcoming: v.pipe(
+				v.array(
+					v.object({
+						serviceDate: v.pipe(
+							v.string(),
+							v.description(
+								'その発車が属するダイヤの日。24 時以降の発車は、日付が変わったあとも前日',
+							),
+						),
+						time: v.string(),
+						minutesUntil: v.number(),
+						platformNo: v.number(),
+						platformName: v.nullable(v.string()),
+						routes: v.array(v.string()),
+						via: v.nullable(v.string()),
+						destination: v.nullable(v.string()),
+						marks: v.array(v.string()),
+					}),
+				),
+				v.description('今から先の発車。発車表がまだなければ空'),
+			),
+			platforms: v.array(
+				v.object({
+					platformNo: v.number(),
+					platformName: v.nullable(v.string()),
+					notes: v.array(v.string()),
+				}),
+			),
+		}),
+	),
+});
+
 const NotificationSchema = v.object({
 	id: v.number(),
 	kind: v.string(),
@@ -302,6 +426,9 @@ const AUTHED_PATHS = [
 	'/api/v1/events',
 	'/api/v1/events/:id',
 	'/api/v1/status',
+	'/api/v1/bus/stops',
+	'/api/v1/bus/stops/:stopId',
+	'/api/v1/bus/next',
 	'/api/v1/notifications',
 	'/api/v1/notifications/read',
 	'/api/v1/notifications/:id/read',
@@ -707,6 +834,69 @@ export function createV1Routes(deps: V1RoutesDeps): Hono<{ Variables: V1AuthVari
 			);
 			if (!result) return c.json({ error: 'not_found' }, 404);
 			return c.json(result);
+		},
+	);
+
+	app.get(
+		'/api/v1/bus/stops',
+		requireScope('read:transit'),
+		describeRoute({
+			description:
+				'バスの停留所と、時刻表の版の一覧。バスの機能を使わない設定のサーバーでは 404。取り込む前は stops が空',
+			responses: {
+				200: {
+					description: 'OK',
+					content: { 'application/json': { schema: resolver(BusStopsSchema) } },
+				},
+			},
+		}),
+		(c) => {
+			const result = listBusStops(deps);
+			return result ? c.json(result) : c.json({ error: 'not_found' }, 404);
+		},
+	);
+
+	app.get(
+		'/api/v1/bus/stops/:stopId',
+		requireScope('read:transit'),
+		describeRoute({
+			description:
+				'1 つの停留所の発車表。generation (8 桁の版のコード) を省くと、今日に有効な版。取り込んでいなければ 404',
+			responses: {
+				200: {
+					description: 'OK',
+					content: { 'application/json': { schema: resolver(BusStopTimetableSchema) } },
+				},
+			},
+		}),
+		validator('param', BusStopParam),
+		validator('query', BusStopQuery),
+		(c) => {
+			const { stopId } = c.req.valid('param');
+			const { generation } = c.req.valid('query');
+			const result = getBusStopTimetable(deps, new Date(), stopId, generation);
+			return result ? c.json(result) : c.json({ error: 'not_found' }, 404);
+		},
+	);
+
+	app.get(
+		'/api/v1/bus/next',
+		requireScope('read:transit'),
+		describeRoute({
+			description:
+				'今から先のバスの発車。stopId を省くと、強調する停留所 (未来大、亀田支所前)。limit は停留所ごとの件数で、既定は 3',
+			responses: {
+				200: {
+					description: 'OK',
+					content: { 'application/json': { schema: resolver(BusNextSchema) } },
+				},
+			},
+		}),
+		validator('query', BusNextQuery),
+		(c) => {
+			const { stopId, limit } = c.req.valid('query');
+			const result = getNextBuses(deps, new Date(), { stopId, limit });
+			return result ? c.json(result) : c.json({ error: 'not_found' }, 404);
 		},
 	);
 
