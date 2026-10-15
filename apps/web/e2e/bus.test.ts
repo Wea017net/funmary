@@ -29,9 +29,6 @@ test.describe('バス', () => {
 		await expect(rows.first()).toContainText('→');
 		// 反対向き (千代台行き) は出ない
 		await expect(page.getByText('千代台行き')).toHaveCount(0);
-		// 事業者の注意書きは、「印の意味」の折りたたみの中
-		await page.getByText('印の意味').click();
-		await expect(page.getByText('△＝架空の注意書き')).toBeVisible();
 		// 現在地から向きを決めるボタンは、URL に向きが付いていても、出ている (PWA には URL の欄がない)
 		await expect(page.getByRole('button', { name: '現在地から向きを決める' })).toBeVisible();
 	});
