@@ -1,5 +1,5 @@
 {
-	"name": "funmary",
+	"name": "funmary-monorepo",
 	"private": true,
 	"type": "module",
 	"description": "公立はこだて未来大学の学生向けの便利な総合 Web アプリ (非公式)",
