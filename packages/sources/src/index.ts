@@ -107,3 +107,14 @@ export {
 	type FetchAcademicCalendarDeps,
 	type FetchAcademicCalendarResult,
 } from './academic-calendar-site/fetch.ts';
+export {
+	BusStopListSchema,
+	BusStopTimetableSchema,
+	fetchBusStopList,
+	fetchBusStopTimetable,
+	type FetchBusDeps,
+	type FetchBusResult,
+	type FetchBusStopListResult,
+	type FetchBusStopTimetableResult,
+	type FetchBusStopTimetableDeps,
+} from './bus/fetch.ts';
