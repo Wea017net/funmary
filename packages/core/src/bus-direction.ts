@@ -63,15 +63,40 @@ export interface DirectionalTimetables {
 }
 
 /**
- * A (stop) の発車表から、未来大へ向かう行き先の集まりを求める。
- * 同じ行き先の便は、同じ向きに進む。経由に未来大と書かれた便が半分以上ある行き先を「未来大へ向かう」とする
- * (経由は一部の停留所しか書かれないので、1 便ずつではなく、行き先ごとに決める)。
- * 経由に未来大と書かれた便が 1 つもない停留所 (始発の停留所など) は、どの便も未来大を通るので、すべての行き先を含める
+ * 未来大の発車表から、行き先を「北」(赤川の側) と「南」に分ける。
+ * 未来大の発車は、系統ごとに、南へ向かう便と、北へ向かう便の 2 つの行き先があり、すべての系統が共有する行き先が北になる
+ * (55 系統は、函館駅前、未来大、赤川の順に並ぶ)。共有する行き先が見つからなければ、北は空
+ */
+function northDestinations(university: BusStopTimetable): ReadonlySet<string> {
+	const routesOf = new Map<string, Set<string>>();
+	for (const departure of university.timetables.flatMap((timetable) => timetable.departures)) {
+		if (departure.destination === undefined) continue;
+		const key = normalize(departure.destination);
+		const routes = routesOf.get(key) ?? new Set<string>();
+		for (const route of departure.routes) routes.add(route);
+		routesOf.set(key, routes);
+	}
+	const most = Math.max(0, ...[...routesOf.values()].map((routes) => routes.size));
+	if (most < 2) return new Set();
+	return new Set([...routesOf].filter(([, routes]) => routes.size === most).map(([key]) => key));
+}
+
+/**
+ * A (stop) の発車の行き先を、未来大へ向かうものと、反対へ向かうものに分ける。
+ * 同じ行き先の便は、同じ向きに進む。A が未来大より南なら、北の行き先が未来大へ向かい、北なら、南の行き先が未来大へ向かう。
+ * A の側は、経由に未来大と書かれた便の行き先から決める (北の行き先なら南、南の行き先なら北)。決められなければ南とする。
+ * 未来大の発車表に、行き先の南北が決められないときは、経由に未来大と書かれた便が半分以上ある行き先を、未来大へ向かうとする
  */
 function destinationsTowardUniversity(
 	stop: BusStopTimetable,
+	university: BusStopTimetable,
 	universityStop: BusUniversityStop,
 ): { readonly toward: ReadonlySet<string>; readonly away: ReadonlySet<string> } {
+	const north = northDestinations(university);
+	const known = new Set<string>();
+	for (const departure of university.timetables.flatMap((timetable) => timetable.departures)) {
+		if (departure.destination !== undefined) known.add(normalize(departure.destination));
+	}
 	const counts = new Map<string, { total: number; mentions: number }>();
 	for (const departure of stop.timetables.flatMap((timetable) => timetable.departures)) {
 		if (departure.destination === undefined) continue;
@@ -86,12 +111,32 @@ function destinationsTowardUniversity(
 		}
 		counts.set(key, entry);
 	}
-	const anyMention = [...counts.values()].some((entry) => entry.mentions > 0);
+
 	const toward = new Set<string>();
 	const away = new Set<string>();
+	if (north.size > 0) {
+		// A が北にあるか: 経由に未来大と書かれた便が、南の行き先に多ければ北
+		let mentionsNorth = 0;
+		let mentionsSouth = 0;
+		for (const [destination, entry] of counts) {
+			// 南北が決められる行き先だけを、根拠にする (行き先に未来大とある便などは、数えない)
+			if (north.has(destination)) mentionsNorth += entry.mentions;
+			else if (known.has(destination)) mentionsSouth += entry.mentions;
+		}
+		const stopIsNorth = mentionsSouth > mentionsNorth;
+		for (const [destination, entry] of counts) {
+			const classified = north.has(destination) || known.has(destination);
+			const towardUniversity = classified
+				? north.has(destination) !== stopIsNorth
+				: entry.mentions * 2 >= entry.total;
+			(towardUniversity ? toward : away).add(destination);
+		}
+		return { toward, away };
+	}
+
+	const anyMention = [...counts.values()].some((entry) => entry.mentions > 0);
 	for (const [destination, entry] of counts) {
-		if (!anyMention || entry.mentions * 2 >= entry.total) toward.add(destination);
-		else away.add(destination);
+		(!anyMention || entry.mentions * 2 >= entry.total ? toward : away).add(destination);
 	}
 	return { toward, away };
 }
@@ -107,7 +152,7 @@ export function filterByDirection(
 	universityStop: BusUniversityStop = UNIVERSITY_STOP,
 ): DirectionalTimetables | null {
 	if (!stop || !university) return null;
-	const { toward, away } = destinationsTowardUniversity(stop, universityStop);
+	const { toward, away } = destinationsTowardUniversity(stop, university, universityStop);
 	const destinationOf = (departure: Departure) =>
 		departure.destination === undefined ? null : normalize(departure.destination);
 

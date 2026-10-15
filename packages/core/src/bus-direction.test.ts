@@ -137,3 +137,72 @@ describe('matchArrivals', () => {
 		).toEqual(['08:30', null]);
 	});
 });
+
+describe('filterByDirection: 未来大の北側と南側', () => {
+	const dep = (time: string, destination: string, routes: string[], via?: string) => ({
+		time,
+		destination,
+		routes,
+		...(via === undefined ? {} : { via }),
+	});
+	// 未来大の発車は、系統ごとに、南へ向かう便と、赤川 (北) へ向かう便がある。すべての系統が共有する行き先が北
+	const hub = stopTimetable('14023', 'はこだて未来大学', [
+		dep('08:15', '函館駅前', ['55A'], '亀田支所前・五稜郭'),
+		dep('08:30', '赤川', ['55A']),
+		dep('08:45', '昭和ターミナル', ['55G'], '亀田支所前'),
+		dep('09:00', '赤川', ['55G']),
+		dep('09:15', '千代台', ['55F'], '亀田支所前・五稜郭'),
+		dep('09:30', '赤川', ['55F']),
+	]);
+
+	it('未来大より北の停留所は、南の行き先 (経由に未来大がない便も含めて) が、未来大へ向かう便になる', () => {
+		const north = stopTimetable('14024', '赤川４区', [
+			dep('08:00', '函館駅前', ['55A'], 'はこだて未来大学'),
+			dep('08:10', '昭和ターミナル', ['55G']),
+			dep('08:20', '千代台', ['55F']),
+			dep('08:40', '赤川', ['55A']),
+		]);
+		const toward = filterByDirection('toUniversity', north, hub, UNIVERSITY);
+		expect(timesOf(toward)).toEqual(['08:00', '08:10', '08:20']);
+		// 未来大から赤川 4 区へは、北へ向かう便だけ
+		const from = filterByDirection('fromUniversity', north, hub, UNIVERSITY);
+		expect(from?.timetables[0]?.departures.map((d) => d.destination)).toEqual([
+			'赤川',
+			'赤川',
+			'赤川',
+		]);
+	});
+
+	it('未来大より南の停留所は、赤川行きが未来大へ向かう便。南の行き先 (A を通る分) が、未来大から A へ', () => {
+		const south = stopTimetable('14011', '医師会病院前', [
+			dep('08:00', '赤川', ['55A'], '亀田支所前・はこだて未来大学'),
+			dep('08:35', '函館駅前', ['55A'], '五稜郭'),
+		]);
+		expect(timesOf(filterByDirection('toUniversity', south, hub, UNIVERSITY))).toEqual(['08:00']);
+		expect(timesOf(filterByDirection('fromUniversity', south, hub, UNIVERSITY))).toEqual(['08:15']);
+	});
+
+	it('行き先に未来大と書かれた便があっても、側の判定の根拠にしない', () => {
+		const south = stopTimetable('14017', '赤川入口', [
+			dep('08:00', '赤川', ['55A'], '未来大'),
+			dep('08:10', '未来大学・赤川', ['55H']),
+			dep('08:20', '函館駅前', ['55A']),
+		]);
+		const withAlias = { ...UNIVERSITY, aliases: ['未来大'] };
+		expect(timesOf(filterByDirection('toUniversity', south, hub, withAlias))).toEqual([
+			'08:00',
+			'08:10',
+		]);
+	});
+
+	it('経由に未来大がまったくない始発の停留所は、北へ向かう便を、未来大へ向かう便とする', () => {
+		const terminal = stopTimetable('19006', '昭和ターミナル', [
+			dep('08:00', '赤川', ['55G']),
+			dep('09:00', '赤川', ['55G']),
+		]);
+		expect(timesOf(filterByDirection('toUniversity', terminal, hub, UNIVERSITY))).toEqual([
+			'08:00',
+			'09:00',
+		]);
+	});
+});
