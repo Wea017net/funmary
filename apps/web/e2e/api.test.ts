@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto';
 import { createServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { expect, test } from '@playwright/test';
-import { oidc, signIn, useMockOidc } from './support.ts';
+import { oidc, seedSubjects, signIn, useMockOidc } from './support.ts';
 
 // サーバーの状態 (次にログインする人) を共有するので、テストは 1 つずつ動かす
 test.describe.configure({ mode: 'serial' });
@@ -115,6 +115,59 @@ test.describe('公開 API と MCP', () => {
 		expect(removed.status(), await removed.text()).toBe(204);
 		await page.reload();
 		await expect(history).toContainText('予定「E2E の予定」を消した');
+	});
+
+	test('履修の書き込みの範囲のトークンで、履修登録と略称を書き込め、画面と設定の履歴に出る。名前の曖昧さは登録しない', async ({
+		page,
+		request,
+	}) => {
+		seedSubjects(() => undefined);
+		const email = `e2e-courses-${Date.now()}@fun.ac.jp`;
+		oidc.setIdentity({ sub: email, email, email_verified: true, hd: 'fun.ac.jp' });
+		await signIn(page);
+		await page.goto('/app/settings/tokens');
+		await expect(
+			page.getByLabel('履修登録、自分だけの曜日と時限、略称を書き換える'),
+		).not.toBeChecked();
+		await page.getByLabel('名前 (どこで使うかのメモ)').fill('履修の登録用');
+		await page.getByLabel('履修登録、自分だけの曜日と時限、略称を書き換える').check();
+		await page.getByRole('button', { name: '発行する' }).click();
+		const writer = await page.locator('#new-token').inputValue();
+		const headers = { Authorization: `Bearer ${writer}` };
+
+		const registered = await request.post('/api/v1/courses', {
+			headers,
+			data: { academicYear: 2026, syllabusId: '900001' },
+		});
+		expect(registered.status(), await registered.text()).toBe(200);
+		expect(await registered.json()).toMatchObject({ registered: true });
+
+		const slot = await request.put('/api/v1/courses/2026/900001/personal-slots', {
+			headers,
+			data: { weekday: 2, period: 3, room: 'E2E 教室' },
+		});
+		expect(slot.status(), await slot.text()).toBe(200);
+		const abbreviation = await request.put('/api/v1/courses/2026/900001/abbreviation', {
+			headers,
+			data: { abbreviation: 'E2E演習' },
+		});
+		expect(abbreviation.status()).toBe(200);
+		const missing = await request.post('/api/v1/courses', {
+			headers,
+			data: { name: '存在しない科目' },
+		});
+		expect(missing.status()).toBe(404);
+
+		await page.goto('/app/courses');
+		await expect(page.getByText('架空の演習Ⅱ1-AB').first()).toBeVisible();
+		await page.goto('/app/settings/tokens');
+		const history = page.getByRole('region', { name: '書き込みの履歴' });
+		await expect(history).toContainText('履修科目に「架空の演習Ⅱ1-AB」を登録した');
+		await expect(history).toContainText('履修の登録用');
+
+		const unregistered = await request.delete('/api/v1/courses/2026/900001', { headers });
+		expect(unregistered.status()).toBe(200);
+		expect(await unregistered.json()).toMatchObject({ registered: false });
 	});
 
 	test('MCP の認可 (OAuth): 登録、ログイン、同意、トークンの引き換え、リフレッシュ、取り消し', async ({

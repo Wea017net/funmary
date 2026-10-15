@@ -1,3 +1,4 @@
+import { parseAbbreviation as parseAbbreviationInput } from '@funmary/core';
 import defaults from './subject-abbreviations.json';
 
 const defaultAbbreviations: ReadonlyMap<string, string> = new Map(Object.entries(defaults));
@@ -11,10 +12,4 @@ export const resolveSubjectAbbreviation = (
 
 export const parseAbbreviation = (
 	input: FormDataEntryValue | null,
-): { ok: true; value: string } | { ok: false; error: string } => {
-	if (typeof input !== 'string')
-		return { ok: false, error: '略称名を入力してください。空欄でも保存できます。' };
-	const value = input.trim();
-	if (value.length > 100) return { ok: false, error: '略称名は100文字以内で入力してください。' };
-	return { ok: true, value };
-};
+): { ok: true; value: string } | { ok: false; error: string } => parseAbbreviationInput(input);

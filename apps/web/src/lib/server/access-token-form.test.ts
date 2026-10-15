@@ -91,7 +91,11 @@ describe('書き込みの範囲', () => {
 		const writes = ACCESS_TOKEN_SCOPE_OPTIONS.filter((option) => option.write);
 
 		expect(reads.map((option) => option.scope)).toEqual([...READ_SCOPES]);
-		expect(writes.map((option) => option.scope)).toEqual(['write:events', 'write:notifications']);
+		expect(writes.map((option) => option.scope)).toEqual([
+			'write:events',
+			'write:courses',
+			'write:notifications',
+		]);
 	});
 });
 
