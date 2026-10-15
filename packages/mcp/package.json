@@ -1,0 +1,46 @@
+{
+	"name": "@funmary/mcp",
+	"version": "0.0.0",
+	"description": "Funmary の MCP サーバー。手元で動かす (stdio) 入口と、サーバーと共有する道具の定義",
+	"license": "(BSD-3-Clause OR Apache-2.0)",
+	"author": "funmary (https://github.com/funmary-app)",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/funmary-app/funmary.git",
+		"directory": "packages/mcp"
+	},
+	"type": "module",
+	"files": [
+		"dist"
+	],
+	"bin": {
+		"funmary-mcp": "./dist/bin.js"
+	},
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"publishConfig": {
+		"access": "public",
+		"provenance": true,
+		"exports": {
+			".": {
+				"types": "./dist/index.d.ts",
+				"default": "./dist/index.js"
+			}
+		}
+	},
+	"engines": {
+		"node": ">=20"
+	},
+	"scripts": {
+		"build": "tsdown"
+	},
+	"dependencies": {
+		"@funmary/client": "workspace:*",
+		"@modelcontextprotocol/sdk": "^1.32.0",
+		"zod": "^4.6.5"
+	},
+	"devDependencies": {
+		"tsdown": "catalog:"
+	}
+}

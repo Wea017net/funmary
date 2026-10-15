@@ -36,7 +36,7 @@ jobs:
       # npm で配るクライアントの型は、サーバーの OpenAPI の定義から作る。作り直して差分が出たら、コミットし忘れ
       - name: クライアントの型の確認
         run: |
-          pnpm --filter @funmary/client generate
+          pnpm generate:client
           git diff --exit-code -- packages/client/src/generated
       - run: pnpm build
       # VPS への反映のスクリプトは、実機でしか動かせないので、偽の systemctl と npm で動きを確かめる
