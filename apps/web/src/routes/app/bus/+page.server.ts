@@ -83,12 +83,10 @@ export const load: ServerLoad = ({ locals, url, cookies, getClientAddress }) => 
 		direction,
 		/** 向きを URL で決めていないとき、ブラウザの現在地で決め直してよい (学内の Wi-Fi で決まったときは、決め直さない) */
 		canDecideByLocation: !isDirection(requestedDirection) && !onCampus,
-		onCampus,
 		leg,
 		universityName: UNIVERSITY_STOP.name,
 		/** いまの日本時間 (HH:MM)。発車の済んだ便を薄く出すのに使う */
 		nowTime: jstDateTime(now).time,
-		checkedAt: listing.checkedAt,
 		stale: isBusDataStale(listing.checkedAt, now),
 		hasStops: selectable.length > 0,
 	};
