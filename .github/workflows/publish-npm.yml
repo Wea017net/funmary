@@ -1,17 +1,25 @@
 name: Publish npm
 
-# main の CI が成功したら、npm にまだない版のパッケージ (funmary、@funmary/client、@funmary/mcp) を公開する。
-# 版は、Changesets で上げる: 公開するパッケージを変えた PR に、pnpm changeset で変更の説明を足し、
-# 版を上げるときに pnpm changeset version を実行して、その変更を PR にして、main に入れる。
+# npm のパッケージ (funmary、@funmary/client、@funmary/mcp) を、手で実行して公開する。3 つは、同じ版で出す。
+# 入力は、patch/minor/major (npm にある、いちばん新しい版から上げる) か、X.Y.Z (1.0.0-beta.0 のような先行版も可)。リポジトリの package.json の版は、
+# 開発用の 0.0.0 のままにして、公開のときに、この版を書き込む (main は保護されていて、版のコミットを push できないため)。
 #
 # npm の trusted publishing (OIDC) で公開するので、npm のトークンを secret に置かない。provenance (どのコミットから、
-# どのワークフローで作ったか) が付く。npm 側で、パッケージごとに、このリポジトリとこのワークフローを、公開者として登録しておく。
-# 登録を終えて、リポジトリの変数 NPM_PUBLISH_ENABLED を true にするまでは、何もしない。
+# どのワークフローで作ったか) が付く。npm 側で、パッケージごとに、このリポジトリとこのワークフローのファイル名
+# (publish-npm.yml) を、公開者として登録しておく。
+# 公開したあと、npm-v<版> のタグと GitHub Release を作る (v* は、アプリ本体の節目の版が使っているので、別の名前にする)。
 on:
-  workflow_run:
-    workflows: [CI]
-    types: [completed]
-    branches: [main]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'patch/minor/major (npm にある、いちばん新しい版から上げる) か、X.Y.Z (1.0.0-beta.0 のような先行版も可)'
+        required: true
+        type: string
+      dist_tag:
+        description: 'npm の dist-tag。空なら、先行版は先行版の名前 (beta など)、通常の版は latest'
+        required: false
+        default: ''
+        type: string
 
 permissions:
   contents: read
@@ -23,21 +31,71 @@ concurrency:
 jobs:
   publish:
     name: npm への公開
-    if: >-
-      github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.event == 'push' &&
-      vars.NPM_PUBLISH_ENABLED == 'true'
+    # 公開するのは、main の最新から。ほかのブランチからは、公開しない
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     permissions:
-      contents: read
+      # タグと GitHub Release を作るのに要る
+      contents: write
       # npm の trusted publishing が、OIDC のトークンを受け取るのに要る
       id-token: write
+    env:
+      GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ github.event.workflow_run.head_sha }}
       - uses: ./.github/actions/setup
+      # 版と dist-tag を決め、後の手順に、環境変数 (VERSION、NPM_TAG、PRERELEASE) で渡す
+      - name: 公開する版を決める
+        env:
+          VERSION_INPUT: ${{ inputs.version }}
+          DIST_TAG_INPUT: ${{ inputs.dist_tag }}
+        run: node scripts/workflows/npm/resolve-npm-version.js
+      # CI と同じ検査を通ってから公開する (E2E は、PR で通したものとする)
+      - run: pnpm format:check
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+      - name: 版を、公開する 3 つの package.json に書き込む (リポジトリには戻さない)
+        run: |
+          node -e "
+            const fs = require('node:fs');
+            for (const dir of ['client', 'mcp', 'cli']) {
+              const file = 'packages/' + dir + '/package.json';
+              const pkg = JSON.parse(fs.readFileSync(file, 'utf8'));
+              pkg.version = process.env.VERSION;
+              fs.writeFileSync(file, JSON.stringify(pkg, null, '\t') + '\n');
+            }
+          "
       - run: pnpm --filter @funmary/client --filter @funmary/mcp --filter funmary build
-      # npm にまだない版だけを公開する (ある版は、飛ばす)。公開しないパッケージは、private なので対象外
-      - run: pnpm changeset publish
+      # workspace:* の依存を、公開する版に書き換えて、tar.gz にする。npm の CLI で、その tar.gz を公開する
+      - name: tar.gz を作る
+        run: |
+          mkdir -p tarballs
+          for dir in client mcp cli; do (cd "packages/$dir" && pnpm pack --pack-destination ../../tarballs); done
+          ls tarballs
+      # 公開は、依存される順 (client、mcp、funmary)。npm にある版は飛ばすので、途中で失敗しても、やり直せる
+      - run: npm install -g npm@11
+      - name: 公開する
+        run: |
+          publish() {
+            NAME="$1"; FILE="$2"
+            if [ -n "$(npm view "$NAME@$VERSION" version 2>/dev/null)" ]; then
+              echo "$NAME@$VERSION は、すでに公開されているので、飛ばします"
+            else
+              npm publish "tarballs/$FILE" --access public --provenance --tag "$NPM_TAG"
+            fi
+          }
+          publish @funmary/client "funmary-client-$VERSION.tgz"
+          publish @funmary/mcp "funmary-mcp-$VERSION.tgz"
+          publish funmary "funmary-$VERSION.tgz"
+      # アプリ本体の更新は、最新の Release (latest) を見るので、npm の Release は、latest にしない
+      - name: タグと GitHub Release を作る
+        run: |
+          if gh release view "npm-v$VERSION" >/dev/null 2>&1; then
+            echo "npm-v$VERSION の Release は、すでにあります"
+          else
+            FLAG="--latest=false"
+            if [ "$PRERELEASE" = "true" ]; then FLAG="--prerelease"; fi
+            gh release create "npm-v$VERSION"               --target "$GITHUB_SHA"               --title "npm パッケージ v$VERSION"               --generate-notes               "$FLAG"
+          fi
