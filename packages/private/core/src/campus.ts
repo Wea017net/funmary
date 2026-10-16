@@ -6,8 +6,11 @@
 /** 未来大の位置 (緯度と経度)。大まかな値で、近くにいるかの判定にだけ使う */
 export const UNIVERSITY_LOCATION = { latitude: 41.8419, longitude: 140.7668 } as const;
 
-/** 「未来大の近く」とみなす距離 (メートル) */
-export const NEAR_UNIVERSITY_METERS = 600;
+/**
+ * 「未来大の近く」とみなす距離 (メートル)。敷地は南北に長く、上の座標から最も遠い角まで約 430 m
+ * (OpenStreetMap の外形で測った)。そこに、GPS の誤差を足した
+ */
+export const NEAR_UNIVERSITY_METERS = 500;
 
 const EARTH_RADIUS_METERS = 6_371_000;
 
