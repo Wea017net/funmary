@@ -94,6 +94,46 @@ test.describe('バス', () => {
 		await expect(page.getByRole('heading', { level: 1, name: 'バス' })).toBeVisible();
 	});
 
+	test.describe('現在地が許可されているとき', () => {
+		// 未来大の座標 (campus.ts の UNIVERSITY_LOCATION) の近く
+		test.describe('未来大の近く', () => {
+			test.use({
+				permissions: ['geolocation'],
+				geolocation: { latitude: 41.8421, longitude: 140.767 },
+			});
+
+			test('ホームの次のバスは、未来大から出る向きになる', async ({ page }) => {
+				await signInAs(page, email);
+				await page.goto('/app');
+				await expect(page.getByRole('region', { name: '次のバス' })).toContainText(
+					'はこだて未来大学 → 函館駅前',
+				);
+			});
+
+			test('バスの画面も、未来大から出る向きになる', async ({ page }) => {
+				await signInAs(page, email);
+				await page.goto('/app/bus');
+				await expect(page.getByRole('link', { name: /到着.*函館駅前/ })).toBeVisible();
+			});
+		});
+
+		// 函館駅の近く
+		test.describe('未来大から離れている', () => {
+			test.use({
+				permissions: ['geolocation'],
+				geolocation: { latitude: 41.7737, longitude: 140.7266 },
+			});
+
+			test('ホームの次のバスは、未来大へ向かう向きになる', async ({ page }) => {
+				await signInAs(page, email);
+				await page.goto('/app');
+				await expect(page.getByRole('region', { name: '次のバス' })).toContainText(
+					'函館駅前 → はこだて未来大学',
+				);
+			});
+		});
+	});
+
 	test('ログインしていなければ、バスの画面は開けない', async ({ page }) => {
 		oidc.setIdentity({ sub: 'nobody', email: 'nobody@fun.ac.jp', email_verified: true });
 		await page.context().clearCookies();

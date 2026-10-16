@@ -4,6 +4,7 @@ import { buildUserTimetable, getBusLeg, listBusStops } from '@funmary/api';
 import {
 	DEFAULT_PERIODS,
 	UNIVERSITY_STOP,
+	type BusDirection,
 	addDays,
 	findNextLesson,
 	isStale,
@@ -20,7 +21,10 @@ import { requireSignedIn } from '#lib/server/admin.ts';
 /** 次の授業を探す日数。長い休みの間は見つからなくてよい */
 const LOOKAHEAD_DAYS = 14;
 
-/** ホームに出す、次のバス。バスの機能がない、時刻表が空のときは null */
+/**
+ * ホームに出す、次のバス。向きは画面が現在地で選び直せるよう、両方の向きを返す。
+ * バスの機能がない、時刻表が空のときは null
+ */
 function nextBus(
 	services: ReturnType<typeof getServices>,
 	savedStopId: string | undefined,
@@ -34,22 +38,38 @@ function nextBus(
 		listing.stops.filter((stop) => stop.id !== UNIVERSITY_STOP.id).map((stop) => stop.id),
 	);
 	if (!stopId) return null;
-	const { direction } = defaultBusDirection(getClientAddress, services.campus.ranges());
-	const leg = getBusLeg(services, now, { stopId, direction });
-	if (!leg || leg.checkedAt === null || leg.departures.length === 0) return null;
-	const next = leg.upcoming[0];
+	const { direction: defaultDirection, onCampus } = defaultBusDirection(
+		getClientAddress,
+		services.campus.ranges(),
+	);
+	const summarize = (direction: BusDirection) => {
+		const leg = getBusLeg(services, now, { stopId, direction });
+		if (!leg || leg.checkedAt === null || leg.departures.length === 0) return null;
+		const next = leg.upcoming[0];
+		return {
+			from: leg.from.name,
+			to: leg.to.name,
+			next: next && {
+				time: next.time,
+				routes: [...next.routes],
+				destination: next.destination,
+				from: next.from.name,
+				to: next.to.name,
+				// 開いたままでも「あと N 分」を合わせられるよう、発車の時刻 (ミリ秒) で渡す
+				departsAt: now.getTime() + next.minutesUntil * 60_000,
+			},
+		};
+	};
+	const legs = {
+		toUniversity: summarize('toUniversity'),
+		fromUniversity: summarize('fromUniversity'),
+	};
+	if (!legs.toUniversity && !legs.fromUniversity) return null;
 	return {
-		from: leg.from.name,
-		to: leg.to.name,
-		next: next && {
-			time: next.time,
-			routes: [...next.routes],
-			destination: next.destination,
-			from: next.from.name,
-			to: next.to.name,
-			// 開いたままでも「あと N 分」を合わせられるよう、発車の時刻 (ミリ秒) で渡す
-			departsAt: now.getTime() + next.minutesUntil * 60_000,
-		},
+		defaultDirection,
+		/** 学内の Wi-Fi で決まったときは、現在地で決め直さない */
+		canDecideByLocation: !onCampus,
+		legs,
 	};
 }
 
