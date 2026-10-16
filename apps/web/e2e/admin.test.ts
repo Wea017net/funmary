@@ -774,6 +774,8 @@ test.describe('招待コード', () => {
 
 		// ほかのテストに影響しないよう、管理者のみに戻す
 		await memberRow.getByRole('button', { name: /^許可を外す/ }).click();
+		// 許可を外す操作の完了 (一覧の更新) を待ってから、モードを戻す。重なると、選び直しが失敗することがある
+		await expect(memberRow.getByRole('button', { name: /^許可する/ })).toBeVisible();
 		await adminPage.getByLabel(/管理者のみ/).check();
 		await expect(limit).toBeDisabled();
 		await adminPage.getByRole('button', { name: '保存する' }).click();
