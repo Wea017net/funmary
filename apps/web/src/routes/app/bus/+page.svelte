@@ -10,9 +10,9 @@
 	import IconSwap from '~icons/material-symbols/swap-vert';
 	import IconWarning from '~icons/material-symbols/warning-outline';
 	import { formatMinutesUntil } from '#lib/bus-label.ts';
+	import { canLocate, isLocationGranted, locateBusDirection } from '#lib/bus-location.ts';
 	import { BUS_DAY_COOKIE, secondsUntilJstMidnight } from '#lib/bus-state.ts';
 	import type { PublicBusLeg, PublicLegDeparture } from '@funmary/api';
-	import { isNearUniversity } from '@funmary/core';
 
 	type DayType = 'weekday' | 'holiday';
 	type Direction = 'toUniversity' | 'fromUniversity';
@@ -82,40 +82,28 @@
 	/** 失敗の理由 (許可されなかったか、現在地を取れなかったか)。うまくいったら null */
 	let locationProblem = $state<'denied' | 'unavailable' | null>(null);
 
-	function decideByLocation() {
+	async function decideByLocation() {
 		if (!data.stopId || locating) return;
 		locating = true;
 		locationProblem = null;
-		navigator.geolocation.getCurrentPosition(
-			({ coords }) => {
-				swapped = isNearUniversity(coords.latitude, coords.longitude)
-					? 'fromUniversity'
-					: 'toUniversity';
-				locating = false;
-			},
-			(error) => {
-				locating = false;
-				locationProblem = error.code === error.PERMISSION_DENIED ? 'denied' : 'unavailable';
-			},
-			{ maximumAge: 60_000, timeout: 10_000 },
-		);
+		const result = await locateBusDirection();
+		locating = false;
+		if ('direction' in result) swapped = result.direction;
+		else locationProblem = result.problem;
 	}
 
 	// 位置情報が使える端末では、いつでもボタンを出す (向きを入れ替えたあとでも、現在地から決め直せるように)
-	const canLocate = $derived(typeof navigator !== 'undefined' && 'geolocation' in navigator);
+	const locatable = $derived(canLocate());
 
 	// 学内の Wi-Fi で向きが決まっていなくて、すでに許可されているときだけ、開いたときに一度、自動で決める。
 	// 開いてすぐに入れ替えた向きは、あとから届いた現在地で上書きしない
 	let triedAutomatically = false;
 	$effect(() => {
-		if (triedAutomatically || !data.canDecideByLocation || !('geolocation' in navigator)) return;
+		if (triedAutomatically || !data.canDecideByLocation || !canLocate()) return;
 		triedAutomatically = true;
-		void navigator.permissions
-			?.query({ name: 'geolocation' })
-			.then((status) => {
-				if (status.state === 'granted' && untrack(() => swapped) === null) decideByLocation();
-			})
-			.catch(() => undefined);
+		void isLocationGranted().then((granted) => {
+			if (granted && untrack(() => swapped) === null) void decideByLocation();
+		});
 	});
 </script>
 
@@ -204,7 +192,7 @@
 			</div>
 		</div>
 
-		{#if canLocate}
+		{#if locatable}
 			<p class="hint">
 				<button type="button" class="locate" onclick={decideByLocation} disabled={locating}>
 					<IconLocation aria-hidden="true" />現在地から向きを決める

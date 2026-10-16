@@ -4,6 +4,7 @@
 	import LessonRoom from '#lib/components/LessonRoom.svelte';
 	import StatusBadge from '#lib/components/StatusBadge.svelte';
 	import { formatMinutesUntil } from '#lib/bus-label.ts';
+	import { canLocate, isLocationGranted, locateBusDirection } from '#lib/bus-location.ts';
 	import type { EventView } from '#lib/server/event-view.ts';
 	import type { LessonView } from '#lib/server/lesson-view.ts';
 	import type { DayNote } from '@funmary/api';
@@ -28,7 +29,9 @@
 		stale: boolean;
 	}
 
-	interface BusView {
+	type BusDirection = 'toUniversity' | 'fromUniversity';
+
+	interface BusLegView {
 		from: string;
 		to: string;
 		/** これからの発車がなければ null */
@@ -43,6 +46,14 @@
 		} | null;
 	}
 
+	interface BusView {
+		/** 学内の Wi-Fi で決めた向き */
+		defaultDirection: BusDirection;
+		/** 学内の Wi-Fi で決まったときは、現在地で決め直さない */
+		canDecideByLocation: boolean;
+		legs: Record<BusDirection, BusLegView | null>;
+	}
+
 	let {
 		data,
 	}: {
@@ -50,7 +61,23 @@
 	} = $props();
 
 	const today = $derived(data.today);
-	const bus = $derived(data.bus);
+
+	// バスの向きは、バスの画面と同じく、残さずに、学内の Wi-Fi と現在地から決める
+	let located = $state<BusDirection | null>(null);
+	const busDirection = $derived(located ?? data.bus?.defaultDirection ?? 'toUniversity');
+	const busLeg = $derived(data.bus?.legs[busDirection] ?? null);
+
+	// 学内の Wi-Fi で向きが決まっていなくて、すでに許可されているときだけ、開いたときに一度、現在地で決める
+	let triedAutomatically = false;
+	$effect(() => {
+		if (triedAutomatically || !data.bus?.canDecideByLocation || !canLocate()) return;
+		triedAutomatically = true;
+		void isLocationGranted().then(async (granted) => {
+			if (!granted) return;
+			const result = await locateBusDirection();
+			if ('direction' in result) located = result.direction;
+		});
+	});
 
 	let nowMs = $state(Date.now());
 	$effect(() => {
@@ -58,7 +85,7 @@
 		return () => clearInterval(timer);
 	});
 	const minutesUntilBus = $derived(
-		bus?.next ? Math.max(0, Math.ceil((bus.next.departsAt - nowMs) / 60_000)) : null,
+		busLeg?.next ? Math.max(0, Math.ceil((busLeg.next.departsAt - nowMs) / 60_000)) : null,
 	);
 </script>
 
@@ -94,25 +121,25 @@
 		{/if}
 	</section>
 
-	{#if bus}
+	{#if busLeg}
 		<section aria-labelledby="bus-heading" class="bus">
 			<h2 id="bus-heading">次のバス</h2>
 			<a class="bus-link" href={resolve('app/bus')}>
 				<IconBus aria-hidden="true" class="icon" />
 				<span class="bus-body">
-					{#if bus.next}
+					{#if busLeg.next}
 						<span class="bus-time">
-							<time>{bus.next.time}</time>
+							<time>{busLeg.next.time}</time>
 							<span class="bus-until">{formatMinutesUntil(minutesUntilBus ?? 0)}</span>
 						</span>
 						<span class="muted">
-							{bus.next.routes.join(' ')}
-							{#if bus.next.destination}{bus.next.destination}行き{/if}
+							{busLeg.next.routes.join(' ')}
+							{#if busLeg.next.destination}{busLeg.next.destination}行き{/if}
 						</span>
-						<span class="muted">{bus.next.from} → {bus.next.to}</span>
+						<span class="muted">{busLeg.next.from} → {busLeg.next.to}</span>
 					{:else}
 						<span class="bus-time">今日の発車は、もうありません</span>
-						<span class="muted">{bus.from} → {bus.to}</span>
+						<span class="muted">{busLeg.from} → {busLeg.to}</span>
 					{/if}
 				</span>
 				<IconChevron aria-hidden="true" class="chevron" />
