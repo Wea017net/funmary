@@ -20,7 +20,6 @@ test.describe('バス', () => {
 		await page.getByRole('link', { name: 'バス', exact: true }).first().click();
 		await expect(page.getByRole('heading', { level: 1, name: 'バス' })).toBeVisible();
 
-		await page.goto('/app/bus?stop=11003&direction=toUniversity');
 		await expect(page.getByRole('link', { name: /出発.*函館駅前/ })).toBeVisible();
 		const rows = page.getByRole('listitem').filter({ hasText: '55A' });
 		await expect(rows.first()).toContainText('赤川行き');
@@ -29,45 +28,60 @@ test.describe('バス', () => {
 		await expect(rows.first()).toContainText('→');
 		// 反対向き (千代台行き) は出ない
 		await expect(page.getByText('千代台行き')).toHaveCount(0);
-		// 現在地から向きを決めるボタンは、URL に向きが付いていても、出ている (PWA には URL の欄がない)
+		// 現在地から向きを決めるボタンが出ている
 		await expect(page.getByRole('button', { name: '現在地から向きを決める' })).toBeVisible();
 	});
 
-	test('向きを入れ替えると、未来大から出る便になる。向きは覚えず、選んだバス停だけを覚える', async ({
+	test('向きを入れ替えると、URL は変えずに、未来大から出る便になる。向きは覚えない', async ({
 		page,
 	}) => {
 		await signInAs(page, email);
-		await page.goto('/app/bus?stop=11003&direction=toUniversity');
-		await page.getByRole('link', { name: /向きを入れ替える/ }).click();
-		await expect(page).toHaveURL(/direction=fromUniversity/);
+		await page.goto('/app/bus');
+		await page.getByRole('button', { name: /向きを入れ替える/ }).click();
+		await expect(page).toHaveURL(/\/app\/bus$/);
 		await expect(page.getByRole('link', { name: /到着.*函館駅前/ })).toBeVisible();
 		const rows = page.getByRole('listitem').filter({ hasText: '55A' });
 		await expect(rows.first()).toContainText('千代台行き');
 		await expect(rows.first()).toContainText('はこだて未来大学 - 函館駅前');
 
-		// 何も指定せずに開くと、前回のバス停で、未来大へ向かう向き (学内の Wi-Fi でなければ)
+		// 開き直すと、未来大へ向かう向きに戻る (学内の Wi-Fi でなければ)
 		await page.goto('/app/bus');
 		await expect(page.getByRole('link', { name: /出発.*函館駅前/ })).toBeVisible();
 	});
 
-	test('バス停の選択の画面から、バス停を選ぶと、バスの画面に戻る', async ({ page }) => {
+	test('バス停の選択の画面から、バス停を選ぶと、バスの画面に戻る。次に開いても同じバス停', async ({
+		page,
+	}) => {
 		await signInAs(page, email);
-		await page.goto('/app/bus?stop=11003&direction=toUniversity');
+		await page.goto('/app/bus');
 		await page.getByRole('link', { name: /出発.*函館駅前/ }).click();
 		await expect(page.getByRole('heading', { level: 1, name: 'バス停選択' })).toBeVisible();
 		// 未来大そのものは選べない
-		await expect(page.getByRole('link', { name: 'はこだて未来大学' })).toHaveCount(0);
-		await page.getByRole('link', { name: '函館駅前' }).click();
-		await expect(page).toHaveURL(/\/app\/bus\?stop=11003&direction=toUniversity/);
+		await expect(page.getByRole('button', { name: 'はこだて未来大学' })).toHaveCount(0);
+		await page.getByRole('button', { name: '函館駅前' }).click();
+		await expect(page).toHaveURL(/\/app\/bus$/);
+		await page.reload();
+		await expect(page.getByRole('link', { name: /出発.*函館駅前/ })).toBeVisible();
 	});
 
-	test('平日と休日を切り替えられ、今日の区分には (今日) が付く', async ({ page }) => {
+	test('平日と休日を、URL は変えずに切り替えられ、その日のうちは覚える。今日の区分には (今日) が付く', async ({
+		page,
+	}) => {
 		await signInAs(page, email);
-		await page.goto('/app/bus?stop=11003&direction=toUniversity');
-		await expect(page.getByRole('link', { name: /\(今日\)/ })).toBeVisible();
-		await page.getByRole('link', { name: /^休日/ }).click();
-		await expect(page).toHaveURL(/day=holiday/);
-		await expect(page.getByRole('link', { name: /^休日/ })).toHaveAttribute('aria-current', 'page');
+		await page.goto('/app/bus');
+		await expect(page.getByRole('button', { name: /\(今日\)/ })).toBeVisible();
+		await page.getByRole('button', { name: /^休日/ }).click();
+		await expect(page.getByRole('button', { name: /^休日/ })).toHaveAttribute(
+			'aria-pressed',
+			'true',
+		);
+		await expect(page).toHaveURL(/\/app\/bus$/);
+
+		await page.reload();
+		await expect(page.getByRole('button', { name: /^休日/ })).toHaveAttribute(
+			'aria-pressed',
+			'true',
+		);
 	});
 
 	test('ログインしていなければ、バスの画面は開けない', async ({ page }) => {

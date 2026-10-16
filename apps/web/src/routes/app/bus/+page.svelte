@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { goto, invalidateAll } from '$app/navigation';
+	import { untrack } from 'svelte';
+	import { invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { SvelteURLSearchParams } from 'svelte/reactivity';
 	import IconBus from '~icons/material-symbols/directions-bus-outline';
 	import IconChevron from '~icons/material-symbols/chevron-right';
 	import IconLocation from '~icons/material-symbols/my-location-outline';
@@ -10,6 +10,7 @@
 	import IconSwap from '~icons/material-symbols/swap-vert';
 	import IconWarning from '~icons/material-symbols/warning-outline';
 	import { formatMinutesUntil } from '#lib/bus-label.ts';
+	import { BUS_DAY_COOKIE, secondsUntilJstMidnight } from '#lib/bus-state.ts';
 	import type { PublicBusLeg, PublicLegDeparture } from '@funmary/api';
 	import { isNearUniversity } from '@funmary/core';
 
@@ -21,9 +22,11 @@
 	}: {
 		data: {
 			stopId: string | null;
-			direction: Direction;
+			defaultDirection: Direction;
 			canDecideByLocation: boolean;
-			leg: PublicBusLeg | null;
+			day: DayType;
+			todayDay: DayType;
+			legs: Record<Direction, Record<DayType, PublicBusLeg | null>>;
 			universityName: string;
 			nowTime: string;
 			stale: boolean;
@@ -39,22 +42,22 @@
 		return () => clearInterval(timer);
 	});
 
-	const busUrl = (params: Record<string, string>) => {
-		const query = new URLSearchParams(params).toString();
-		return query ? `${resolve('app/bus')}?${query}` : resolve('app/bus');
-	};
+	// 向きは、残さず、画面の中だけで入れ替える。1 分ごとに読み直しても消えないよう、$derived にはしない
+	let swapped = $state<Direction | null>(null);
+	const direction = $derived(swapped ?? data.defaultDirection);
+	const toUniversity = $derived(direction === 'toUniversity');
 
-	const leg = $derived(data.leg);
-	const toUniversity = $derived(data.direction === 'toUniversity');
-	const otherDirection = $derived<Direction>(toUniversity ? 'fromUniversity' : 'toUniversity');
-	const isToday = $derived(leg !== null && leg.day === leg.todayDay);
+	// 日の種類は Cookie に残す。サーバーが同じ値を返すので、読み直しても変わらない
+	let day = $derived(data.day);
 
-	/** 向きと日の区分を引き継いで、バス停選択の画面へ行く */
-	const stopsUrl = $derived.by(() => {
-		const query = new SvelteURLSearchParams({ direction: data.direction });
-		if (leg && leg.day !== leg.todayDay) query.set('day', leg.day);
-		return `${resolve('app/bus/stops')}?${query.toString()}`;
-	});
+	function selectDay(next: DayType) {
+		day = next;
+		const secure = location.protocol === 'https:' ? '; secure' : '';
+		document.cookie = `${BUS_DAY_COOKIE}=${next}; path=/; max-age=${secondsUntilJstMidnight(new Date())}; samesite=lax${secure}`;
+	}
+
+	const leg = $derived(data.legs[direction][day]);
+	const isToday = $derived(day === data.todayDay);
 
 	/** 今日の区分のとき、まだ発車していない最初の便 (これに目印を付けて、一覧をその位置に合わせる) */
 	const nextIndex = $derived(
@@ -66,7 +69,7 @@
 	let list: HTMLElement | undefined = $state();
 	let scrolledFor = '';
 	$effect(() => {
-		const key = `${data.stopId}-${data.direction}-${leg?.day}`;
+		const key = `${data.stopId}-${direction}-${day}`;
 		if (!list || scrolledFor === key) return;
 		scrolledFor = key;
 		const next = list.querySelector<HTMLElement>('[data-next]');
@@ -85,13 +88,10 @@
 		locationProblem = null;
 		navigator.geolocation.getCurrentPosition(
 			({ coords }) => {
-				const direction: Direction = isNearUniversity(coords.latitude, coords.longitude)
+				swapped = isNearUniversity(coords.latitude, coords.longitude)
 					? 'fromUniversity'
 					: 'toUniversity';
 				locating = false;
-				if (direction !== data.direction && data.stopId) {
-					void goto(busUrl({ stop: data.stopId, direction }), { replaceState: true });
-				}
 			},
 			(error) => {
 				locating = false;
@@ -101,16 +101,19 @@
 		);
 	}
 
-	// 位置情報が使える端末では、いつでもボタンを出す (URL に向きが付いていても、PWA には URL の欄がなく、決め直せなくなるため)
+	// 位置情報が使える端末では、いつでもボタンを出す (向きを入れ替えたあとでも、現在地から決め直せるように)
 	const canLocate = $derived(typeof navigator !== 'undefined' && 'geolocation' in navigator);
 
-	// すでに許可されていて、向きを URL で決めていないときだけ、開いたときに自動で決める
+	// 学内の Wi-Fi で向きが決まっていなくて、すでに許可されているときだけ、開いたときに一度、自動で決める。
+	// 開いてすぐに入れ替えた向きは、あとから届いた現在地で上書きしない
+	let triedAutomatically = false;
 	$effect(() => {
-		if (!data.canDecideByLocation || !('geolocation' in navigator)) return;
+		if (triedAutomatically || !data.canDecideByLocation || !('geolocation' in navigator)) return;
+		triedAutomatically = true;
 		void navigator.permissions
 			?.query({ name: 'geolocation' })
 			.then((status) => {
-				if (status.state === 'granted') decideByLocation();
+				if (status.state === 'granted' && untrack(() => swapped) === null) decideByLocation();
 			})
 			.catch(() => undefined);
 	});
@@ -158,7 +161,7 @@
 {/snippet}
 
 {#snippet stopCard(label: string)}
-	<a class="card picker" href={stopsUrl}>
+	<a class="card picker" href={resolve('app/bus/stops')}>
 		<IconStop aria-hidden="true" class="icon" />
 		<span class="card-label">{label}</span>
 		<span class="card-name">{leg?.stop.name ?? 'バス停を選ぶ'}</span>
@@ -180,16 +183,16 @@
 		<p>時刻表は、まだ取り込めていません。しばらくしてからもう一度開いてください。</p>
 	{:else}
 		<div class="trip">
-			<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- resolve 済みの /app/bus に、向きを足している -->
-			<a
+			<button
+				type="button"
 				class="swap"
-				href={busUrl({ stop: data.stopId, direction: otherDirection })}
+				onclick={() => (swapped = toUniversity ? 'fromUniversity' : 'toUniversity')}
 				aria-label={toUniversity
 					? '向きを入れ替える (未来大から出発)'
 					: '向きを入れ替える (未来大へ向かう)'}
 			>
 				<IconSwap aria-hidden="true" />
-			</a>
+			</button>
 			<div class="cards">
 				{#if toUniversity}
 					{@render stopCard('出発')}
@@ -222,16 +225,11 @@
 		{#if leg}
 			<nav aria-label="日の種類">
 				<ul class="days">
-					{#each ['weekday', 'holiday'] as const as day (day)}
+					{#each ['weekday', 'holiday'] as const as option (option)}
 						<li>
-							<!-- eslint-disable svelte/no-navigation-without-resolve -- resolve 済みの /app/bus に、停留所と向きと日の種類を足している -->
-							<a
-								href={busUrl({ stop: leg.stop.id, direction: data.direction, day })}
-								aria-current={leg.day === day ? 'page' : undefined}
-							>
-								{DAY_LABELS[day]}{day === leg.todayDay ? ' (今日)' : ''}
-							</a>
-							<!-- eslint-enable svelte/no-navigation-without-resolve -->
+							<button type="button" onclick={() => selectDay(option)} aria-pressed={day === option}>
+								{DAY_LABELS[option]}{option === data.todayDay ? ' (今日)' : ''}
+							</button>
 						</li>
 					{/each}
 				</ul>
@@ -284,8 +282,12 @@
 		place-items: center;
 		width: 48px;
 		height: 48px;
+		padding: 0;
+		border: 0;
 		border-radius: 50%;
+		background: none;
 		color: var(--fm-text-muted);
+		cursor: pointer;
 
 		&:hover {
 			background: var(--fm-surface-muted);
@@ -395,17 +397,21 @@
 		border-bottom: 1px solid var(--fm-divider);
 		list-style: none;
 
-		a {
+		button {
 			display: flex;
 			align-items: center;
 			justify-content: center;
+			width: 100%;
 			min-height: 48px;
+			border: 0;
 			border-bottom: 3px solid transparent;
+			background: none;
 			color: var(--fm-text);
-			text-decoration: none;
+			font: inherit;
+			cursor: pointer;
 		}
 
-		a[aria-current='page'] {
+		button[aria-pressed='true'] {
 			border-bottom-color: var(--fm-primary);
 			color: var(--fm-primary);
 			font-weight: 700;
