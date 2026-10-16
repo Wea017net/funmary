@@ -64,6 +64,7 @@ test.describe('スマホの幅で、画面が横にはみ出さない', () => {
 			'/app/admin/invites',
 			'/app/admin/status',
 			'/app/admin/support-invites',
+			'/app/admin/campus-network',
 			'/app/notifications',
 			'/app/admin/discord',
 			'/app/admin/audit-log',

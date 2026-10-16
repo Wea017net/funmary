@@ -23,6 +23,7 @@
 	import IconTerms from '~icons/material-symbols/gavel';
 	import IconThirdParty from '~icons/material-symbols/inventory-2-outline';
 	import IconUpload from '~icons/material-symbols/upload-file-outline';
+	import IconWifi from '~icons/material-symbols/wifi';
 
 	let {
 		data,
@@ -151,6 +152,12 @@
 				icon: IconDiscord,
 				title: 'サポートサーバーの招待',
 				description: 'Discord の招待リンクの発行、登録、公開と取り消し',
+			},
+			{
+				href: resolve('app/admin/campus-network'),
+				icon: IconWifi,
+				title: '学内のネットワーク',
+				description: 'バスの向きを決める、学内の Wi-Fi の IP アドレスの範囲',
 			},
 			{
 				href: resolve('app/admin/webhooks'),

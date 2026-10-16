@@ -1,6 +1,6 @@
 // バスの時刻表。「A から未来大へ」「未来大から A へ」の発車だけを出す (A は、未来大を通る任意の停留所)。
 // 選んだ停留所は、次に開いたときのために、Cookie に残す。向きは、残さず、いる場所から決める:
-// 学内の Wi-Fi (CAMPUS_IP_RANGES) なら未来大から出る向き、そうでなければ未来大へ向かう向き。
+// 学内の Wi-Fi (環境変数 CAMPUS_IP_RANGES と、管理画面で登録した範囲) なら未来大から出る向き、そうでなければ未来大へ向かう向き。
 // 現在地での判定は、ブラウザ側で行い、向きを URL に足して開き直す。保存した写しだけを読む。
 // BUS_API_BASE_URL がないサーバーでは、この画面はない
 import { error, type ServerLoad } from '@sveltejs/kit';
@@ -58,9 +58,10 @@ export const load: ServerLoad = ({ locals, url, cookies, getClientAddress }) => 
 	// 向き: URL で決めたもの、学内の Wi-Fi、それ以外 (未来大へ) の順
 	const requestedDirection = url.searchParams.get('direction');
 	let onCampus = false;
-	if (services.campusIpRanges.length > 0) {
+	const campusRanges = services.campus.ranges();
+	if (campusRanges.length > 0) {
 		try {
-			onCampus = isInIpRanges(getClientAddress(), services.campusIpRanges);
+			onCampus = isInIpRanges(getClientAddress(), campusRanges);
 		} catch {
 			onCampus = false;
 		}
