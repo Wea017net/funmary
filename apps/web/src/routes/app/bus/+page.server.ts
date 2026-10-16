@@ -8,9 +8,7 @@ import { error, type ServerLoad } from '@sveltejs/kit';
 import { getBusLeg, listBusStops, type PublicBusLeg } from '@funmary/api';
 import {
 	BUS_DIRECTIONS,
-	DEFAULT_BUS_STOP_IDS,
 	UNIVERSITY_STOP,
-	isInIpRanges,
 	jstDateTime,
 	type BusDayType,
 	type BusDirection,
@@ -18,6 +16,7 @@ import {
 import { isBusDataStale } from '#lib/bus-label.ts';
 import { BUS_DAY_COOKIE, BUS_STOP_COOKIE, parseBusDay } from '#lib/bus-state.ts';
 import { requireSignedIn } from '#lib/server/admin.ts';
+import { chooseBusStopId, defaultBusDirection } from '#lib/server/bus-selection.ts';
 import { getServices } from '#lib/server/services.ts';
 
 const BUS_DAYS: readonly BusDayType[] = ['weekday', 'holiday'];
@@ -31,25 +30,14 @@ export const load: ServerLoad = ({ locals, cookies, getClientAddress }) => {
 
 	// 未来大そのものは、A にならない
 	const selectable = listing.stops.filter((stop) => stop.id !== UNIVERSITY_STOP.id);
-	const known = (id: string | null | undefined): id is string =>
-		id !== null && id !== undefined && selectable.some((stop) => stop.id === id);
-
-	const savedStop = cookies.get(BUS_STOP_COOKIE);
-	const stopId =
-		(known(savedStop) && savedStop) ||
-		DEFAULT_BUS_STOP_IDS.find((id) => known(id)) ||
-		selectable[0]?.id ||
-		null;
-
-	let onCampus = false;
-	const campusRanges = services.campus.ranges();
-	if (campusRanges.length > 0) {
-		try {
-			onCampus = isInIpRanges(getClientAddress(), campusRanges);
-		} catch {
-			onCampus = false;
-		}
-	}
+	const stopId = chooseBusStopId(
+		cookies.get(BUS_STOP_COOKIE),
+		selectable.map((stop) => stop.id),
+	);
+	const { direction: defaultDirection, onCampus } = defaultBusDirection(
+		getClientAddress,
+		services.campus.ranges(),
+	);
 
 	const legs = Object.fromEntries(
 		BUS_DIRECTIONS.map((direction) => [
@@ -70,7 +58,7 @@ export const load: ServerLoad = ({ locals, cookies, getClientAddress }) => {
 	return {
 		stopId,
 		/** 学内の Wi-Fi で決めた、はじめの向き。画面の中で入れ替えられる */
-		defaultDirection: (onCampus ? 'fromUniversity' : 'toUniversity') satisfies BusDirection,
+		defaultDirection,
 		/** 学内の Wi-Fi で決まったときは、現在地で決め直さない */
 		canDecideByLocation: !onCampus,
 		/** 選んだ日の種類 (その日のうちだけ覚えている)。なければ今日の種類 */
