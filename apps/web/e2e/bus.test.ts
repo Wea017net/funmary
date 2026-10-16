@@ -84,6 +84,16 @@ test.describe('バス', () => {
 		);
 	});
 
+	test('ホームに、次のバスが出る。押すとバスの画面に行く', async ({ page }) => {
+		await signInAs(page, email);
+		await page.goto('/app');
+		const section = page.getByRole('region', { name: '次のバス' });
+		// 取り込んだ時刻表の終わりに近い時刻でも、乗る停留所と降りる停留所は出る
+		await expect(section).toContainText('函館駅前 → はこだて未来大学');
+		await section.getByRole('link').click();
+		await expect(page.getByRole('heading', { level: 1, name: 'バス' })).toBeVisible();
+	});
+
 	test('ログインしていなければ、バスの画面は開けない', async ({ page }) => {
 		oidc.setIdentity({ sub: 'nobody', email: 'nobody@fun.ac.jp', email_verified: true });
 		await page.context().clearCookies();
