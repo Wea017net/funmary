@@ -86,6 +86,11 @@ import { getServices, setServices } from '#lib/server/services.ts';
 import { dailyDigestDeps } from '#lib/server/daily-digest.ts';
 import { deliverNotificationsDeps, testMessage } from '#lib/server/notification-delivery.ts';
 import { readWebhookLimit, WEBHOOKS_PER_USER_KEY } from '#lib/server/webhook-limit.ts';
+import {
+	CAMPUS_RANGES_KEY,
+	campusRanges,
+	readRegisteredRanges,
+} from '#lib/server/campus-networks.ts';
 import { parseThemePreference, THEME_COOKIE } from '#lib/theme.ts';
 
 /** Hono に渡すパス。これ自身か、この下のパスが対象になる */
@@ -336,7 +341,14 @@ export const init: ServerInit = () => {
 		academicCalendar: academicCalendarStore,
 		holidays: holidayStore,
 		bus: result.config.busApiBaseUrl ? createBusStore(database) : null,
-		campusIpRanges: result.config.campusIpRanges,
+		campus: {
+			envRanges: result.config.campusIpRanges,
+			ranges: () =>
+				campusRanges(
+					result.config.campusIpRanges,
+					readRegisteredRanges(settingsStore.get(CAMPUS_RANGES_KEY)),
+				),
+		},
 		sourceHealth: createSourceHealthStore(database),
 		jobRuns: jobRunStore,
 		jobs: { names: jobs.map((job) => job.name), runNow: (name: string) => runner.runNow(name) },

@@ -111,8 +111,13 @@ export interface Services {
 	readonly holidays: HolidayStore;
 	/** バスの時刻表の写し。BUS_API_BASE_URL を設定していないときは null で、バスの機能を出さない */
 	readonly bus: BusStore | null;
-	/** 学内の Wi-Fi の IPv4 アドレスの範囲 (CAMPUS_IP_RANGES) */
-	readonly campusIpRanges: readonly string[];
+	/** 学内の Wi-Fi の IPv4 アドレスの範囲 */
+	readonly campus: {
+		/** 環境変数 CAMPUS_IP_RANGES で設定した範囲。管理画面からは変えられない */
+		readonly envRanges: readonly string[];
+		/** 環境変数と、管理画面で登録した範囲を合わせたもの。呼ぶたびに読むので、登録がすぐ効く */
+		ranges(): readonly string[];
+	};
 	readonly sourceHealth: SourceHealthStore;
 	readonly jobRuns: StoredJobRunStore;
 	/** サーバーの中で動いている定期処理。管理画面から今すぐ動かせる */
