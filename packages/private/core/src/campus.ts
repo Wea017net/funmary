@@ -49,18 +49,62 @@ function ipv4ToInt(address: string): number | null {
 	return value;
 }
 
-/** アドレスが、範囲 (a.b.c.d/n の CIDR、または単独のアドレス) のどれかに入るか。IPv4 だけを扱い、読めないものは外れとする */
-export function isInIpRanges(address: string, ranges: readonly string[]): boolean {
+/** 登録できる範囲の最も広いもの (/8)。学内以外まで巻き込む範囲を、間違って登録しないための歯止め */
+const MIN_PREFIX_BITS = 8;
+
+/** アドレスが入る、最初の範囲 (a.b.c.d/n の CIDR、または単独のアドレス)。IPv4 だけを扱い、読めないものは外れとする */
+export function findIpRange(address: string, ranges: readonly string[]): string | null {
 	const value = ipv4ToInt(address);
-	if (value === null) return false;
-	return ranges.some((range) => {
-		const [base, bitsText] = range.split('/');
-		const start = ipv4ToInt(base ?? '');
-		if (start === null) return false;
-		const bits = bitsText === undefined ? 32 : Number(bitsText);
-		if (!Number.isInteger(bits) || bits < 0 || bits > 32) return false;
-		if (bits === 0) return true;
-		const size = 2 ** (32 - bits);
-		return Math.floor(value / size) === Math.floor(start / size);
-	});
+	if (value === null) return null;
+	return (
+		ranges.find((range) => {
+			const [base, bitsText] = range.split('/');
+			const start = ipv4ToInt(base ?? '');
+			if (start === null) return false;
+			const bits = bitsText === undefined ? 32 : Number(bitsText);
+			if (!Number.isInteger(bits) || bits < 0 || bits > 32) return false;
+			if (bits === 0) return true;
+			const size = 2 ** (32 - bits);
+			return Math.floor(value / size) === Math.floor(start / size);
+		}) ?? null
+	);
+}
+
+export const isInIpRanges = (address: string, ranges: readonly string[]): boolean =>
+	findIpRange(address, ranges) !== null;
+
+/** 範囲の先頭のアドレスと長さから、保存する形にする。/32 は単独のアドレスにそろえる */
+function formatIpRange(value: number, bits: number): string {
+	const size = 2 ** (32 - bits);
+	const network = Math.floor(value / size) * size;
+	const address = [24, 16, 8, 0].map((shift) => Math.floor(network / 2 ** shift) % 256).join('.');
+	return bits === 32 ? address : `${address}/${bits}`;
+}
+
+/**
+ * 登録する範囲の入力を、保存する形にそろえる。単独のアドレスか a.b.c.d/n で、IPv4 だけ。
+ * 先頭でないアドレスは範囲の先頭に直し、/8 より広いものと、読めないものは null
+ */
+export function normalizeIpRange(input: string): string | null {
+	const parts = input.trim().split('/');
+	const [base, bitsText] = parts;
+	if (parts.length > 2 || base === undefined || base.includes(':')) return null;
+	const value = ipv4ToInt(base);
+	if (value === null) return null;
+	let bits = 32;
+	if (bitsText !== undefined) {
+		if (!/^\d{1,2}$/.test(bitsText)) return null;
+		bits = Number(bitsText);
+	}
+	if (bits < MIN_PREFIX_BITS || bits > 32) return null;
+	return formatIpRange(value, bits);
+}
+
+/** アドレスを含む、長さ bits の範囲。IPv4 でないアドレスと、/8 より広い長さは null */
+export function ipRangeContaining(address: string, bits: number): string | null {
+	const value = ipv4ToInt(address);
+	if (value === null || !Number.isInteger(bits) || bits < MIN_PREFIX_BITS || bits > 32) {
+		return null;
+	}
+	return formatIpRange(value, bits);
 }

@@ -159,6 +159,9 @@ export {
 export {
 	NEAR_UNIVERSITY_METERS,
 	UNIVERSITY_LOCATION,
+	findIpRange,
+	ipRangeContaining,
 	isInIpRanges,
 	isNearUniversity,
+	normalizeIpRange,
 } from './campus.ts';
