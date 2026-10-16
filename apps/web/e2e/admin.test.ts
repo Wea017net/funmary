@@ -497,6 +497,104 @@ test.describe('サポートサーバーの招待', () => {
 	});
 });
 
+test.describe('学内のネットワーク', () => {
+	const clearRanges = () =>
+		seedSubjects((database) => {
+			database.sqlite.prepare("DELETE FROM settings WHERE key = 'campus-ip-ranges'").run();
+		});
+	// 手元では DB が残るので、前の実行で登録した範囲を消してから始める
+	test.beforeEach(clearRanges);
+	test.afterAll(clearRanges);
+
+	const openPage = async (page: Page) => {
+		oidc.setIdentity({
+			sub: 'e2e-admin@fun.ac.jp',
+			email: 'e2e-admin@fun.ac.jp',
+			email_verified: true,
+			hd: 'fun.ac.jp',
+		});
+		await signIn(page);
+		await page.goto('/app/settings');
+		await page.getByRole('link', { name: '学内のネットワーク' }).click();
+		await expect(page.getByRole('heading', { name: '学内のネットワーク', level: 1 })).toBeVisible();
+	};
+
+	test('範囲を入力して登録し、重ねて登録できず、消せる', async ({ page }) => {
+		await openPage(page);
+		const register = page.getByRole('region', { name: '範囲を入力して登録する' });
+
+		await register.getByLabel('アドレスか範囲').fill('abc');
+		await register.getByRole('button', { name: '登録する' }).click();
+		await expect(page.getByRole('alert')).toContainText('IPv4 のアドレスか');
+
+		// ホスト部が 0 でなくても、範囲の先頭にそろえて登録する
+		await register.getByLabel('アドレスか範囲').fill('203.0.113.77/24');
+		await register.getByLabel('メモ (任意)').fill('E2E の範囲');
+		await register.getByRole('button', { name: '登録する' }).click();
+		await expect(page.getByRole('status').first()).toContainText('203.0.113.0/24 を登録しました');
+		const item = page
+			.getByRole('region', { name: '登録した範囲' })
+			.getByRole('listitem')
+			.filter({ hasText: '203.0.113.0/24' });
+		await expect(item).toContainText('E2E の範囲');
+
+		await register.getByLabel('アドレスか範囲').fill('203.0.113.0/24');
+		await register.getByRole('button', { name: '登録する' }).click();
+		await expect(page.getByRole('alert')).toContainText('すでに登録してあります');
+
+		await item.getByRole('button', { name: '消す' }).click();
+		await expect(page.getByRole('status').first()).toContainText(
+			'203.0.113.0/24 の登録を消しました',
+		);
+		await expect(item).toHaveCount(0);
+	});
+
+	test('いまのアドレスが登録済みかを、押す前から出し、ボタンで登録できる', async ({ page }) => {
+		await openPage(page);
+		const address = (await page.locator('.address code').innerText()).trim();
+		// 接続元が IPv6 の環境 (localhost が ::1 になるとき) では、登録できないことだけを確かめる
+		const isIpv4 = /^\d+\.\d+\.\d+\.\d+$/.test(address);
+		const current = page.getByRole('region', { name: 'いまの接続' });
+		const own = current.getByRole('button', { name: 'このアドレスだけを登録する' });
+		const subnet = current.getByRole('button', { name: '同じ範囲 (/24) を登録する' });
+		if (!isIpv4) {
+			await expect(current).toContainText('登録できません');
+			await expect(own).toBeDisabled();
+			await expect(subnet).toBeDisabled();
+			return;
+		}
+
+		await expect(current).toContainText('未登録');
+		await expect(own).toBeEnabled();
+		await own.click();
+		await expect(page.getByRole('alert')).toHaveCount(0);
+
+		// ボタンを押す前の表示でも、登録済みと分かる
+		await page.reload();
+		await expect(current).toContainText('登録済み');
+		await expect(current).toContainText(address);
+		await expect(own).toBeDisabled();
+		await expect(subnet).toBeDisabled();
+		const item = page
+			.getByRole('region', { name: '登録した範囲' })
+			.getByRole('listitem')
+			.filter({ hasText: address });
+		await expect(item).toContainText('いまの接続');
+
+		await item.getByRole('button', { name: '消す' }).click();
+		await expect(current).toContainText('未登録');
+		await expect(own).toBeEnabled();
+	});
+
+	test('管理者でなければ、見つからないことにする', async ({ page }) => {
+		const email = 'e2e-not-admin@fun.ac.jp';
+		oidc.setIdentity({ sub: email, email, email_verified: true, hd: 'fun.ac.jp' });
+		await signIn(page);
+		const response = await page.goto('/app/admin/campus-network');
+		expect(response?.status()).toBe(404);
+	});
+});
+
 test.describe('取得元と実行履歴', () => {
 	test.beforeAll(() => {
 		seedSubjects((database) => {
