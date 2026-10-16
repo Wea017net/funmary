@@ -3,11 +3,14 @@
 	import InstallGuide from '#lib/components/InstallGuide.svelte';
 	import LessonRoom from '#lib/components/LessonRoom.svelte';
 	import StatusBadge from '#lib/components/StatusBadge.svelte';
+	import { formatMinutesUntil } from '#lib/bus-label.ts';
 	import type { EventView } from '#lib/server/event-view.ts';
 	import type { LessonView } from '#lib/server/lesson-view.ts';
 	import type { DayNote } from '@funmary/api';
 	import { formatDate, formatDayNote, formatFetchedAt } from '#lib/timetable-label.ts';
+	import IconBus from '~icons/material-symbols/directions-bus-outline';
 	import IconCalendar from '~icons/material-symbols/calendar-add-on-outline';
+	import IconChevron from '~icons/material-symbols/chevron-right';
 	import IconInfo from '~icons/material-symbols/info-outline';
 	import IconWarning from '~icons/material-symbols/warning-outline';
 
@@ -25,13 +28,38 @@
 		stale: boolean;
 	}
 
+	interface BusView {
+		from: string;
+		to: string;
+		/** これからの発車がなければ null */
+		next: {
+			time: string;
+			routes: string[];
+			destination: string | null;
+			from: string;
+			to: string;
+			/** 発車の時刻 (ミリ秒)。開いたままでも「あと N 分」を合わせるのに使う */
+			departsAt: number;
+		} | null;
+	}
+
 	let {
 		data,
 	}: {
-		data: { today: TodayView };
+		data: { today: TodayView; bus: BusView | null };
 	} = $props();
 
 	const today = $derived(data.today);
+	const bus = $derived(data.bus);
+
+	let nowMs = $state(Date.now());
+	$effect(() => {
+		const timer = setInterval(() => (nowMs = Date.now()), 30_000);
+		return () => clearInterval(timer);
+	});
+	const minutesUntilBus = $derived(
+		bus?.next ? Math.max(0, Math.ceil((bus.next.departsAt - nowMs) / 60_000)) : null,
+	);
 </script>
 
 <svelte:head>
@@ -65,6 +93,32 @@
 			<p><a href={resolve('app/courses')}>履修科目を登録する</a></p>
 		{/if}
 	</section>
+
+	{#if bus}
+		<section aria-labelledby="bus-heading" class="bus">
+			<h2 id="bus-heading">次のバス</h2>
+			<a class="bus-link" href={resolve('app/bus')}>
+				<IconBus aria-hidden="true" class="icon" />
+				<span class="bus-body">
+					{#if bus.next}
+						<span class="bus-time">
+							<time>{bus.next.time}</time>
+							<span class="bus-until">{formatMinutesUntil(minutesUntilBus ?? 0)}</span>
+						</span>
+						<span class="muted">
+							{bus.next.routes.join(' ')}
+							{#if bus.next.destination}{bus.next.destination}行き{/if}
+						</span>
+						<span class="muted">{bus.next.from} → {bus.next.to}</span>
+					{:else}
+						<span class="bus-time">今日の発車は、もうありません</span>
+						<span class="muted">{bus.from} → {bus.to}</span>
+					{/if}
+				</span>
+				<IconChevron aria-hidden="true" class="chevron" />
+			</a>
+		</section>
+	{/if}
 
 	<section aria-labelledby="today-heading">
 		<h2 id="today-heading">
@@ -191,6 +245,58 @@
 
 	.suggest-title {
 		font-weight: 700;
+	}
+
+	.bus-link {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		min-height: 52px;
+		padding: 0.75rem 1rem;
+		border: 1px solid var(--fm-divider);
+		border-radius: 0.75rem;
+		background: var(--fm-surface);
+		color: inherit;
+		text-decoration: none;
+
+		&:hover {
+			background: var(--fm-surface-muted);
+		}
+
+		:global(.icon) {
+			flex: none;
+			width: 1.5rem;
+			height: 1.5rem;
+			color: var(--fm-primary);
+		}
+
+		:global(.chevron) {
+			flex: none;
+			margin-left: auto;
+			color: var(--fm-text-muted);
+		}
+	}
+
+	.bus-body {
+		display: flex;
+		flex-direction: column;
+		min-width: 0;
+		font-size: 0.875rem;
+	}
+
+	.bus-time {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: baseline;
+		gap: 0 0.5rem;
+		font-size: 1.25rem;
+		font-weight: 700;
+		font-variant-numeric: tabular-nums;
+	}
+
+	.bus-until {
+		color: var(--fm-primary);
+		font-size: 0.875rem;
 	}
 
 	#today-heading time {

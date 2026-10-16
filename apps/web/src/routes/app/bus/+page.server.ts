@@ -1,30 +1,27 @@
 // バスの時刻表。「A から未来大へ」「未来大から A へ」の発車だけを出す (A は、未来大を通る任意の停留所)。
-// 選んだ停留所は、次に開いたときのために、Cookie に残す。向きは、残さず、いる場所から決める:
-// 学内の Wi-Fi (環境変数 CAMPUS_IP_RANGES と、管理画面で登録した範囲) なら未来大から出る向き、そうでなければ未来大へ向かう向き。
-// 現在地での判定は、ブラウザ側で行い、向きを URL に足して開き直す。保存した写しだけを読む。
-// BUS_API_BASE_URL がないサーバーでは、この画面はない
+// 選んだ停留所と日の種類は Cookie に置き、サーバーが画面に入れて返す (週の時間割の見せ方と同じ作り)。
+// 向きと日の種類の切り替えで読み直さないよう、選んだ停留所の 2 つの向きと 2 つの日の種類を、まとめて返す。
+// 向きは残さず、いる場所から決める: 学内の Wi-Fi (環境変数 CAMPUS_IP_RANGES と、管理画面で登録した範囲) なら
+// 未来大から出る向き、そうでなければ未来大へ向かう向き。現在地での判定は、ブラウザ側で行う。
+// 保存した写しだけを読む。BUS_API_BASE_URL がないサーバーでは、この画面はない
 import { error, type ServerLoad } from '@sveltejs/kit';
 import { getBusLeg, listBusStops, type PublicBusLeg } from '@funmary/api';
 import {
 	BUS_DIRECTIONS,
-	DEFAULT_BUS_STOP_IDS,
 	UNIVERSITY_STOP,
-	isInIpRanges,
 	jstDateTime,
 	type BusDayType,
 	type BusDirection,
 } from '@funmary/core';
 import { isBusDataStale } from '#lib/bus-label.ts';
+import { BUS_DAY_COOKIE, BUS_STOP_COOKIE, parseBusDay } from '#lib/bus-state.ts';
 import { requireSignedIn } from '#lib/server/admin.ts';
+import { chooseBusStopId, defaultBusDirection } from '#lib/server/bus-selection.ts';
 import { getServices } from '#lib/server/services.ts';
 
-const BUS_STOP_COOKIE = 'fm_bus_stop';
-const ONE_YEAR_S = 365 * 24 * 60 * 60;
+const BUS_DAYS: readonly BusDayType[] = ['weekday', 'holiday'];
 
-const isDirection = (value: string | null | undefined): value is BusDirection =>
-	(BUS_DIRECTIONS as readonly (string | null | undefined)[]).includes(value);
-
-export const load: ServerLoad = ({ locals, url, cookies, getClientAddress }) => {
+export const load: ServerLoad = ({ locals, cookies, getClientAddress }) => {
 	requireSignedIn(locals);
 	const services = getServices();
 	const now = new Date();
@@ -33,58 +30,41 @@ export const load: ServerLoad = ({ locals, url, cookies, getClientAddress }) => 
 
 	// 未来大そのものは、A にならない
 	const selectable = listing.stops.filter((stop) => stop.id !== UNIVERSITY_STOP.id);
-	const known = (id: string | null | undefined): id is string =>
-		id !== null && id !== undefined && selectable.some((stop) => stop.id === id);
+	const stopId = chooseBusStopId(
+		cookies.get(BUS_STOP_COOKIE),
+		selectable.map((stop) => stop.id),
+	);
+	const { direction: defaultDirection, onCampus } = defaultBusDirection(
+		getClientAddress,
+		services.campus.ranges(),
+	);
 
-	const requestedStop = url.searchParams.get('stop');
-	const savedStop = cookies.get(BUS_STOP_COOKIE);
-	const stopId =
-		(known(requestedStop) && requestedStop) ||
-		(known(savedStop) && savedStop) ||
-		DEFAULT_BUS_STOP_IDS.find((id) => known(id)) ||
-		selectable[0]?.id ||
-		null;
-	// 利用者が選んだ停留所だけを、覚える
-	if (known(requestedStop)) {
-		cookies.set(BUS_STOP_COOKIE, requestedStop, {
-			path: '/',
-			maxAge: ONE_YEAR_S,
-			sameSite: 'lax',
-			httpOnly: true,
-			secure: url.protocol === 'https:',
-		});
-	}
-
-	// 向き: URL で決めたもの、学内の Wi-Fi、それ以外 (未来大へ) の順
-	const requestedDirection = url.searchParams.get('direction');
-	let onCampus = false;
-	const campusRanges = services.campus.ranges();
-	if (campusRanges.length > 0) {
-		try {
-			onCampus = isInIpRanges(getClientAddress(), campusRanges);
-		} catch {
-			onCampus = false;
-		}
-	}
-	const direction: BusDirection = isDirection(requestedDirection)
-		? requestedDirection
-		: onCampus
-			? 'fromUniversity'
-			: 'toUniversity';
-
-	const requestedDay = url.searchParams.get('day');
-	const day: BusDayType | undefined =
-		requestedDay === 'weekday' || requestedDay === 'holiday' ? requestedDay : undefined;
-	const leg: PublicBusLeg | null = stopId
-		? getBusLeg(services, now, { stopId, direction, day })
-		: null;
+	const legs = Object.fromEntries(
+		BUS_DIRECTIONS.map((direction) => [
+			direction,
+			Object.fromEntries(
+				BUS_DAYS.map((day) => [
+					day,
+					stopId ? getBusLeg(services, now, { stopId, direction, day }) : null,
+				]),
+			),
+		]),
+	) as Record<BusDirection, Record<BusDayType, PublicBusLeg | null>>;
+	const anyLeg = BUS_DIRECTIONS.flatMap((direction) =>
+		BUS_DAYS.map((day) => legs[direction][day]),
+	).find((leg) => leg !== null);
+	const todayDay = anyLeg?.todayDay ?? 'weekday';
 
 	return {
 		stopId,
-		direction,
-		/** 向きを URL で決めていないとき、ブラウザの現在地で決め直してよい (学内の Wi-Fi で決まったときは、決め直さない) */
-		canDecideByLocation: !isDirection(requestedDirection) && !onCampus,
-		leg,
+		/** 学内の Wi-Fi で決めた、はじめの向き。画面の中で入れ替えられる */
+		defaultDirection,
+		/** 学内の Wi-Fi で決まったときは、現在地で決め直さない */
+		canDecideByLocation: !onCampus,
+		/** 選んだ日の種類 (その日のうちだけ覚えている)。なければ今日の種類 */
+		day: parseBusDay(cookies.get(BUS_DAY_COOKIE)) ?? todayDay,
+		todayDay,
+		legs,
 		universityName: UNIVERSITY_STOP.name,
 		/** いまの日本時間 (HH:MM)。発車の済んだ便を薄く出すのに使う */
 		nowTime: jstDateTime(now).time,

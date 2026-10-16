@@ -115,6 +115,16 @@ describe('isNearUniversity', () => {
 		expect(isNearUniversity(41.7737, 140.7266)).toBe(false);
 	});
 
+	it('既定では、敷地の端 (約 430 m) は近く、500 m を超える所は近くでない', () => {
+		// 緯度 0.001 度は約 111 m
+		expect(
+			isNearUniversity(UNIVERSITY_LOCATION.latitude + 0.0039, UNIVERSITY_LOCATION.longitude),
+		).toBe(true);
+		expect(
+			isNearUniversity(UNIVERSITY_LOCATION.latitude + 0.0049, UNIVERSITY_LOCATION.longitude),
+		).toBe(false);
+	});
+
 	it('範囲 (メートル) を指定できる', () => {
 		const offset = UNIVERSITY_LOCATION.latitude + 0.0045; // 約 500 m
 		expect(isNearUniversity(offset, UNIVERSITY_LOCATION.longitude, 300)).toBe(false);
