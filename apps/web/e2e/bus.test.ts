@@ -135,7 +135,9 @@ test.describe('バス', () => {
 		const firstSection = await sections.first().boundingBox();
 		expect(firstRoute).not.toBeNull();
 		expect(firstSection).not.toBeNull();
-		expect(Math.abs(firstRoute!.y - firstSection!.y)).toBeLessThanOrEqual(2);
+		// 文字の大きさが違うので、上端ではなく、縦の範囲が重なる (同じ行にある) ことを確かめる
+		expect(firstSection!.y).toBeLessThan(firstRoute!.y + firstRoute!.height);
+		expect(firstRoute!.y).toBeLessThan(firstSection!.y + firstSection!.height);
 		for (const column of [routes, sections]) {
 			const positions = await column.evaluateAll((elements) =>
 				elements.map((element) => element.getBoundingClientRect().x),
