@@ -243,28 +243,27 @@
 				</section>
 			</div>
 
-			<section class="timetable-panel" aria-labelledby="timetable-heading">
-				<div class="timetable-header">
-					<h2 id="timetable-heading">時刻表</h2>
-					{#if leg}
-						<div class="days" role="group" aria-label="日の種類">
-							{#each ['weekday', 'holiday'] as const as option (option)}
-								<button
-									type="button"
-									onclick={() => selectDay(option)}
-									aria-pressed={day === option}
-								>
-									{DAY_LABELS[option]}{option === data.todayDay ? ' (今日)' : ''}
-								</button>
-							{/each}
-						</div>
-					{/if}
-				</div>
-
+			<section class="timetable-panel" aria-label="時刻表">
 				{#if leg}
-					<h3 id="departures-heading" class="visually-hidden">
+					<nav aria-label="日の種類">
+						<ul class="days">
+							{#each ['weekday', 'holiday'] as const as option (option)}
+								<li>
+									<button
+										type="button"
+										onclick={() => selectDay(option)}
+										aria-pressed={day === option}
+									>
+										{DAY_LABELS[option]}{option === data.todayDay ? ' (今日)' : ''}
+									</button>
+								</li>
+							{/each}
+						</ul>
+					</nav>
+
+					<h2 id="departures-heading" class="visually-hidden">
 						{leg.from.name}から{leg.to.name}への発車
-					</h3>
+					</h2>
 					{#if leg.departures.length === 0}
 						<p class="empty">
 							{#if leg.checkedAt === null}
@@ -310,7 +309,6 @@
 		flex-direction: column;
 		flex: 1;
 		min-height: 0;
-		gap: 0.5rem;
 	}
 
 	.overview {
@@ -325,7 +323,7 @@
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
-		margin: 0;
+		margin: 0.75rem 0 0.5rem;
 	}
 
 	.swap {
@@ -384,36 +382,11 @@
 		}
 	}
 
-	.route-panel,
-	.timetable-panel {
-		border: 1px solid var(--fm-divider);
-		border-radius: 0.75rem;
-		background: var(--fm-surface);
-	}
-
-	.route-panel {
-		padding: 0.75rem;
-	}
-
 	.timetable-panel {
 		display: flex;
 		flex: 1;
 		flex-direction: column;
 		min-height: 0;
-		padding: 0.75rem;
-	}
-
-	.timetable-header {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 0.75rem;
-		margin-bottom: 0.5rem;
-
-		h2 {
-			margin: 0;
-			font-size: 1.125rem;
-		}
 	}
 
 	/* 選べる停留所は、浮かせて見せる。未来大は、固定なので平らにする */
@@ -441,10 +414,6 @@
 	.hint {
 		margin: 0 0 0.25rem;
 		font-size: 0.875rem;
-	}
-
-	.trip + .hint {
-		margin-top: 0.75rem;
 	}
 
 	.locate {
@@ -476,43 +445,31 @@
 		}
 	}
 
-	/* 平日と休日を、選択状態が分かるセグメントボタンで切り替える */
+	/* 平日と休日。2 つを同じ幅で並べ、選んでいるほうに下線を引く */
 	.days {
-		display: inline-grid;
-		grid-template-columns: repeat(2, 4.75rem);
-		flex: none;
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		margin: 0.5rem 0 0;
 		padding: 0;
-		border: 1px solid var(--fm-divider);
-		border-radius: 0.75rem;
-		background: var(--fm-surface);
-		overflow: hidden;
+		border-bottom: 1px solid var(--fm-divider);
+		list-style: none;
 
 		button {
 			display: flex;
 			align-items: center;
 			justify-content: center;
-			min-width: 0;
-			min-height: 36px;
-			padding: 0 0.25rem;
+			width: 100%;
+			min-height: 48px;
 			border: 0;
+			border-bottom: 3px solid transparent;
 			background: none;
 			color: var(--fm-text);
 			font: inherit;
-			font-size: 0.8125rem;
-			white-space: nowrap;
 			cursor: pointer;
 		}
 
-		button:hover {
-			background: var(--fm-surface-muted);
-		}
-
-		button + button {
-			border-left: 1px solid var(--fm-divider);
-		}
-
 		button[aria-pressed='true'] {
-			background: var(--fm-primary-soft);
+			border-bottom-color: var(--fm-primary);
 			color: var(--fm-primary);
 			font-weight: 700;
 		}
@@ -692,8 +649,17 @@
 			width: 100%;
 		}
 
+		.trip {
+			margin: 0 0 0.5rem;
+		}
+
 		.hint {
 			margin: 0.25rem 0 0;
+		}
+
+		/* 便の一覧を横並びにするかは、画面ではなく一覧の幅で決める (列が収まらない幅で、残り時間が切れないように) */
+		.timetable-panel {
+			container: timetable / inline-size;
 		}
 
 		.departures {
@@ -701,7 +667,7 @@
 			min-height: 0;
 			max-height: none;
 
-			@media (min-width: 1024px) {
+			@container timetable (min-width: 36rem) {
 				display: grid;
 				grid-template-columns:
 					max-content minmax(8rem, 1.4fr) minmax(10rem, 1.7fr)
